@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>XVue</title>
+</head>
+
+<body>
+  <div id="app">
+    <div class="box">XVue demo</div>
+
+    <div class="box">
+      <p>这是插值</p>
+      <p>{{ person.name }}--{{person.age}}--{{msg}}--{{}}</p>
+    </div>
+
+    <div class="box">
+      <p>这是 v-text</p>
+      <p v-text="text"></p>
+    </div>
+
+    <div class="box">
+      <p>这是 v-html</p>
+      <p v-html="html"></p>
+    </div>
+
+    <div class="box">
+      <p>这是 v-model</p>
+      <input type="text" v-model="msg">
+    </div>
+
+    <div class="box">
+      <p v-bind:prop1="prop1">这是 v-bind，属性值为 {{prop1}}</p>
+    </div>
+    <div class="box">
+      <p :prop2="prop2">这是 :bind，属性值为 {{prop2}}</p>
+    </div>
+
+    <div class="box">
+      <button v-on:click="decreaseAge">这是 on 的点击事件</button>
+    </div>
+    <div class="box">
+      <button @click="addAge">这是 @ 的点击事件</button>
+    </div>
+  </div>
+  <script src="./Compile.js"></script>
+  <script src="./XVue.js"></script>
+  <script>
+    let vm = new XVue({
+      el: '#app',
+      data: {
+        person: {
+          name: '尤水就下',
+          age: 30
+        },
+        text: '这是指令文本',
+        html: '<h3>h3标题</h3>',
+        msg: '这是一个双向绑定的信息',
+        prop1: 'hh',
+        prop2: 'xx'
+      },
+      created() {
+        setTimeout(() => {
+          this.person.age = 20
+        }, 2000);
+      },
+      methods: {
+        addAge() {
+          this.html = this.person.age++
+        },
+        decreaseAge() {
+          this.html = this.person.age--
+        }
+      }
+    })
+  </script>
+</body>
+
+<style>
+.box {
+  padding-left: 10px;
+  padding-bottom: 10px;
+  font-size: 24px;
+  border-bottom: 1px solid black;
+
+}
+.box input {
+  width: 300px;
+}
+</style>
+</html>

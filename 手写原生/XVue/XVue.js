@@ -6,10 +6,12 @@ class XVue {
 
     // 第一步：数据劫持
     this.observeData(this.$data)
+    this.observeComputed(this.$options.computed)
     // 第二步：编译
     new Compile(this.$el, this)
-    // 第三步：代理数据
+    // 第三步：代理
     this.proxyData(this.$data)
+    this.proxyMethods(this.$options.methods)
 
     options.created && options.created.call(this)
     // Watcher 的测试小代码
@@ -51,6 +53,17 @@ class XVue {
       }
     })
   }
+  observeComputed(computed) {
+    Object.keys(computed).forEach(c => {
+      Object.defineProperty(this.$data, c, {
+        enumerable: true,
+        configurable: false,
+        get() {
+          return computed[c].call(this)
+        }
+      })
+    })
+  }
   proxyData(data) {
     Object.keys(data).forEach(key => {
       Object.defineProperty(this, key, {
@@ -61,6 +74,17 @@ class XVue {
         },
         set(newValue) {
           data[key] = newValue
+        }
+      })
+    })
+  }
+  proxyMethods(methods) {
+    Object.keys(methods).forEach(m => {
+      Object.defineProperty(this, m, {
+        enumerable: true,
+        configurable: false,
+        get() {
+          return methods[m]
         }
       })
     })

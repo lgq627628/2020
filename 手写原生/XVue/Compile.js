@@ -86,7 +86,7 @@ class Compile {
     return node.nodeType === 3
   }
   hasCurlyBraces(text) {
-    return /\{\{(.+)\}\}/.test(text)
+    return /\{\{(.+?)\}\}/.test(text)
   }
 }
 

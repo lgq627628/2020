@@ -45,6 +45,11 @@
     <div class="box">
       <button @click="addAge">这是 @ 的点击事件</button>
     </div>
+
+    <div class="box">
+      <p>这是计算属性</p>
+      <p>{{fullInfo}}</p>
+    </div>
   </div>
   <script src="./Compile.js"></script>
   <script src="./XVue.js"></script>
@@ -62,17 +67,25 @@
         prop1: 'hh',
         prop2: 'xx'
       },
+      computed: {
+        fullInfo() {
+          return `${this.person.age}+++${this.msg}`
+        }
+      },
       created() {
-        setTimeout(() => {
-          this.person.age = 20
-        }, 2000);
+        this.setAge()
       },
       methods: {
+        setAge() {
+          setTimeout(() => {
+            this.person.age = 20
+          }, 2000);
+        },
         addAge() {
-          this.html = this.person.age++
+          this.person.age++
         },
         decreaseAge() {
-          this.html = this.person.age--
+          this.person.age--
         }
       }
     })

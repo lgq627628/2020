@@ -18,7 +18,7 @@ class Compile {
     // 因为文档片段存在于内存中，并不在DOM树中，所以将子元素插入到文档片段时不会引起页面回流（对元素位置和几何上的计算）
     let fragment = document.createDocumentFragment()
     let firstChild
-    while (firstChild = el.firstChild) { // 这个是移动操作
+    while (firstChild = el.firstChild) { // 这个是移动操作，一个节点只能有一个父亲
       fragment.appendChild(firstChild)
     }
     return fragment

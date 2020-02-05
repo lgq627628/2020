@@ -1,0 +1,22 @@
+{
+  "name": "AST",
+  "version": "1.0.0",
+  "description": "### 设计模式 写设计模式的总结和例子等",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@babel/core": "^7.8.4",
+    "@babel/generator": "^7.8.4",
+    "@babel/parser": "^7.8.4",
+    "@babel/traverse": "^7.8.4",
+    "@babel/types": "^7.8.3",
+    "escodegen": "^1.13.0",
+    "esprima": "^4.0.1",
+    "estraverse": "^4.3.0"
+  }
+}

@@ -11,6 +11,7 @@ class Compile {
     this.compile(fragment)
     // 3、将编译结果追加到宿主中
     this.$el.appendChild(fragment)
+    fragment = null // 释放内存
   }
 
   // 核心方法

@@ -5,6 +5,7 @@
  * 和 apply 的区别就是参数的不同，apply 传递的是数组（因为 apply 和 arr 都是 a 开头，方便记忆）
  * bind 和 call 类似，但是不执行函数，只是改变 this 指向，并返回一个新函数
  * 如果传入的第一个参数是 null，则 this 指向不变
+ * 可参考文章链接（https://juejin.im/post/5ce4b0c6e51d455d6d535770）
  */
 
 // 简单版本

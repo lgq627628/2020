@@ -1,0 +1,24 @@
+{
+  "name": "x-cli",
+  "version": "1.0.0",
+  "description": "## 所需模块依赖 - commander 参数解析 - inquirer 交互式命令行 - download-git-repo 下载模板 - chalk 有颜色输出 - metalsmith 读取所有文件，实现模板渲染 - consolidate 统一模板引擎",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "x-cli": "./bin/www"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "axios": "^0.19.2",
+    "commander": "^4.1.1",
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-plugin-import": "^2.20.1",
+    "inquirer": "^7.0.4",
+    "ora": "^4.0.3"
+  }
+}

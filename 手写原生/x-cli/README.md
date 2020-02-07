@@ -1,13 +1,16 @@
 # 脚手架示例
+主要思路就是拉取模板，需要的话可以读取用户输入来修改模板文件。
 
 ## 所需模块依赖
 - commander 参数解析
 - inquirer 交互式命令行
 - download-git-repo 下载模板
 - chalk 有颜色输出
-- metalsmith 读取所有文件，实现模板渲染
-- consolidate 统一模板引擎
+- metalsmith 遍历文件夹看需不要渲染
+- consolidate 统一了所有的模板引擎
 - ora 用来显隐loading
+- ncp 拷贝文件
+- ejs 模板引擎
 
 ## 步骤
 1、定个规范

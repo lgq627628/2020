@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>vnode</title>
+  <style>
+    .item {
+      font-size: 30px;
+      color: green;
+    }
+    .box {
+      border: 1px solid red;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script src="./h.js"></script>
+  <script src="./diff.js"></script>
+  <script src="./patch.js"></script>
+  <script>
+    // 这个方案的有问题：
+    // 1、如果只是调换位置也会重新渲染
+    // 2、新增节点也不会被更新
+    let v1 = createElement('ul', {class: 'wrap', a: 1}, [ // 索引 0
+      createElement('li', {class: 'item'}, ['a']), // 索引 1、2
+      createElement('li', {class: 'item'}, ['b']), // 索引 3、4
+      createElement('li', {class: 'item'}, ['c']), // 索引 5、6
+      createElement('li', {class: 'item'}, ['d']) // 索引 7、8
+    ])
+    let v2 = createElement('ul', {class: 'box', b: 1}, [ // 索引 0
+      createElement('li', {class: 'item'}, ['1']), // 索引 1、2
+      createElement('li', {class: 'item'}, ['2']), // 索引 3、4
+      createElement('li', {class: 'item'}, ['c']), // 索引 5、6
+      // createElement('li', {class: 'item'}, ['d']) // 索引 7、8
+    ])
+    let dom1 = render(v1, app)
+    let patches = diff(v1, v2) // 比较两个 vnode 的不同
+    patch(dom1, patches) // 打补丁并更新视图
+  </script>
+</body>
+</html>

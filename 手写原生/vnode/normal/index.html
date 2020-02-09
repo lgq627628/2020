@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>vnode</title>
+  <style>
+    .item {
+      font-size: 30px;
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script src='./vnode.js'></script>
+  <script>
+    let vnode = createElement('div', {id: 'test'}, [
+      createElement('p', {key: 'a', style: {color: 'blue'}}, ['测试节点1']),
+      createElement('p', {key: 'b', '@click': () => alert('哈哈')}, '测试节点22'),
+      createElement('p', {key: 'c', 'class': 'item'}, '测试节点333'),
+      createElement('p', {key: 'd'}, '测试节点4444'),
+    ])
+
+    // let vnode2 = createElement('div', {id: 'test'}, [
+    //   createElement('p', {key: 'd'}, '测试节点4444'),
+    //   createElement('p', {key: 'a', style: {color: '#ccc'}}, '测试节点1'),
+    //   createElement('p', {key: 'b'}, '测试节点22'),
+    //   createElement('p', {key: 'e'}, '测试节点55555'),
+    //   createElement('p', {key: 'f', style: {color: 'red'}}, '测试节点666666')
+    // ])
+
+    // console.log(JSON.stringify(vnode, null, 4))
+    let res = render(vnode, app)
+    console.log(res)
+    setTimeout(() => {
+      // render(vnode2, app)
+    }, 3000);
+  </script>
+</body>
+</html>

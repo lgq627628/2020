@@ -1,0 +1,17 @@
+{
+  "name": "flow",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "flow-remove-types src/ -d dist/",
+    "start": "flow"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "flow-bin": "^0.118.0",
+    "flow-remove-types": "^2.118.0"
+  }
+}

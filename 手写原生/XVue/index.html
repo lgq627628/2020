@@ -11,7 +11,7 @@
 <body>
   <div id="app">
     <div class="box">XVue demo</div>
-
+    这是数组哦{{ arr2 }}
     <div class="box">
       <p>这是插值</p>
       <p>{{ person.name }}--{{person.age}}--{{msg}}--{{}}</p>
@@ -65,11 +65,16 @@
         html: '<h3>h3标题</h3>',
         msg: '这是一个双向绑定的信息',
         prop1: 'hh',
-        prop2: 'xx'
+        prop2: 'xx',
+        arr: [{id: 1}, {id: 2}],
+        arr2: [1, 2]
       },
       computed: {
         fullInfo() {
           return `${this.person.age}+++${this.msg}`
+        },
+        hh() {
+          return this.arr2
         }
       },
       created() {
@@ -79,6 +84,11 @@
         setAge() {
           setTimeout(() => {
             this.person.age = 20
+            this.arr2= [3, 4]
+            // this.arr[0].id = 5
+            // this.arr2[0] = 5
+            // this.arr2.push(3)
+            // console.log(this.arr2)
           }, 2000);
         },
         addAge() {

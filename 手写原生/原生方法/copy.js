@@ -1,0 +1,7 @@
+function copy() {
+
+}
+
+function deepCopy() {
+
+}

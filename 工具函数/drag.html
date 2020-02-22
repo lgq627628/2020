@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    #box {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100px;
+      height: 100px;
+      background: red;
+    }
+  </style>
+</head>
+<body>
+  <div id="box"></div>
+  <script>
+    class Drag {
+      constructor(el, opts) {
+        this.el = document.querySelector(el)
+        this.dragStart = opts.dragStart
+        this.dragging = opts.dragging
+        this.dragEnd = opts.dragEnd
+        this.el.addEventListener('mousedown', this.down.bind(this))
+      }
+      down(e) {
+        this.winW = document.documentElement.clientWidth;
+        this.winH = document.documentElement.clientHeight;
+        this.mouseX = e.clientX
+        this.mouseY = e.clientY
+        let {top, left, width, height} = this.el.getBoundingClientRect()
+        this.top = top
+        this.left = left
+        this.width = width
+        this.height = height
+        this.maxX = this.winW - this.width
+        this.maxY = this.winH - this.height
+
+        this.MOVE = this.move.bind(this)
+        this.UP = this.up.bind(this)
+        document.addEventListener('mousemove', this.MOVE)
+        document.addEventListener('mouseup', this.UP)
+        this.dragStart()
+      }
+      move(e) {
+        let top = this.top + (e.clientX -  this.mouseY)
+        let left = this.left + (e.clientY - this.mouseX)
+        if (top < 0) top = 0
+        if (top > this.maxY) top = this.maxY
+        if (left < 0) left = 0
+        if (left > this.maxX) left = this.maxX
+        this.el.style.top = top + 'px'
+        this.el.style.left = left + 'px'
+        this.dragging()
+      }
+      up() {
+        document.removeEventListener('mousemove', this.MOVE)
+        document.removeEventListener('mouseup', this.UP)
+        this.dragEnd()
+      }
+    }
+
+    let d = new Drag('#box', {
+      dragStart() {
+        console.log('开始拖拽')
+      },
+      dragging() {
+        console.log('拖拽中')
+      },
+      dragEnd() {
+        console.log('结束拖拽')
+      }
+    })
+  </script>
+</body>
+</html>

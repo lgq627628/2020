@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+    html, body, #app {
+      width: 100%;
+      height: 100%;
+    }
+    #app {
+      position: relative;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    class Ball {
+      constructor(opts) {
+        this._init(opts) // 初始化必要的属性
+      }
+      _init(opts) { // 因为其他语言可能把 init 当作内置的
+        this.parentEle = document.getElementById(opts.parentId)
+        this.top = opts.top || 0
+        this.left = opts.left || 0
+        this.r = 70
+        this.bgColor = opts.bgColor || 'red'
+        this.diffX = Math.random() * 10 - 5
+        this.diffY = Math.random() * 10 - 5
+        this.diffR = Math.random() * 2 + 1
+      }
+      render() {
+        let ball = document.createElement('div')
+        ball.style.position = 'absolute'
+        ball.style.top = this.top + 'px'
+        ball.style.left = this.left + 'px'
+        ball.style.width = this.r + 'px'
+        ball.style.height = this.r + 'px'
+        ball.style.borderRadius = '50%'
+        ball.style.backgroundColor = this.bgColor
+        this.parentEle.appendChild(ball)
+      }
+      update() {
+          this.top += this.diffY
+          this.left += this.diffX
+          this.r -= this.diffR
+          if (this.r <= 0) this.r = 0
+      }
+
+    }
+  </script>
+  <script>
+    let ballArr = []
+    app.addEventListener('mousemove', e => {
+      let ball = new Ball({parentId: 'app', top: e.clientY, left: e.clientX, bgColor: `#${Math.random().toString(16).slice(2, 8)}`})
+      ballArr.push(ball)
+    })
+    setInterval(() => {
+      [...app.children].forEach(ball => {
+        ball.remove()
+      })
+      for(let i = ballArr.length - 1; i >=0; i--) {
+        let ball = ballArr[i]
+        ball.render()
+        ball.update()
+        if (ball.r <= 0) ballArr.splice(i, 1)
+      }
+    }, 30)
+  </script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!--
+ * 图片懒加载
+ * 我们可以把 img 放到一个 div 中，
+ * 一开始把图片的 src 设置为空，并把真正的图片地址放到自定义属性 data-src 中，并给 div 设置一个默认背景图片占位
+ * 当页面结构和数据加载完，或设置一定间隔，或者到可视区域才加载图片
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    .box {
+      margin: 1000px auto;
+      width: 200px;
+      height: 100px;
+      /* 这里就是默认图 */
+      background: #ccc;
+    }
+    img {
+      width: 100%;
+      height: 100%;
+    }
+    /* 避免出现打叉的符号 */
+    /* .box img {
+      display: none;
+      width: 100%;
+      height: 100%;
+    } */
+  </style>
+</head>
+<body>
+  <div class="box">
+    <img src="" data-src="https://dss0.bdstatic.com/5aV1bjqh_Q23odCf/static/superman/img/logo/bd_logo1-2885cdb57f.png" alt="">
+  </div>
+
+  <script>
+    let imgs = document.getElementsByTagName('img')
+    let loadImgNum = 0
+
+    function lazyload() {
+      let winH = document.documentElement.clientHeight;
+      let scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+      for (let i = loadImgNum; i < imgs.length; i++) {
+        let img = imgs[i]
+        console.log('111', imgs.length, img.getBoundingClientRect().top)
+        if (img.offsetTop < scrollTop + winH) {
+          img.src = img.getAttribute("data-src");
+          loadImgNum = i + 1
+        }
+      }
+    }
+    lazyload()
+    window.addEventListener('scroll', lazyload)
+  </script>
+  <!-- <script>
+    // 这个是简单展示版本
+    // window.onload = function() {
+    // }
+    // setTimeout(() => {
+    //   img.src = img.getAttribute('data-src')
+    //   img.style.display = 'block';
+    // }, 1000);
+
+    let img = document.querySelector('.box img')
+    setTimeout(() => {
+      // 先验证一波
+      let src = img.getAttribute('data-src')
+      let temp = new Image()
+      temp.onload = function() {
+        img.src = src
+        img.style.display = 'block';
+        temp = null
+      }
+      temp.src = src // 在部分 ie 下必须放在 onload 下面
+    }, 1000);
+  </!-->
+</body>
+</html>

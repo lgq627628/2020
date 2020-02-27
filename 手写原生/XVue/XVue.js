@@ -142,11 +142,12 @@ class Dep {
   }
 }
 let watcherId = 0
+let batcher
 // 还记得 vue 中有个 this.$watch(vm, a, function(){}) 吗？
 // 以及 watch() {} 也是下面这个来实现的
 class Watcher {
   constructor(vm, expr, cb) {
-    this.id = watcherId++
+    this.id = watcherId++ // 加这个 id 可以在批量异步处理的时候去重，不对 wathcer 进行频繁更新
     this.vm = vm
     this.expr = expr
     this.cb = cb
@@ -154,10 +155,15 @@ class Watcher {
     Dep.target = this // 把当前 watcher 实例指向 Dep.target
     this.getValue(this.vm, this.expr)
     Dep.target = null
-    console.log(this, '=====')
   }
   update() {
+    if (!batcher) {
+      batcher = new Batcher()
+    }
     // vue 中不会立即更新 dom，而是加入到队列中，也就是异步的批量更新，提高性能
+    batcher.push(this)
+  }
+  run() { // 真正更新
     this.cb(this.getValue(this.vm, this.expr)) // call 可加可不加，虽然没有用到 this
   }
   addDep(dep) { // 将 watcher 与 dep 关联起来

@@ -11,7 +11,7 @@
 <body>
   <div id="app">
     <div class="box">XVue demo</div>
-    这是数组哦{{ arr2 }}
+    这是数组哦{{ arr2 }}{{ num }}
     <div class="box">
       <p>这是插值</p>
       <p>{{ person.name }}--{{person.age}}--{{msg}}--{{}}</p>
@@ -51,6 +51,7 @@
       <p>{{fullInfo}}</p>
     </div>
   </div>
+  <script src="./Batcher.js"></script>
   <script src="./Compile.js"></script>
   <script src="./XVue.js"></script>
   <script>
@@ -67,7 +68,8 @@
         prop1: 'hh',
         prop2: 'xx',
         arr: [{id: 1}, {id: 2}],
-        arr2: [1, 2]
+        arr2: [1, 2],
+        num: 0
       },
       computed: {
         fullInfo() {
@@ -79,6 +81,9 @@
       },
       created() {
         this.setAge()
+        for(let i = 0; i < 100; i++) {
+          this.num = i
+        }
       },
       methods: {
         setAge() {

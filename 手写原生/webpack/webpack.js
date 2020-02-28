@@ -23,7 +23,7 @@ const moduleAnalyser = (filename) => { // 单个文件分析方法，后面可�
     }
   })
   const {code} = babel.transformFromAst(ast, null, { // 把 ast 转成浏览器可运行的代码
-    presets: ['@babel/preset-env'] // 把 es6 转成 es5
+    presets: ['@babel/preset-env'] // 把 es6 转成 es5，presets 是插件集合的意思，plugins 是单个插件，好比套餐和单点的关系
   })
 
   return {
@@ -61,7 +61,7 @@ const generateCode = (entry) => { // 把依赖串联起来并生成最终的 cod
 
       function require(module) {
 
-        function localRequire(relativePath) { // 除了第一次，之后都需要把相对转换成绝对路径
+        function localRequire(relativePath) { // 除了第一次，之后都需要把相对转换成绝对路径，如果你在前面 traverse 遍历的时候直接把路径给改了，就不用这一步了，就直接递归 require 就行
           return require(graph[module].dependencies[relativePath])
         }
         let exports = {}; // 单纯的是个对象，用来存取导入导出的东西
@@ -79,4 +79,4 @@ const generateCode = (entry) => { // 把依赖串联起来并生成最终的 cod
 }
 
 let code = generateCode('./src/index.js')
-console.log(code)
+fs.writeFileSync('./dist/main.js', code)

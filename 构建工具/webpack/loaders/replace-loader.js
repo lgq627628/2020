@@ -18,4 +18,7 @@ module.exports = function (source) { // source 就是匹配到的文件字符串
   //   let result =  source.replace('666', options.msg)
   //   cb(null, result)
   // }, 1000)
+
+  // 应用：异常捕获或者语言替换
+  // function() {} => try { function() {} } catch (e) {}
 }

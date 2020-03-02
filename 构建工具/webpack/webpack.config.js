@@ -2,6 +2,7 @@ const path = require('path')
 const CopyrightPlugin = require('./pulgins/copyright-plugin.js')
 const DonePlugin = require('./pulgins/done-plugin.js')
 const AsyncPlugin = require('./pulgins/async-plugin.js')
+const OutputMapPlugin = require('./pulgins/output-map-plugin')
 module.exports = {
   mode: 'development',
   resolveLoader: {
@@ -76,6 +77,9 @@ module.exports = {
   plugins: [
     new CopyrightPlugin({name: '尤水就下'}),
     new DonePlugin(),
-    new AsyncPlugin()
+    new AsyncPlugin(),
+    new OutputMapPlugin({
+      filename: 'outputMap.md'
+    })
   ]
 }

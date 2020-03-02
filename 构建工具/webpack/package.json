@@ -16,6 +16,7 @@
     "@babel/preset-env": "^7.8.6",
     "less": "^3.11.1",
     "loader-utils": "^1.4.0",
+    "mime": "^2.4.4",
     "sass": "^1.26.2",
     "schema-utils": "^2.6.4",
     "webpack": "^4.41.6",

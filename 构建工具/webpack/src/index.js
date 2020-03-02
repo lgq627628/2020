@@ -14,6 +14,8 @@ document.getElementById('app').appendChild(div)
 
 let img = document.createElement('img')
 img.src = pic
+img.width = 150
+img.height = 200
 document.getElementById('app').appendChild(img)
 
-console.log('666')
+console.log('666', pic)

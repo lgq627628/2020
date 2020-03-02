@@ -53,6 +53,10 @@ module.exports = {
       {
         test: /\.less$/,
         use: ['style-loader', 'less-loader']
+      },
+      {
+        test: /\.jpeg$/,
+        use: ['file-loader'] // 目的就是根据图片生成一个 md5 发射到输出目录下，并且该 loader 还会返回当前的图片路径
       }
     ]
   },

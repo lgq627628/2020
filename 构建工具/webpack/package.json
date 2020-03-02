@@ -12,7 +12,11 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@babel/core": "^7.8.6",
+    "@babel/preset-env": "^7.8.6",
+    "less": "^3.11.1",
     "loader-utils": "^1.4.0",
+    "sass": "^1.26.2",
     "webpack": "^4.41.6",
     "webpack-cli": "^3.3.11"
   }

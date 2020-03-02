@@ -48,11 +48,11 @@ module.exports = {
       },
       {
         test: /\.css$/,
-        use: ['style-loader']
+        use: ['style-loader', 'css-loader']
       },
       {
         test: /\.less$/,
-        use: ['style-loader', 'less-loader']
+        use: ['style-loader', 'css-loader', 'less-loader']
       },
       // {
       //   test: /\.jpeg$/,

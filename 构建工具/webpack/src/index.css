@@ -3,3 +3,9 @@
   height: 100px;
   background: red;
 }
+.wrap {
+  width: 100px;
+  height: 100px;
+  border: 2px solid green;
+  background: url('./avatar.jpeg');
+}

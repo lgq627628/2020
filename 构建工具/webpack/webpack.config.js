@@ -31,6 +31,13 @@ module.exports = {
             }
           },
           {
+            loader: 'banner-loader',
+            options: {
+              text: '尤水就下',
+              filename: path.resolve(__dirname, 'banner.js')
+            }
+          },
+          {
             // loader: path.resolve(__dirname, './loaders/replace-loader.js'),
             loader: 'replace-loader',
             options: { // 这里可以传自定义的参数

@@ -17,6 +17,7 @@
     "less": "^3.11.1",
     "loader-utils": "^1.4.0",
     "sass": "^1.26.2",
+    "schema-utils": "^2.6.4",
     "webpack": "^4.41.6",
     "webpack-cli": "^3.3.11"
   }

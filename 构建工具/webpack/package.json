@@ -21,5 +21,8 @@
     "schema-utils": "^2.6.4",
     "webpack": "^4.41.6",
     "webpack-cli": "^3.3.11"
+  },
+  "dependencies": {
+    "cos-nodejs-sdk-v5": "^2.5.17"
   }
 }

@@ -3,6 +3,7 @@ const CopyrightPlugin = require('./pulgins/copyright-plugin.js')
 const DonePlugin = require('./pulgins/done-plugin.js')
 const AsyncPlugin = require('./pulgins/async-plugin.js')
 const OutputMapPlugin = require('./pulgins/output-map-plugin')
+const UploadPlugin = require('./pulgins/upload-plugin')
 module.exports = {
   mode: 'development',
   resolveLoader: {
@@ -80,6 +81,12 @@ module.exports = {
     new AsyncPlugin(),
     new OutputMapPlugin({
       filename: 'outputMap.md'
+    }),
+    new UploadPlugin({ // 去腾讯云上拿对应的值即可
+      bucket: 'xxx',
+      domain: 'https://xxx.com',
+      secretId: 'xxx',
+      secretKey: 'xxx'
     })
   ]
 }

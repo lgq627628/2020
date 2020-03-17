@@ -10,3 +10,14 @@ async function read() {
 read().then(res => {
   console.log(res)
 })
+
+async function request() {
+  try {
+    let a = await doSth1()
+    let b = await doSth2(a)
+    let c = await doSth3(b)
+    console.log(c)
+  } catch (err) {
+    console.log(err)
+  }
+}

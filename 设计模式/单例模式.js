@@ -89,3 +89,83 @@ function createSingle(fn) {
     return instance || (instance = fn.apply(this, arguments))
   }
 }
+
+
+let Alert = (function() {
+  let instance
+  function Alert(text) {
+    if (!instance) instance = this instanceof Alert ? this : new Alert(text) // 这是用来判断是否有用 new 关键字，没有 new 的话 this 一般是 window
+    instance.init(text)
+    return instance
+  }
+  Alert.prototype.init = function(text) {
+    this.text = text
+  }
+  return Alert
+})()
+
+let a = Alert('xx')
+let b = new Alert('hh')
+console.log(a===b, a)
+
+
+
+
+// 真正的弹窗例子
+let Alert = (function() {
+  let instance
+  let div
+  function createDiv() {
+    if (!div) {
+      div = document.createElement('div')
+      div.style.display = 'none'
+      document.body.append(div)
+    }
+  }
+  function Alert(text) {
+    if (!instance) instance = this instanceof Alert ? this : new Alert(text) // 这是用来判断是否有用 new 关键字，没有 new 的话 this 一般是 window
+    instance.init(text)
+    return instance
+  }
+  Alert.prototype.init = function(text) {
+    createDiv() // 惰性单体，就是延迟执行
+    div.innerHTML = text
+    div.style.display = 'block'
+  }
+  Alert.prototype.hide = function() {
+    div.style.display = 'none'
+  }
+  return Alert
+})()
+
+// 真正的弹窗例子进阶改版
+function createDiv() {
+  let div = document.createElement('div')
+  div.style.display = 'none'
+  document.body.append(div)
+  return div
+}
+let Single = (function() {
+  let instance
+  return function(fn) {
+    return instance || (instance = fn.apply(this, arguments))
+  }
+})()
+let Alert = (function() {
+  let instance
+  let div
+  function Alert(text) {
+    if (!instance) instance = this instanceof Alert ? this : new Alert(text) // 这是用来判断是否有用 new 关键字，没有 new 的话 this 一般是 window
+    instance.init(text)
+    return instance
+  }
+  Alert.prototype.init = function(text) {
+    div = Single(createDiv) // 动态惰性单体
+    div.innerHTML = text
+    div.style.display = 'block'
+  }
+  Alert.prototype.hide = function() {
+    div.style.display = 'none'
+  }
+  return Alert
+})()

@@ -7,5 +7,23 @@ function copy(obj) {
   return newObj
 }
 
-// 方法二：Object.assign()
-Object.assign(newObj, obj)
+// 方法二：投机取巧的浅拷贝
+Object.assign({}, obj)
+[].concat(arr)
+arr.slice(0)
+[...obj]
+
+// 完整点
+function copy2(value) {
+  if (typeof value === 'object' && value !== null) {
+    let result = Array.isArray(value) ? [] : {}
+    for (const key in value) {
+      if (value.hasOwnProperty(key)) {
+        result[key] = object[key];
+      }
+    }
+    return result
+  } else {
+    return value
+  }
+}

@@ -1,16 +1,31 @@
 // 深拷贝要注意循环引用导致的死循环的问题
 
-function deepCopy(origin) {
-  let obj = new origin.constructor() // 因为这里需要判断是对象还是数组还是函数，否则 constructor 都是对象
-  for(let key in origin) {
-    let value = origin[key]
-    if (value instanceof Object) {
-      obj[key] = deepCopy(value)
-    } else {
-      obj[key] = value
+
+function deepCopy(obj) {
+  if (typeof obj !== 'object' || obj === null) return obj
+  if (obj instanceof RegExp || obj instanceof Date) {
+    return new obj.constructor(obj)
+  }
+  let newObj = new obj.constructor
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      newObj[key] = deepCopy(obj[key])
     }
   }
-  return obj
+  return newObj
+}
+
+function deepCopy1(obj) {
+  let newObj = new obj.constructor() // 因为这里需要判断是对象还是数组还是函数，否则 constructor 都是对象
+  for(let key in obj) {
+    let value = obj[key]
+    if (value instanceof Object) {
+      newObj[key] = deepCopy(value)
+    } else {
+      newObj[key] = value
+    }
+  }
+  return newObj
 }
 
 
@@ -20,9 +35,8 @@ function deepCopy2(value) {
   if (typeof value === 'object' && value !== null) {
     let result = Array.isArray(value) ? [] : {}
     for (const key in value) {
-      if (value.hasOwnProperty(key)) {
-        result[key] = deepCopy2(object[key]);
-      }
+      if (!value.hasOwnProperty(key)) break // 能走到这里肯定是到原型上了
+      result[key] = deepCopy2(object[key]);
     }
     return result
   } else {
@@ -37,9 +51,8 @@ function deepCopy3(value, map = new Map) {
     let result = Array.isArray(value) ? [] : {}
     map.set(value, result) // 这个得写在循环前面
     for (const key in value) {
-      if (value.hasOwnProperty(key)) {
-        result[key] = deepCopy3(object[key], map);
-      }
+      if (!value.hasOwnProperty(key)) break
+      result[key] = deepCopy3(object[key], map);
     }
     return result
   } else {

@@ -2,6 +2,7 @@
  * 手写 bind 方法
  * 看这个方法之前可以去看当前目录下的 call 方法
  * bind 和 call 类似，但是不执行函数，只是改变 this 指向，并返回一个新函数
+ * 通过 bind 方法绑定之后 this 便是永久性的，再用 call、bind 改变是无效的
  */
 
 // 简单版本
@@ -42,3 +43,7 @@ let b = {
 let fn1 = a.myBind(b)
 let fn2 = a.myBind(b, 1)
 console.log(fn1(1, 2), fn2())
+
+
+
+

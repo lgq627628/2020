@@ -116,6 +116,7 @@ const mapState = list => { // 因为最后要在 computed 中调用
   list.forEach(stateName => {
     obj[stateName] = () => this.$store.state[stateName]
   })
+  return obj
 }
 
 const mapGetters = list => { // 因为最后要在 computed 中调用

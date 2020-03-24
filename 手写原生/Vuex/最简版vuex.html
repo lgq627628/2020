@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vuex</title>
+  <script src="https://cdn.bootcss.com/vue/2.6.11/vue.js"></script>
+</head>
+<body>
+  <div id="component1">{{data}}</div>
+  <div id="component2">
+    <button @click="change">change</button>
+  </div>
+
+  <script>
+    const Vuex = {}
+    Vuex.install = function (Vue) {
+      console.log('install 方法开始执行')
+      const store = {}
+      store.state = new Vue({
+        data () {
+          return {
+            msg: '哈哈'
+          }
+        }
+      })
+      store.mutations = {
+        SETMSG(value) {
+          store.state.msg = value
+        }
+      }
+      store.commit = function(mutationName, value) {
+        store.mutations[mutationName] && store.mutations[mutationName](value)
+      }
+      // Vue.prototype.$store = store
+      Vue.mixin({
+        beforeCreate () {
+          this.$store = store
+        }
+      })
+    }
+    Vue.use(Vuex)
+    let v1 = new Vue({
+      el: '#component1',
+      computed: {
+        data() {
+          return this.$store.state.msg
+        }
+      }
+    })
+    let v2 = new Vue({
+      el: '#component2',
+      methods: {
+        change() {
+          // this.$store.mutations.SETMSG('这是 mutations 触发的值')
+          this.$store.commit('SETMSG', '这是 mutations 触发的值')
+        }
+      }
+    })
+    console.log(v1, v2)
+  </script>
+</body>
+</html>

@@ -53,7 +53,8 @@ class Store {
     Object.keys(actions).forEach(actionName => {
       this.actions[actionName] = value => {
         // actions[actionName](this, value)
-        actions[actionName].call(this, this, value)
+        let res = actions[actionName].call(this, this, value)
+        return Promise.resolve(res)
       }
     })
 

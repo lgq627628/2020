@@ -1,4 +1,5 @@
 // 特点：稀释操作，一定时间内只执行一次，需要有一个标志位看能否执行
+// 比如：搜索框的即时查询
 
 function throttle(fn, delay) {
   let canRun = true
@@ -9,6 +10,18 @@ function throttle(fn, delay) {
     setTimeout(() => {
       canRun = true
     }, delay)
+  }
+}
+
+// 下面是利用时间戳的方式
+function throttle2(fn, delay) {
+  let prev = 0
+  return function() {
+    let now = Date.now()
+    if (now - prev > delay) {
+      fn.apply(this)
+      prev = now
+    }
   }
 }
 

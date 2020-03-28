@@ -1,10 +1,11 @@
 // 防止多次执行，最终在一定的时间间隔内只执行一次，比如拖拽窗口
 // 特点：无限延迟，就像照相，什么时候手不抖了就执行
+// 比如：下拉触底加载下一页
 
 function debounce(fn, wait=300, immediate=false) {
   let timer, result
   let d =  function(...args) {
-    timer && clearTimeout(timer)
+    timer && clearTimeout(timer) // 这个只会清掉定时器，但是 timer 还是有值的
     if (immediate) { // 是否要立即执行
       let callNow = !timer
       timer = setTimeout(() => {

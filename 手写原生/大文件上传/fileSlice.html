@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>大文件切片上传</title>
+</head>
+<body>
+
+  <input type="file" id="input">
+
+  <script>
+    input.addEventListener('change', async e => {
+      const file = e.target.files[0] // es6 才有 files 这个对象
+      let fileName = file.name.split('.')[0]
+      // Object.prototype.toString.call(file) [object File]
+      // Object.prototype.toString.call(file.slice(0, 102400)) [object Blob]
+      // File 由多个 Blob 组成
+      let start = 0
+      let size = 1024 * 1024 // 1M
+      let fileChunkList = []
+      while(start < file.size) {
+        fileChunkList.push({
+          file: file.slice(start, start + size)
+        })
+        start += size
+      }
+      console.log(fileName, fileChunkList)
+      const requestList = fileChunkList.map((chunk, i) => {
+        const formData = new FormData()
+        formData.append('file', chunk.file)
+        formData.append('filename', `${fileName}-${i}`)
+        return formData
+      }).map(async formData => {
+        return request({
+          url: 'http://localhost:3000/upload',
+          data: formData
+        })
+      })
+      await Promise.all(requestList)
+
+
+      const mergeRequest = async () => {
+        await request({
+          url: 'http://localhost:3000/merge',
+          headers: {'content-type': 'application/json'}
+        })
+        alert('上传成功')
+      }
+      mergeRequest()
+
+      function request({url, method='POST', data, headers={}, requestList}) {
+        return new Promise(resolve => {
+          let xhr = new XMLHttpRequest() // ajax 对象
+          xhr.open(method, url) // 打开请求
+          Object.keys(headers).forEach(key => {
+            xhr.setRequestHeader(key, headers[key]) // 加上请求头
+          })
+          xhr.send(data) // get 的时候放空
+          xhr.onload = e => {
+            resolve({data: e.target.response})
+          }
+        })
+      }
+    })
+  </script>
+
+</body>
+</html>

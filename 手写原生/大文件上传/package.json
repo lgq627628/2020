@@ -1,0 +1,19 @@
+{
+  "name": "bigdata",
+  "version": "1.0.0",
+  "description": "- js 在 es6 之后多了 file 的 api，以及 node 的 file 和 stream，文件处理能力增强 - 任何文件都是二进制，可分割成 blob（start，end） - 到时候并发请求 n 个切片，就是发送 n 个请求，因为 http 就有并发性，速度就会更快 - 切片方法就是利用 file.slice(0, 102400) 这个 api，返回的是一个 blob 二进制文件对象，这个 blob 协议可以提前预览，传统的 es5 只能上传到服务器等它返回一个远程地址，我们才能本地预览，因为到 es6 才提供了操纵文件的能力",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {
+    "express": "^4.17.1",
+    "fs-extra": "^9.0.0",
+    "koa": "^2.11.0",
+    "koa-body": "^4.1.1",
+    "koa-router": "^8.0.8"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

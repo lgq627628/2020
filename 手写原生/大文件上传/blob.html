@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>blob 协议</title>
+</head>
+<body>
+
+  <input type="file" id="input">
+  <br>
+  <img id="img" src="" alt="" width="300">
+  <script>
+    input.addEventListener('change', e => {
+      const file = e.target.files[0]
+      const localUrl = URL.createObjectURL(file) // 这个是个 blob 协议，直接可以本地访问
+      console.log(localUrl)
+      img.src = localUrl
+      img.onload = function() {
+        URL.revokeObjectURL(localUrl) // blob 还是很占资源的，需要释放
+      }
+    })
+  </script>
+
+</body>
+</html>

@@ -1,4 +1,5 @@
 // 用 define 声明一个模块，require 来使用
+// 《你不知道的js上卷》第54页有说明
 
 let moduleCbMap = {} // 其实就是把 define 中定义的模块当作回调函数存储起来
 function define(moduleName, deps, cb) {

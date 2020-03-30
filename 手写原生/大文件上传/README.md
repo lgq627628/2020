@@ -11,3 +11,17 @@
 - 以源文件作为文件夹的名字，把切片（以文件名+index命名）都放在这个目录下
 - 排序并循环创建可写、读流使之流向可写流
 - 删除中转文件和目录
+
+## 如何避免文件丢失、超时
+- 怎样知道丢失呢？就是根据内容算出 hash 值，前端算一个，传到后端，后端也算一个，如果两个 hash 不同就要重传
+```js
+async function calcHash(fileList) {
+  return new Promise(resolve => {
+    const worker = new Worker('/hash.js)
+    worker.postMessage({fileList})
+    worker.onMessage(e => {
+      console.log(e.data)
+    })
+  })
+}
+```

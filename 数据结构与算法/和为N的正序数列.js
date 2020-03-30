@@ -2,10 +2,6 @@
 // 比如输入 15
 // 结果为 [[1,2,3,4,5], [4,5,6], [7,8]]
 
-
-
-
-
 function hh(num) {
   let mid = Math.ceil(num / 2)
   let arr = []

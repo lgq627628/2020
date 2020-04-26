@@ -15,3 +15,20 @@ window.onscroll = () => {
 window.scrollTo(0, 0)
 document.body.scrollTop = 0;
 document.documentElement.scrollTop = 0;
+
+// 匀速滚动到顶部
+let y = document.documentElement.scrollTop
+let timer = setInterval(() => {
+  y -= 10
+  document.documentElement.scrollTop = y
+  if (y <= 0) clearInterval(timer)
+}, 10);
+
+
+// 缓动滚动到顶部
+let y = document.documentElement.scrollTop
+let timer = setInterval(() => {
+  y -= (document.documentElement.scrollTop / 10)
+  document.documentElement.scrollTop = y
+  if (y <= 0) clearInterval(timer)
+}, 10);

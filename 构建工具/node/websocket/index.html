@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>live server</title>
+</head>
+<body>
+  哈哈哈哈
+</body>
+
+<!-- <script>
+  var ws = new WebSocket("ws://localhost:8080");
+  // 显式指定收到的二进制数据类型
+  // ws.binaryType = "blob";
+  // ws.binaryType = "arraybuffer";
+  ws.onopen = function(evt) {
+    console.log("Connection open ...");
+
+    // 向服务器发送数据
+    ws.send("Hello WebSockets!");
+
+
+    // 向服务器发送 Blob 数据
+    // var file = document.querySelector('input[type="file"]').files[0];
+    // ws.send(file);
+
+    // bufferedAmount 可以用来判断发送是否结束
+    // var data = new ArrayBuffer(10000000);
+    // socket.send(data);
+    // if (socket.bufferedAmount === 0) {
+    //   // 发送完毕
+    // } else {
+    //   // 发送还没结束
+    // }
+  };
+  // 如果要指定多个回调函数，可以使用addEventListener方法
+  // ws.addEventListener('open', function (event) {
+  //   ws.send('Hello Server!');
+  // });
+
+  ws.onmessage = function(evt) {
+    console.log( "Received Message: " + evt.data);
+    ws.close();
+    // if(typeof event.data === String) {
+    //   console.log("Received data string");
+    // }
+
+    // if(event.data instanceof ArrayBuffer){
+    //   var buffer = event.data;
+    //   console.log("Received arraybuffer");
+    // }
+  };
+
+  ws.onclose = function(evt) {
+    console.log("Connection closed.");
+  };
+</script> -->
+
+<script>
+  function createWS(url) {
+    let ws = new WebSocket(url)
+
+    ws.onopen = () => {
+
+    }
+    ws.onmessage = () => {
+
+    }
+    ws.onclose = () => {
+
+    }
+
+    return ws
+  }
+</script>
+</html>

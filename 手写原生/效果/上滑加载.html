@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上滑加载，下滑刷新</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        header {
+            position: absolute;
+            height: 40px;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: burlywood;
+        }
+        footer {
+            position: absolute;
+            height: 40px;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: burlywood;
+        }
+        ul {
+            display: block;
+            position: absolute;
+            top: 40px;
+            bottom: 40px;
+            width: 100%;
+            overflow: auto;
+            list-style: none;
+        }
+        ul li {
+            width: 100%;
+            height: 40px;
+            line-height: 40px;
+            border-bottom: 1px solid #000;
+            background: #fff;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        我是头部
+    </header>
+    <section>
+        <ul id="list"></ul>
+    </section>
+    <footer>
+        我是尾部
+    </footer>
+
+    <script>
+        let list = document.getElementById('list')
+        let nowPage = 0
+        let isEnd = false
+        window.onload = () => {
+            // 这边后期可以用 translate 来做，性能好
+            getData()
+            let ulH = list.getBoundingClientRect().height // ul 的固定视口高度
+            list.addEventListener('scroll', e => {
+                let allLiH = list.childNodes.length * 41 // ul 里面的内容高度
+                let diffH = allLiH - ulH // 滚动到底部需要滚动多少
+                let scrollTop = e.target.scrollTop
+                if (scrollTop + 50 >= diffH) {
+                    console.log('快滚动到底啦，准备加载')
+                    getData()
+                }
+                if (scrollTop === 0) {
+                    console.log('到顶啦，该刷新啦')
+                }
+            })
+        }
+
+        function getData() {
+            if (isEnd) return
+            let html = ''
+            let len = list.childNodes.length
+            if (nowPage > 5) {
+                isEnd = true
+                html = '<li>已经到底啦</li>'
+                let dom = parseDom(html)
+                insertAfter(dom, list.children[len - 1])
+                return
+            }
+            nowPage++
+            for(let i=0; i<20; i++) {
+                html += `<li>${(i + 1) + (nowPage - 1) * 20}</li>`
+            }
+            if (len) {
+                let dom = parseDom(html)
+                insertAfter(dom, list.children[len - 1])
+            } else {
+                list.innerHTML = html
+            }
+        }
+
+        function parseDom(str) { // 字符串 dom 化
+            let div = document.createElement('div')
+            div.innerHTML = str
+            return div.childNodes
+        }
+
+        function insertAfter(newEle, targetEle) { // 在已有元素的后面插入新元素
+            let temp = targetEle;
+            [...newEle].forEach(ele => {
+                temp.after(ele)
+                temp = ele
+            })
+        }
+
+    </script>
+</body>
+</html>

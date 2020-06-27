@@ -1,0 +1,15 @@
+{
+  "name": "fanyi",
+  "bin": {
+    "f": "cli.js"
+  },
+  "files": [
+    "*.js"
+  ],
+  "version": "0.0.1",
+  "main": "main.js",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^5.1.0"
+  }
+}

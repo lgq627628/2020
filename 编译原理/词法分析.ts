@@ -155,24 +155,32 @@ class Token {
   appendText(ch: string) {
     this.text += ch
   }
+  getType() {
+    return this.type
+  }
 }
 
 // enum TokenType { // 最终的 token 状态
 //   None,
+//   // 关键字
 //   Let,
 //   Const,
 //   Identifier, // 变量名标识符
 //   Number,
+//   // 操作符
 //   RelOp, // 比较操作符
 //   GT,
 //   Equal,
 //   Plus,
 //   Minus,
 //   Multi,
-//   Divide
+//   Divide,
+//   EOL, // end of line 表示换行符
+//   EOF // end of file 表示程序结束
 // }
-enum TokenType { // 最终的 token 状态
+export enum TokenType { // 最终的 token 状态
   None,
+  // 关键字
   Let = '变量声明',
   Const = '常量声明',
   Identifier = '变量名', // 变量名标识符
@@ -187,7 +195,7 @@ enum TokenType { // 最终的 token 状态
   Divide = '除'
 }
 
-enum DfaState { // 自动机的状态
+export enum DfaState { // 自动机的状态
   Initial,
   Let,
   Let1,
@@ -204,9 +212,9 @@ enum DfaState { // 自动机的状态
   Divide
 }
 
-let rs = lexicalAnalyser('let a = 10')
-let rs1 = lexicalAnalyser('a >= 10')
-let rs2 = lexicalAnalyser('2 + 3 * 5')
-console.log(rs)
-console.log(rs1)
-console.log(rs2)
+// let rs = lexicalAnalyser('let a = 10')
+// let rs1 = lexicalAnalyser('leta >= 10')
+// let rs2 = lexicalAnalyser('2 + 3 * 5')
+// console.log(rs)
+// console.log(rs1)
+// console.log(rs2)

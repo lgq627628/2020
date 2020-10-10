@@ -1,0 +1,10 @@
+const fs = require('fs')
+const http = require('http')
+const server = http.createServer()
+server.on('request', (req, res) => {
+    const stream = fs.createReadStream('./xx.txt')
+    stream.pipe(res)
+    stream.on('end', () => console.log('读取完成'))
+})
+server.listen(9999)
+console.log('监听本地 9999 端口中')

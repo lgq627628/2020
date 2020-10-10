@@ -32,3 +32,13 @@ let timer = setInterval(() => {
   document.documentElement.scrollTop = y
   if (y <= 0) clearInterval(timer)
 }, 10);
+
+
+// 滚动到顶部
+const scrollToTop = _ => {
+  const c = document.documentElement.scrollTop || document.body.scrollTop; //获取到顶端的距离
+  if (c > 0) {
+    window.requestAnimationFrame(scrollToTop);//滚动动画效果
+    window.scrollTo(0, c - c / 8);
+  }
+};

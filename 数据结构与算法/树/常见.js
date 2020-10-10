@@ -1,15 +1,35 @@
-function TreeNode(val) {
-  this.val = val;
-  this.left = this.right = null;
+// 翻转二叉树
+function invertTree(root) {
+  if (!root) return;
+  let { left, right } = root;
+  root.left = right;
+  root.right = left;
+  invertTree(root.left);
+  invertTree(root.right);
+  // let right = invertTree(root.right);
+  // let left = invertTree(root.left);
+  // root.left = right;
+  // root.right = left;
+  return root;
 }
-
-
-function preOrder(node) {
-  if (!node) return
-
-  preOrder(node.left)
-  preOrder(node.right)
-}
+const root = {
+  val: "A",
+  left: {
+    val: "B",
+    left: {
+      val: "D"
+    },
+    right: {
+      val: "E"
+    }
+  },
+  right: {
+    val: "C",
+    right: {
+      val: "F"
+    }
+  }
+};
 
 
 function tree2Arr(node) { // 中序遍历

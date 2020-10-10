@@ -186,3 +186,29 @@ console.log(maxVaildLen('(()()'))
 console.log(maxVaildLen(')()())'))
 console.log(maxVaildLen('(()))())('))
 console.log(maxVaildLen(')(((((()())()()))()(()))('))
+
+
+
+// xx、最小栈问题
+function MinStack() {
+  this.stack = [];
+  this.stack2 = [];
+}
+MinStack.prototype.push(val) {
+  this.stack.push(val);
+  if (val <= this.stack2[this.stack2.length - 1] || this.stack2.length < 1) this.stack2.push(val);
+}
+MinStack.prototype.pop() {
+  let val = this.stack.pop();
+  if (val === this.stack2[this.stack2.length - 1]) this.stack2.pop();
+}
+MinStack.prototype.top() {
+  return this.stack[this.stack.length - 1];
+}
+MinStack.prototype.getMin() {
+  return this.stack2[this.stack2.length - 1];
+}
+
+
+
+// 递减栈：155, 496, 901, 42, 84

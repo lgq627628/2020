@@ -44,3 +44,17 @@ console.log(newArr)
   }
   Array.prototype.myFlat = myFlat;
 })();
+
+
+// 下面是：扁平化数组(扁平所有)
+const deepFlatten = arr => arr.reduce((a, v) => a.concat(Array.isArray(v) ? deepFlatten(v) : v), []);
+// deepFlatten(['a',['b'],[['c'],'d']]) -> ['a','b','c','d']
+//如果所要展开的只有一层 可以直接使用 es6 的 Array.flat()，且只能展开一层
+['a',['b'],['c'],'d'].flat() -> ['a','b','c','d']'a',['b'],[['c'],'d']].flat() -> ["a", "b", ['c'], "d"]
+
+
+// 下面是：扁平化指定深度的数组
+const flattenDepth = (ary, depth = 1) =>
+depth != 1 ? ary.reduce((a, v) => a.concat(Array.isArray(v) ? flattenDepth(v, depth - 1) : v), [])
+: ary.flat();
+// flattenDepth(['a','b',['c'],[['d','e',['f'] ]]], 2) ->  ["a", "b", "c", "d", "e", ['f']]

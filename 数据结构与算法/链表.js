@@ -267,3 +267,39 @@ let link8 = {
 }
 let rs8 = isCircleLink(link8);
 console.log(JSON.stringify(rs8, null, 4));
+
+
+
+
+
+
+// xx、K个一组翻转链表
+// 题目描述：给你一个链表，每 k 个节点一组进行翻转，请你返回翻转后的链表。
+// k 是一个正整数，它的值小于或等于链表的长度。
+// 如果节点总数不是 k 的整数倍，那么请将最后剩余的节点保持原有顺序。
+function reverseKLink(l, k) {
+
+}
+let link9 = {
+  value: 1,
+  next: {
+    value: 2,
+    next: {
+      value: 3,
+      next: {
+        value: 4,
+        next: {
+          value: 5
+        }
+      }
+    }
+  }
+}
+let rs9 = reverseKLink(link9);
+console.log(JSON.stringify(rs9, null, 4));
+
+
+
+
+// xx、复制带随机指针的链表
+// 思路：先复制普通链表，同时建立新旧链表的映射关系；再循环一遍原始链表复制随机的值

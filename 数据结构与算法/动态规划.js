@@ -119,7 +119,7 @@ function longUpStr(arr) {
   let lens = new Array(arr.length).fill(1)
   for(let i = 1; i < arr.length; i++) {
     for(let j = 0; j < i; j++) { // 以每个元素为子序列末位元素，向前看
-      if(arr[i] > arr[j]) {) { // 若遇到了一个比当前元素小的值，则意味着遇到了一个可以延长的上升子序列，故更新当前元素索引位对应的状态
+      if(arr[i] > arr[j]) { // 若遇到了一个比当前元素小的值，则意味着遇到了一个可以延长的上升子序列，故更新当前元素索引位对应的状态
         lens[i] = Math.max(lens[i], lens[j] + 1)
       }
     }
@@ -138,5 +138,65 @@ console.log(rs3) // 4
 
 
 
+// “粉刷房子”的问题
+// 假如有一排房子，共 n 个，每个房子可以被粉刷成红色、蓝色或者绿色这三种颜色中的一种，你需要粉刷所有的房子并且使其相邻的两个房子颜色不能相同。
+// 当然，因为市场上不同颜色油漆的价格不同，所以房子粉刷成不同颜色的花费成本也是不同的。每个房子粉刷成不同颜色的花费是以一个 n x 3 的矩阵来表示的。
+// 例如，costs[0][0] 表示第 0 号房子粉刷成红色的成本花费；costs[1][2] 表示第 1 号房子粉刷成绿色的花费，以此类推。请你计算出粉刷完所有房子最少的花费成本。
+//      颜色 0 1 2
+// 房子
+//  0  第 0 间房的花费是已知的
+//  1
+//  2
+//  3
+function brushHouse(n, m, costs) {
+  if(!costs || !costs.length) return 0
+  const dp = []
 
-// 最长回文子串
+  // 初始化第一间房的数据
+  dp[0] = []
+  for(let j = 0; j < m; j++) dp[0][j] = costs[0][j]
+
+  for(let i = 1; i < n; i++) {
+    dp[i] = []
+    for(let j = 0; j < m; j++) {
+      let min = Infinity
+      for(let k = 0; k < m; k++) {
+        if (j === k) continue;
+        min = Math.min(min, dp[i - 1][k])
+        // f[i][x] = Math.min(f[i-1][x以外的索引1号], f[i-1][x以外的索引2号]) + costs[i][x]
+        // 其中f[i][x]对应的是当粉刷到第i个房子时，使用第x（x=0、1、2）号油漆对应的总花费成本的最小值
+      }
+      dp[i][j] = min + costs[i][j]
+    }
+  }
+  console.log(dp)
+  return Math.min(...dp[dp.length - 1])
+}
+function brushHouse2(n, m, costs) { // 这是优化版，利用滚动数组减少空间复杂度
+  if(!costs || !costs.length) return 0
+  const dp = []
+
+  // 初始化第一间房的数据
+  for(let j = 0; j < m; j++) dp[j] = costs[0][j]
+  console.log(dp)
+
+  for(let i = 1; i < n; i++) {
+    let pre = dp.slice(0) // 注意这里不能直接覆盖原有的单条数据
+    for(let j = 0; j < m; j++) {
+      let min = Infinity
+      for(let k = 0; k < m; k++) {
+        if (j === k) continue;
+        min = Math.min(min, pre[k])
+        // f[i][x] = Math.min(f[i-1][x以外的索引1号], f[i-1][x以外的索引2号]) + costs[i][x]
+        // 其中f[i][x]对应的是当粉刷到第i个房子时，使用第x（x=0、1、2）号油漆对应的总花费成本的最小值
+      }
+      dp[j] = min + costs[i][j]
+    }
+  }
+  console.log(dp)
+  return Math.min(...dp)
+}
+let rs4 = brushHouse(3, 3, [[17,2,17],[16,16,5],[14,3,19]])
+console.log(rs4) // 10
+rs4 = brushHouse2(3, 3, [[17,2,17],[16,16,5],[14,3,19]])
+console.log(rs4) // 10

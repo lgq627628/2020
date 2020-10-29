@@ -189,26 +189,77 @@ console.log(maxVaildLen(')(((((()())()()))()(()))('))
 
 
 
+
+
+// 递减栈的应用一：
 // xx、最小栈问题
 function MinStack() {
   this.stack = [];
   this.stack2 = [];
 }
-MinStack.prototype.push(val) {
+MinStack.prototype.push = val => {
   this.stack.push(val);
   if (val <= this.stack2[this.stack2.length - 1] || this.stack2.length < 1) this.stack2.push(val);
 }
-MinStack.prototype.pop() {
+MinStack.prototype.pop = () => {
   let val = this.stack.pop();
   if (val === this.stack2[this.stack2.length - 1]) this.stack2.pop();
 }
-MinStack.prototype.top() {
+MinStack.prototype.top = () => {
   return this.stack[this.stack.length - 1];
 }
-MinStack.prototype.getMin() {
+MinStack.prototype.getMin = () => {
   return this.stack2[this.stack2.length - 1];
 }
 
 
 
+// 递减栈的应用二：
+// 题目描述: 根据每日气温列表，请重新生成一个列表，对应位置的输出是需要再等待多久温度才会升高超过该日的天数。如果之后都不会升高，请在该位置用 0 来代替。
+// 例如，给定一个列表 temperatures = [73, 74, 75, 71, 69, 72, 76, 73]，你的输出应该是 [1, 1, 4, 2, 1, 1, 0, 0]。
+function dayTemperature(arr) {
+  let rs = new Array(arr.length).fill(0)
+  let stack = []
+  for(let i = 0; i < arr.length; i++) {
+    while(stack.length && arr[stack[stack.length - 1]] < arr[i]) {
+        let idx = stack.pop()
+        rs[idx] = i - idx
+    }
+    stack.push(i)
+  }
+  return rs
+}
+console.log(dayTemperature([73, 74, 75, 71, 69, 72, 76, 73])) // [1, 1, 4, 2, 1, 1, 0, 0]
+
 // 递减栈：155, 496, 901, 42, 84
+
+
+
+
+// xx、双栈模拟队列
+function Queue() {
+  this.stack1 = [] // 只进
+  this.stack2 = [] // 只出
+}
+Queue.prototype.push = val => {
+  this.stack1.push(val)
+}
+Queue.prototype.pop = () => {
+  if (!this.stack2.length) {
+    while(this.stack1.length) {
+      this.stack2.push(this.stack1.pop())
+    }
+  }
+  return this.stack2.pop()
+}
+Queue.prototype.peek = () => {
+  if (!this.stack2.length) {
+    while(this.stack1.length) {
+      this.stack2.push(this.stack1.pop())
+    }
+  }
+  return this.stack2.length ? this.stack2[this.stack2.length - 1] : null
+}
+Queue.prototype.empty = () => {
+  return !this.stack.length && !this.stack2.length
+}

@@ -3,7 +3,7 @@ function LinkNode(value) {
   this.next = null;
 }
 
-// xx、合并两个有序链表：新建一个链表节点，依次比较两个链表取最小值，和合并两个有序数组有异曲同工之妙
+// leetcode-21、合并两个有序链表：新建一个链表节点，依次比较两个链表取最小值，和合并两个有序数组有异曲同工之妙
 function mergeLinkNode(l1, l2) {
   let head = new LinkNode();
   let cur = head;
@@ -22,6 +22,19 @@ function mergeLinkNode(l1, l2) {
   if (l1) cur.next = l1;
   if (l2) cur.next = l2;
   return head.next;
+}
+function mergeLinkNode2(l1, l2) { // 递归
+  if (!l1) {
+    return l2
+  } else if (!l2) {
+    return l1
+  } else if (l1.value <= l2.value) {
+    l1.next = mergeLinkNode2(l1.next, l2)
+    return l1
+  } else {
+    l2.next = mergeLinkNode2(l1, l2.next)
+    return l2
+  }
 }
 
 let link1 = {
@@ -42,7 +55,7 @@ let link2 = {
     }
   }
 }
-let rs = mergeLinkNode(link1, link2);
+let rs = mergeLinkNode2(link1, link2);
 console.log(JSON.stringify(rs, null, 4));
 
 

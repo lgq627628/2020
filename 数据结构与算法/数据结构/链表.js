@@ -316,3 +316,20 @@ console.log(JSON.stringify(rs9, null, 4));
 
 // xx、复制带随机指针的链表
 // 思路：先复制普通链表，同时建立新旧链表的映射关系；再循环一遍原始链表复制随机的值
+
+
+
+// xx、相交链表
+// 链表 A 走完走 B，链表 B 走完走 A，也就是他们移动相同的距离（A + B）
+var getIntersectionNode = function(headA, headB) {
+  let pA =  headA
+  let pB =  headB
+
+  while(pA || pB) {
+      if (pA === pB) return pA
+      pA = pA ? pA.next : headB
+      pB = pB ? pB.next : headA
+  }
+
+  return null
+};

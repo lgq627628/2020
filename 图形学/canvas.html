@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canvas</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+    canvas {
+      border: 1px solid red;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="xx" width="600" height="600"></canvas>
+
+  <script src="./Vector2D.js"></script>
+  <!-- CSS 属性中的宽高影响 Canvas 在页面上呈现的大小，而 HTML 属性中的宽高则决定了 Canvas 的坐标系。 -->
+  <!-- 因为画布宽高决定了可视区域的坐标范围，所以 Canvas 将画布宽高和样式宽高分开的做法，能更方便地适配不同的显示设备。 -->
+  <!-- <script>
+    let canvas = document.getElementById('xx');
+    let ctx = canvas.getContext('2d');
+    // canvas 大体可分为：状态指令 + 绘制指令
+
+    let rectSize = [100, 100];
+    ctx.save(); // 暂存状态
+    ctx.translate(-rectSize[0] / 2, -rectSize[1] / 2);
+    ctx.fillStyle = 'red';
+    ctx.beginPath();
+    ctx.rect(canvas.width / 2, canvas.height / 2, 100, 100);
+    ctx.fill();
+    ctx.restore(); // 恢复状态
+
+    ctx.fillStyle = 'green';
+    ctx.beginPath();
+    ctx.arc(100, 100, 50, 0, 2 * Math.PI);
+    ctx.fill();
+  </script> -->
+
+  <!-- <script>
+    let canvas = document.getElementById('xx');
+    let ctx = canvas.getContext('2d');
+
+    ctx.translate(canvas.width / 2, canvas.height);
+    ctx.scale(1, -1);
+    ctx.beginPath();
+    ctx.strokeStyle = "blue";
+    ctx.moveTo(0, 100);
+    ctx.lineTo(-100, 0);
+    ctx.lineTo(100, 0);
+    ctx.lineTo(0, 100);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(0, 300, 100, 0, 2*Math.PI);
+    ctx.stroke();
+  </script> -->
+
+  <script>
+    let canvas = document.getElementById('xx');
+    let ctx = canvas.getContext('2d');
+
+    ctx.translate(0, canvas.height);
+    ctx.scale(1, -1);
+    ctx.lineCap = 'round';
+
+    const v = new Vector2D(1, 0).rotate(dir).scale(length);
+    const v1 = v0.copy().add(v);
+
+    function drawBranch(ctx, v0, length, thickness, dir, bias) {
+
+    }
+  </script>
+</body>
+</html>

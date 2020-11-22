@@ -1,0 +1,37 @@
+<script>
+  let numReg = `[0-9]+`
+let idReg = `[A-Za-z_][0-9A-Za-z_]*`
+let strReg = `['][^']+[']`
+let opReg = `\\*|\\+|\\-|\\/|=|>=|<=|==|===|&&|\\|\\|`
+let noteReg = `\\/\\/.*`
+let tokenMapArr = [0,1,'Number', 'ID', 'String', 'OP', 'Note']
+// 下面这个匹配是有顺序的
+let finalReg = new RegExp(`\s*((${idReg})|(${numReg})|(${strReg})|(${opReg})|(${noteReg}))`)
+let rs = []
+class Token {
+  constructor(type, text) {
+    this.type = type
+    this.text = text
+  }
+}
+function func(data) {
+  let arr
+  while(arr = data.match(finalReg)) {
+    let temp = ''
+    let token
+    for(let i = 2; i < arr.length - 4; i++) {
+      temp = arr[i]
+      if (temp) {
+        data = data.slice(+arr.index+temp.length, data.length)
+        token = new Token(tokenMapArr[i], temp)
+        rs.push(token)
+        break
+      }
+    }
+  }
+  console.log(rs)
+}
+
+func('let a = 10')
+
+</script>

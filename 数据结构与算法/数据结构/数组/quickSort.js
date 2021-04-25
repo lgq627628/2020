@@ -6,8 +6,8 @@
 function quickSort(arr) { // 简单版本：取前中后任意一个位参照，划分左右数组，递归下去
   if (arr.length <= 1) return arr;
 
-  let midIdx = ~~(arr.length / 2);
-  let midVal = arr.splice(midIdx, 1)[0];
+  let midIdx = ~~(arr.length / 2); // baseIdx = arr.length - 1
+  let midVal = arr.splice(midIdx, 1)[0]; // baseVal = arr.pop()
   let left = [];
   let right = [];
 

@@ -8,8 +8,8 @@ function bubbleSort(arr) {
     let flag = true; // 加上这个就可以是的最好的时间复杂度为 O(n)
     for (let j = 0; j < len - i - 1; j++) {
       if (arr[j] > arr[j + 1]) {
+        flag = false; // 这个地方要加分号啊，不加就会和下面的属性变成同一条语句
         [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
-        flag = false;
       }
     }
     if (flag) return arr;

@@ -42,3 +42,9 @@ const scrollToTop = _ => {
     window.scrollTo(0, c - c / 8);
   }
 };
+
+
+// ios 键盘遮挡
+setTimeout(function(){
+  document.body.scrollTop = document.body.scrollHeight;
+},300);

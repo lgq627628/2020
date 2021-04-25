@@ -1,0 +1,64 @@
+<!-- https://zhuanlan.zhihu.com/p/52481595 -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Document</title>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="target" style="
+      width: 150px;
+      height: 150px;
+      background: blue;
+      margin-bottom: 50px;
+      color: #FFF;
+    ">神奇的api</div>
+  </div>
+
+  <canvas id="canvas" style="border:2px solid black;" width="200" height="200">
+  </canvas>
+
+<script>
+
+let canvas = document.getElementById('canvas');
+let ctx = canvas.getContext('2d');
+let target = document.getElementsByClassName('wrapper');
+
+// 创造svg
+let data = `
+  <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
+    <foreignObject width="100%" height="100%">
+      <div xmlns="http://www.w3.org/1999/xhtml" style="font-size:40px">
+       ${target[0].innerHTML}
+      </div>
+    </foreignObject>
+  </svg>
+`
+
+let DOMURL = window.URL || window.webkitURL || window;
+
+let img = new Image();
+let svg = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
+let url = DOMURL.createObjectURL(svg);
+// 根据svg生产url
+
+img.onload = function () {
+  ctx.drawImage(img, 0, 0);
+  DOMURL.revokeObjectURL(url); // 摧毁刚刚生产的url
+}// 注册回调函数
+
+img.src = url;
+// 将图片url塞到img里
+
+// 1. 此方法中插入的html必须是有效的html
+// 2. 必须使用内联样式, 并且支持部分样式,
+// 3. 已访问的链接样式（:visited）不会对 SVG 图像中的链接生效，因此无法获取浏览历史；SVG 图像中也不会渲染原生主题，因此借此检测用户的平台也会更困难。
+// 4. 此外，您也不能在 SVG 图像中各种引入脚本文件，因此不会有从其他脚本文件访问 DOM 的风险。SVG 图像中的 DOM 元素也不能接收事件的输入，因此无法将敏感信息载入到一个表单控件（如将完整路径载入到 file <input> 元素中）渲染再通过读取图像获取这些信息。
+// 5. 这个解决方案所依赖的 SVG 图像在实现上是非常严格的。如果引入了外部的图片会污染canvas画布. 但是接下来说介绍的html2canvas可以解决这个问题!!!
+
+</script>
+
+
+</body>
+</html>

@@ -19,3 +19,6 @@ dom.setAttribute("class","test1");
 // insertBefore() 某个子节点前面添加
 // https://developer.mozilla.org/zh-CN/docs/Web/API/Node/insertBefore
 // appendChild() 末尾添加
+node.appendChild(child)
+node.insertBefore(child, node.children[0]) // children 非标准，childNodes 才是
+node.removeChild(child)

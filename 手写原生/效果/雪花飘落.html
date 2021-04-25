@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>雪花飘落</title>
+</head>
+<body>
+  <canvas id="snowFall"></canvas>
+<script>
+  let snowBox = function () {
+      let canvasEl = document.getElementById("snowFall");
+      let ctx = canvasEl.getContext('2d');
+      canvasEl.width = window.innerWidth;
+      canvasEl.height = window.innerHeight;
+      let lineList = []; // 雪的容器
+      let snow = function () {
+          let _this = this;
+          _this.cacheCanvas = document.createElement("canvas");
+          _this.cacheCtx = _this.cacheCanvas.getContext("2d");
+          _this.cacheCanvas.width = 10;
+          _this.cacheCanvas.height = 10;
+          _this.speed = [1, 1.5, 2][Math.floor(Math.random()*3)];                // 雪花下落的三种速度，便于取整
+          _this.posx = Math.round(Math.random() * canvasEl.width);               // 雪花x坐标
+          _this.posy = Math.round(Math.random() * canvasEl.height);              // 雪花y坐标
+          _this.img = `./img/snow_(${Math.ceil(Math.random() * 9)}).png`;        // img
+          _this.w = _this.getInt(5 + Math.random() * 6);
+          _this.h = _this.getInt(5 + Math.random() * 6);
+          _this.cacheSnow();
+      };
+
+      snow.prototype = {
+          cacheSnow: function () {
+              let _this = this;
+              // _this.cacheCtx.save();
+              let img = new Image();   // 创建img元素
+              img.src = _this.img;
+              _this.cacheCtx.drawImage(img, 0, 0, _this.w, _this.h);
+              // _this.cacheCtx.restore();
+          },
+          fall: function () {
+              let _this = this;
+              if (_this.posy > canvasEl.height + 5) {
+                  _this.posy = _this.getInt(0 - _this.h);
+                  _this.posx = _this.getInt(canvasEl.width * Math.random());
+              }
+              if (_this.posx > canvasEl.width + 5) {
+                  _this.posx = _this.getInt(0 - _this.w);
+                  _this.posy = _this.getInt(canvasEl.height * Math.random());
+              }
+              // 如果雪花在可视区域
+              if (_this.posy <= canvasEl.height || _this.posx <= canvasEl.width) {
+                  _this.posy = _this.posy + _this.speed;
+                  _this.posx = _this.posx + _this.speed * .5;
+              }
+              _this.paint();
+          },
+          paint: function () {
+              ctx.drawImage(this.cacheCanvas, this.posx, this.posy)
+          },
+          getInt: function(num){
+              let rounded;
+              rounded = (0.5 + num) | 0;
+              return rounded;
+          }
+      };
+
+      let control;
+      control = {
+          start: function (num) {
+              for (let i = 0; i < num; i++) {
+                  let s = new snow();
+                  lineList.push(s);
+              }
+              (function loop() {
+                  ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+                  for (let i = 0; i < num; i++) {
+                      lineList[i].fall();
+                  }
+                  requestAnimationFrame(loop)
+              })();
+          }
+      };
+      return control;
+  }();
+
+  window.onload = function(){
+      snowBox.start(2000)
+  };
+</script>
+</body>
+</html>

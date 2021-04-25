@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>路径树</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+    }
+    #svg {
+      position: fixed;
+      width: 100%;
+      height: 40%;
+    }
+    #percent {
+      position: fixed;
+      display: none;
+      padding: 5px;
+      background-color: rgba(0, 0, 0, 0.8);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <!-- 下面的 svg 是用来画线的， percent 是用来显示数值提示的，最好写在函数里，动态生成，这里就简单写在这里 -->
+  <svg id="svg"></svg>
+  <div id="percent"></div>
+
+  <script>
+    let originPathValMap = { // 这个是原始数据，可直接改
+      'ABCD': 5,
+      'ABD': 20,
+      'ABCDEF': 30,
+      'ABCDEFG': 15,
+      'ABDEFM': 18,
+      'ABCDFG': 12
+    };
+
+    let nodeMap = formatPathNode(originPathValMap); // 整理原始数据，已经在控制台打印了
+    let layerArr = layerNode(nodeMap); // 对原始数据进行分层
+    let lineArr = drawNode(layerArr, nodeMap); // 绘制元素节点
+    drawAllLine(nodeMap); // 这里用 svg 画出所有线
+    addEvent(); // 添加事件监听
+
+    console.log('这是整理数据的结果', nodeMap);
+    console.log('这是分层的结果', layerArr);
+
+    function addEvent() {
+      let svg = document.getElementById('svg');
+      svg.addEventListener('mousemove', handleHover, false); // 这里没写解绑
+    }
+
+    function handleHover(e) {
+      let tagName = e.target.tagName;
+      if (tagName.toUpperCase() === 'LINE') {
+        showPercent(e.x, e.y, e.target.dataset.percent);
+      } else {
+        hidePercent();
+      }
+    }
+
+    function showPercent(x, y, val) {
+      let percent = document.getElementById('percent');
+      percent.textContent = val;
+      percent.style.left = x + 'px';
+      percent.style.top = y + 'px';
+      percent.style.display = 'block';
+    }
+
+    function hidePercent() {
+      document.getElementById('percent').style.display = 'none';
+    }
+
+    function drawAllLine(nodeMap, gap = 5) { // 绘制线条，这里设置的线条间隔比较大
+      let lineStr = '';
+      Object.keys(nodeMap).forEach(name => {
+        let firstEle = document.getElementById(name);
+        let item = nodeMap[name];
+        if (item.children) {
+          let halfLen = parseInt(item.children.length / 2);
+          item.children.forEach((c, i) => {
+            let secondEle = document.getElementById(c);
+            let firstPoint = getEleCenterPoint(firstEle);
+            let secondPoint = getEleCenterPoint(secondEle);
+            lineStr += `<line x1="${firstPoint.x}" y1="${firstPoint.y + gap * (i - halfLen)}" x2="${secondPoint.x}" y2="${secondPoint.y + gap * (i - halfLen)}" stroke="${item.color[i]}" stroke-width="2" data-percent="${item.percent[i]}%"></line>`;
+          });
+        }
+      });
+      let svg = document.getElementById('svg');
+      svg.innerHTML = lineStr;
+      return svg.children;
+    }
+
+    function getEleCenterPoint(ele) { // 获取元素节点中心点坐标
+      let { top, left, width, height } = ele.getBoundingClientRect();
+      return {
+        x: parseInt(left + width / 2),
+        y: parseInt(top + height / 2)
+      }
+    }
+
+    function drawNode(layerArr) { // 绘制元素节点
+      let rs = [];
+      layerArr.forEach((layer, i) => {
+        let parent = createEle({ w: 1000, h: 80 });
+        layer.forEach(name => {
+          parent.appendChild(createEle({ name, color: '#ccc' }));
+        });
+        rs[i] = parent;
+      });
+      rs.forEach(item => document.body.appendChild(item));
+      return rs;
+    }
+
+    function createEle(opts) {
+      let div = document.createElement('div');
+      Object.assign(div.style, { // 这边样式暂时写的比较死
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginLeft: `${opts.marginLeft || 40}px`,
+          width: `${opts.w || 40}px`,
+          height: `${opts.h || 40}px`,
+          boxSizing: 'border-box',
+          backgroundColor: opts.color || 'transparent'
+      });
+      opts.name && div.setAttribute('id', opts.name);
+      div.textContent = opts.name || '';
+      return div;
+    }
+
+    function layerNode(nodeMap) { // 对原始数据进行分层
+      let rs = [[]];
+      let idx = 0;
+      tempLayer = rs[idx];
+      Object.keys(nodeMap).forEach(name => {
+        let { uniqueParent = [], uniqueChildren = [] } = nodeMap[name];
+        if (uniqueParent.length > 1 || (uniqueParent.length === 1 && tempLayer[tempLayer.length - 1] !== uniqueParent[0])) {
+          idx++;
+          rs[idx] = [];
+          tempLayer = rs[idx];
+        }
+        tempLayer.push(name);
+      });
+      return rs;
+    }
+
+    function formatPathNode(pathValMap) {
+      let nodeMap = {};
+      let pathColorMap = {};
+      Object.keys(pathValMap).forEach(path => {
+        let nameArr = path.split('');
+        let tempParent = null;
+        let len = nameArr.length;
+        pathColorMap[path] = genColor();
+        nameArr.forEach((name, i) => {
+          if (!nodeMap[name]) {
+            nodeMap[name] = {
+              name,
+              color: [],
+              parent: [],
+              children: [],
+              percent: []
+            }
+          }
+          nodeMap[name].percent.push(pathValMap[path]);
+          if (i < len - 1) nodeMap[name].color.push(pathColorMap[path]);
+          if (tempParent) {
+            nodeMap[name].parent.push(tempParent.name);
+            tempParent.children.push(name);
+          }
+          tempParent = nodeMap[name];
+        });
+      });
+      Object.keys(nodeMap).forEach(node => {
+        let item = nodeMap[node];
+        [...item.children].sort();
+        item.uniqueChildren = [...new Set(item.children)].sort();
+        item.uniqueParent = [...new Set(item.parent)].sort();
+      });
+      return nodeMap;
+    }
+
+    function genColor() { // 随机生成颜色
+      return '#' + Math.random().toString(16).substr(2, 6).toUpperCase();
+    }
+  </script>
+</body>
+</html>

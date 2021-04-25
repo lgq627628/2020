@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <style>
+    * {
+        margin: 0;
+        padding: 0;
+    }
+    .list {
+        width: 60vw;
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+  </style>
+  <ul class="list"></ul>
+  <script>
+    'use strict'
+    let list = document.querySelector('.list')
+    let total = 100000
+    let size = 20
+    let index = 0
+    const render = (total, index) => {
+        if (total <= 0) {
+            return
+        }
+        let curPage = Math.min(total, size)
+        window.requestAnimationFrame(() => {
+            let fragment = document.createDocumentFragment()
+            for (let i = 0; i < curPage; ++i) {
+                let item = document.createElement('li')
+                item.innerText = `我是${index + i}`
+                fragment.appendChild(item)
+            }
+            list.appendChild(fragment)
+            render(total - curPage, index + curPage)
+        })
+    }
+    render(total, index)
+  </script>
+</body>
+</html>
+

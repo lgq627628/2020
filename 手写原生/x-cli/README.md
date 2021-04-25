@@ -1,5 +1,6 @@
 # 脚手架示例
 主要思路就是拉取模板，需要的话可以读取用户输入来修改模板文件。
+这篇挺好： https://juejin.cn/post/6932610749906812935?utm_source=gold_browser_extension
 
 ## 所需模块依赖
 - commander 参数解析

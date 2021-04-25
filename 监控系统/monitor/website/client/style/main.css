@@ -1,0 +1,28 @@
+.title {
+  color: #333;
+  text-align: center;
+  margin-top: 20px;
+}
+
+.img {
+  margin: 0 auto;
+  display: block;
+  border: 2px solid #f4b72b;
+  border-radius: 6px;
+  opacity: .7;
+}
+
+.qrcode {
+  width: 300px;
+  height: 300px;
+}
+
+.avatar {
+  width: 100px;
+  height: 100px;
+  margin-top: 10px;
+}
+
+.fruits-list {
+  margin: 10px 0;
+}

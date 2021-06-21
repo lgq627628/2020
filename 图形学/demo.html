@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas 的拖拽、移动、缩放</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        #canvas {
+            margin: 100px;
+            width: 400px;
+            height: 400px;
+            border: 1px solid red;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="400px" height="400px"></canvas>
+</body>
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const drawCircle = (ctx, cx, cy, r) => {
+    // const drawCircle = (ctx: CanvasRenderingContext2D, cx, cy, r) => {
+        ctx.save();
+        ctx.beginPath();
+
+        ctx.strokeStyle = 'green';
+        ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+        ctx.stroke();
+
+        ctx.closePath();
+        ctx.restore();
+    }
+
+    const dragStatus = {
+        IDLE: 0,
+        DRAR_START: 1,
+        DRARRING: 2,
+        MOVE_START: 5,
+        MOVING: 6
+    };
+    const canvasInfo = {
+        status: dragStatus.IDLE,
+        dragTarget: null,
+        lastPos: null,
+        offset: { x: 0, y: 0 },
+        scale: 1,
+        scaleStep: 0.1,
+        maxScalce: 5,
+        minScalce: .5,
+    };
+    const circles = []
+    const getCanvasPosition = (e, offset = { x: 0, y: 0 }, scale = 1) => {
+        return {
+            x: (e.offsetX - offset.x) / scale,
+            y: (e.offsetY - offset.y) / scale
+        }
+    }
+    const getMousePos = e => {
+        return {
+            x: e.offsetX,
+            y: e.offsetY
+        }
+    }
+    const getDistance = (p1, p2) => {
+        return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+    }
+    const drawAllCircles = (circles) => {
+        circles.forEach(c => {
+            drawCircle(ctx, c.x, c.y, c.r);
+        })
+    }
+
+    circles.push({ x: 100, y: 100, r: 30 });
+    circles.push({ x: 200, y: 300, r: 40 });
+    drawAllCircles(circles);
+
+    const isInCircle = pos => {
+        for(let i = 0; i < circles.length; i++) {
+            const circle = circles[i];
+            if (getDistance(circle, pos) < circle.r) return circle;
+        }
+        return false
+    }
+    const redraw = () => {
+        ctx.setTransform(canvasInfo.scale, 0, 0, canvasInfo.scale, canvasInfo.offset.x, canvasInfo.offset.y);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawAllCircles(circles);
+    }
+
+    canvas.oncontextmenu = () => false;
+
+    canvas.addEventListener('mousedown', e => {
+        const pos = getCanvasPosition(e, canvasInfo.offset, canvasInfo.scale);
+        const circleRef = isInCircle(pos);
+        if (circleRef) {
+            canvasInfo.status = dragStatus.DRAR_START;
+            canvasInfo.dragTarget = circleRef;
+            canvasInfo.lastPos = pos;
+        } else {
+            canvasInfo.status = dragStatus.MOVE_START;
+            canvasInfo.lastPos = pos;
+        }
+    });
+    canvas.addEventListener('mousemove', e => {
+        const pos = getCanvasPosition(e, canvasInfo.offset, canvasInfo.scale);
+        const mousePos = getMousePos(e);
+        if (isInCircle(pos)) {
+            canvas.style.cursor = 'move';
+        } else if (canvasInfo.status === dragStatus.MOVE_START) {
+            canvas.style.cursor = 'grab';
+        } else {
+            canvas.style.cursor = 'auto';
+        }
+        if (canvasInfo.status === dragStatus.DRAR_START && getDistance(pos, canvasInfo.lastPos) >= 5) {
+            console.log('开始拖拽');
+            canvasInfo.status = dragStatus.DRARRING;
+            canvasInfo.lastPos = pos;
+        } else if (canvasInfo.status === dragStatus.DRARRING) {
+            console.log('拖拽...');
+            const { dragTarget } = canvasInfo;
+            dragTarget.x += (pos.x - canvasInfo.lastPos.x);
+            dragTarget.y += (pos.y - canvasInfo.lastPos.y);
+            canvasInfo.lastPos = pos;
+            redraw();
+        } else if (canvasInfo.status === dragStatus.MOVE_START && getDistance(mousePos, canvasInfo.lastPos) >= 5) {
+            console.log('开始移动');
+            canvasInfo.status = dragStatus.MOVING;
+            canvasInfo.lastPos = mousePos;
+        } else if (canvasInfo.status === dragStatus.MOVING) { // 因为拖拽的时候会改变偏移值，对偏移量的计算会抖动
+            console.log('移动...');
+            canvasInfo.offset.x += (mousePos.x - canvasInfo.lastPos.x);
+            canvasInfo.offset.y += (mousePos.y - canvasInfo.lastPos.y);
+            canvasInfo.lastPos = mousePos;
+            redraw();
+        }
+    });
+    document.addEventListener('mouseup', e => {
+        console.log('结束移动');
+        canvasInfo.status = dragStatus.IDLE;
+    });
+
+
+    canvas.addEventListener('wheel', e => {
+        e.preventDefault(); // 不然会触发外层滚动条
+        const pos = getCanvasPosition(e, canvasInfo.offset);
+        const { scaleStep, maxScalce, minScalce } = canvasInfo;
+        const deltaX = pos.x / canvasInfo.scale * scaleStep;
+        const deltaY = pos.y / canvasInfo.scale * scaleStep;
+        if (e.wheelDelta > 0 && canvasInfo.scale < maxScalce) {
+            canvasInfo.offset.x -= deltaX;
+            canvasInfo.offset.y -= deltaY;
+            canvasInfo.scale += scaleStep;
+        } else if (e.wheelDelta <= 0 && canvasInfo.scale > minScalce) {
+            canvasInfo.offset.x += deltaX;
+            canvasInfo.offset.y += deltaY;
+            canvasInfo.scale -= scaleStep;
+        }
+        redraw();
+    })
+</script>
+</html>

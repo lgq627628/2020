@@ -90,6 +90,7 @@ a;                      Identifier
 this;                   ThisExpression
 super;                  Super
 a::b;                   BindExpression
+console.log             MemberExpression
 ```
 ### Class:
 class 的语法比较特殊，有专门的 AST 节点来表示。
@@ -200,8 +201,8 @@ export type Scopable =
   | DoWhileStatement
   | ForInStatement
   | ForStatement
-  | FunctionDeclaration
-  | FunctionExpression
+  | FunctionDeclaration         function guang(){}
+  | FunctionExpression          const ssh = function () {}
   | Program
   | ObjectMethod
   | SwitchStatement
@@ -237,3 +238,12 @@ plugin 从前到后，preset 从后到前
 如果希望把一些公共的 helper、core-js、regenerator 等注入的 runtime 函数抽离出来，并且以模块化的方式引入，那么需要用 @babel/plugin-transform-runtime 这个包。
 
 @babel/plugin-transform-runtime 不支持根据 targets 的过滤，和 @babel/preset-env 配合时有问题，这个在 babel8 中得到了解决。babel8 在 @babel/polyfills 包中支持了 polyfill provider 的配置，而且还可以选择注入方式。不再需要 @babel/plugin-transform-runtime 插件了。
+
+
+## babel 的测试
+- 测试转换后的 AST，是否符合预期
+- 测试转换后生成的代码，是否符合预期（如果代码比较多，可以存成快照，进行快照对比）
+- 转换后的代码执行一下，测试是否符合预期
+一般还是第二种方式用的比较多，babel 也是封装了这种方式，提供了 babel-plugin-tester 包。
+babel-plugin-tester 就是对比生成的代码的方式，有三种对比方式：直接对比字符串、指定输入和输出的代码文件和实际执行结果对比、生成快照对比快照。
+babel plugin tester 还是得用 jest 来跑，只是做了一层封装，简化了书写方式，但运行的话还是用 jest

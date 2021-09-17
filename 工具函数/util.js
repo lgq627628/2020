@@ -34,6 +34,7 @@ params.get('sex'); // "female"
 const fillZero = (num, len) => num.toString().padStart(len, '0');
 const num = fillZero(169, 5);
 // num => "00169"
+// 骚操作补零 `00${mins}`.slice(-2),
 
 // 精确小数
 const round = (num, decimal) => Math.round(num * 10 ** decimal) / 10 ** decimal;

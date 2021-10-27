@@ -1,0 +1,1 @@
+export const PREFIX_REACT_ID = 'data-react-id'

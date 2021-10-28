@@ -1,60 +1,79 @@
 import { PREFIX_REACT_ID } from './const'
+import { Element, Component } from './react'
 
 const datasetId = PREFIX_REACT_ID.split('-').slice(1).map((_, i) => i === 0 ? _ : _.slice(0, 1).toUpperCase() + _.slice(1)).join('')
 
+const id2EventMap = {}
 
-function createUnit(element, id) {
-    
+function createUnit(element) {
     if (typeof element === 'string' || typeof element === 'number') {
-        return createTextUnit(element, id)
-    } else if (element.type && typeof element.type === 'function') {
-        return createClassUnit(element, id)
+        return new TextUnit(element)
+    } else if (element instanceof Element && typeof element.type === 'function') {
+        return new ClassUnit(element)
     } else {
-        return createJsxUnit(element, id)
+        return new TagUnit(element)
     }
 }
 
-function createTextUnit(element, id) {
-    return `<span ${PREFIX_REACT_ID}=${id}>${element}</span>`
+class Unit {
+    constructor(element) {
+        this.element = element
+    }
+    getHTMLString() {
+        throw new Error('具体子类自己实现')
+    }
+}
+class TextUnit extends Unit {
+    getHTMLString(reactId) {
+        return `<span ${PREFIX_REACT_ID}=${reactId}>${this.element}</span>`
+    }
+}
+class TagUnit extends Unit {
+    getHTMLString(reactId) {
+        const { type, props = {}, children = [] } = this.element;
+        const startTag = `<${type} ${PREFIX_REACT_ID}=${reactId}`
+        const endTag = `</${type}>`
+        let propsStr = ''
+        Object.entries(props).forEach(([key, value]) => {
+            if (key.startsWith('on')) {
+                const eventName = key.slice(2).toLowerCase()
+                const fn = value
+                if (!fn) return
+                if (!id2EventMap[datasetId]) id2EventMap[datasetId] = []
+                if (id2EventMap[datasetId].includes(eventName)) return
+                id2EventMap[datasetId].push(eventName) // 临时处理多事件重复监听
+                document.addEventListener(eventName, e => {
+                    const clickReactId = e.target.dataset[datasetId]
+                    if (String(clickReactId) !== String(reactId)) return
+                    fn()
+                })
+            } else if (key === 'style') {
+                let styleStr = ` style="`
+                Object.entries(value).forEach(([p, v]) => {
+                    styleStr += `${p}:${v};`
+                })
+                styleStr += `"`
+                propsStr += styleStr
+            } else {
+                propsStr += ` ${key}="${value}"`
+            }
+        })
+        const childrenStr = children.map((c, i) => createUnit(c).getHTMLString(reactId + '.' + i)).join('')
+        return startTag + propsStr + '>' + childrenStr + endTag
+    }
 }
 
-function createClassUnit(element, id) {
-    const { type: klass, props = {} } = element;
-    console.log('走了')
-    const instance = new klass({props, _reactId: id})
-    const component = instance.render()
-    console.log(component)
-    return createUnit(component, id)
+class ClassUnit extends Unit {
+    getHTMLString(reactId) {
+        const { type: klass, props = {} } = this.element;
+        const instance = new klass({...props, _reactId: reactId})
+        const component = instance.render()
+        instance.componentWillMount && instance.componentWillMount()
+        return createUnit(component).getHTMLString(reactId)
+    }
 }
-function createJsxUnit(element, id) {
-    const { type, props = {}, children = [] } = element;
-    const startTag = `<${type} ${PREFIX_REACT_ID}=${id}`
-    const endTag = `</${type}>`
-    let propsStr = ''
-    Object.entries(props).forEach(([key, value]) => {
-        if (key.startsWith('on')) {
-            const eventName = key.slice(2).toLowerCase()
-            const fn = value
-            if (!fn) return
-            document.addEventListener(eventName, e => {
-                const clickReactId = e.target.dataset[datasetId]
-                if (String(clickReactId) !== String(id)) return
-                fn()
-            })
-        } else if (key === 'style') {
-            let styleStr = ` style="`
-            Object.entries(value).forEach(([p, v]) => {
-                styleStr += `${p}:${v};`
-            })
-            styleStr += `"`
-            propsStr += styleStr
-        } else {
-            propsStr += ` ${key}="${value}"`
-        }
-    })
-    const childrenStr = children.map((c, i) => createUnit(c, id + '.' + i)).join('')
-    return startTag + propsStr + '>' + childrenStr + endTag
-}
+
 export {
-    createUnit
+    createUnit,
+    id2EventMap
 }

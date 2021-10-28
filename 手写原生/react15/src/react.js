@@ -1,17 +1,20 @@
 import { PREFIX_REACT_ID } from './const'
 import { createUnit } from './unit'
 
-function createElement(type, props, ...children) {
-    return {
-        type,
-        props,
-        children
+class Element {
+    constructor(type, props, children) {
+        this.type = type
+        this.props = props
+        this.children = children
     }
 }
+function createElement(type, props, ...children) {
+    return new Element(type, props, children)
+}
 function render(element, container) {
-    console.log(element);
-    const html = createUnit(element, 0)
-    container.innerHTML = html
+    const unit = createUnit(element)
+    const htmlString = unit.getHTMLString(0)
+    container.innerHTML = htmlString
 }
 class Component {
     constructor(props) {
@@ -19,9 +22,19 @@ class Component {
         this._reactId = props._reactId
         this.state = null
     }
+    componentWillMount() {}
+    shouldUpdateComponent(prevState, curState) {
+        return true
+    }
     setState(newState) {
         Object.assign(this.state, newState)
-        document.getElementsByClassName([`${PREFIX_REACT_ID}=${this._reactId}`]).innerHTML = createUnit(this.render(), this._reactId)
+        const newJsx = this.render()
+        const shouldUpdateComponent = this.shouldUpdateComponent(newJsx, this.curDom)
+        shouldUpdateComponent && this.update(newJsx)
+    }
+    update(newJsx) {
+        const element = document.querySelector(`[${PREFIX_REACT_ID}="${this._reactId}"]`)
+        element.innerHTML = createUnit(newJsx).getHTMLString(this._reactId)
     }
 }
 
@@ -32,3 +45,7 @@ const React = {
 }
 
 export default React
+export {
+    Element,
+    Component
+}

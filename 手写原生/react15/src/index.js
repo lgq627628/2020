@@ -2,7 +2,7 @@ import React from './react'
 
 
 // 方式一：普通字符串渲染
-React.render('哈哈哈', document.getElementById('root'))
+// React.render('哈哈哈', document.getElementById('root'))
 
 
 // 方式二：jsx 渲染
@@ -16,7 +16,6 @@ React.render('哈哈哈', document.getElementById('root'))
 //   }, "hello", React.createElement("span", {
 //     style:  {color: 'red', background: 'lightgreen'}
 //   }, " water!"));
-// console.log('jsx', jsx)
 // React.render(jsx, document.getElementById('root'))
 
 
@@ -29,8 +28,7 @@ class Box extends React.Component {
       num: 0
     }
   }
-  handleAdd = () => {
-    console.log(this)
+  handleAdd = e => {
     this.setState({ num: this.state.num + 1 })
   }
   render() {

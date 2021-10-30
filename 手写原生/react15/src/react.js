@@ -1,5 +1,5 @@
-import { PREFIX_REACT_ID } from './const'
 import { createUnit } from './unit'
+import { EE } from './common';
 
 class Element {
     constructor(type, props, children) {
@@ -13,28 +13,25 @@ function createElement(type, props, ...children) {
 }
 function render(element, container) {
     const unit = createUnit(element)
-    const htmlString = unit.getHTMLString(0)
+    const htmlString = unit.getHTMLString('0')
     container.innerHTML = htmlString
+    EE.fire('mounted')
 }
 class Component {
     constructor(props) {
         this.props = props
-        this._reactId = props._reactId
-        this.state = null
     }
-    componentWillMount() {}
-    shouldUpdateComponent(prevState, curState) {
+    componentWillMount() {
+        console.log(this._unit._reactId, '准备挂载')
+    }
+    componentDidMount() {
+        console.log(this._unit._reactId, '挂载了')
+    }
+    shouldComponentUpdate(newProps, newState) {
         return true
     }
-    setState(newState) {
-        Object.assign(this.state, newState)
-        const newJsx = this.render()
-        const shouldUpdateComponent = this.shouldUpdateComponent(newJsx, this.curDom)
-        shouldUpdateComponent && this.update(newJsx)
-    }
-    update(newJsx) {
-        const element = document.querySelector(`[${PREFIX_REACT_ID}="${this._reactId}"]`)
-        element.innerHTML = createUnit(newJsx).getHTMLString(this._reactId)
+    setState(partState) {
+        this._unit.update(null, partState)
     }
 }
 

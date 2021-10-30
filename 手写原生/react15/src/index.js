@@ -20,7 +20,42 @@ import React from './react'
 
 
 
-// 方式三：类式组件渲染
+// // 方式三：类式组件渲染
+// class BoxItem extends React.Component {
+//   render() {
+//     return `组件 id 为${this._reactId}`
+//   }
+// }
+// class Box extends React.Component {
+//   constructor(props) {
+//     super(props);
+//     this.state = {
+//       num: 0
+//     }
+//   }
+//   handleAdd = () => {
+//     this.setState({ num: this.state.num + 1 })
+//   }
+//   render() {
+//     return React.createElement('div', {
+//       class: 'xx',
+//       style:  { background: 'yellow' },
+//       onClick: this.handleAdd
+//     },
+//     'hello',
+//     React.createElement("span", {
+//       style:  { color: 'red', background: 'lightgreen'}
+//     }, ' water!'),
+//     'name: ' + this.props.name,
+//     'num: ' + this.state.num,
+//     React.createElement(BoxItem, null, '六六六', React.createElement(BoxItem), React.createElement(BoxItem)))
+//   }
+// }
+// React.render(React.createElement(Box, {name: '哦ono'}), document.getElementById('root'))
+
+
+
+// setState 案例
 class Box extends React.Component {
   constructor(props) {
     super(props);
@@ -28,17 +63,22 @@ class Box extends React.Component {
       num: 0
     }
   }
-  handleAdd = e => {
-    this.setState({ num: this.state.num + 1 })
+  componentDidMount() {
+    setInterval(() => {
+      this.setState({ num: this.state.num + 1 })
+    }, 1000);
   }
   render() {
-    return React.createElement("div", {
-      class: "xx",
-      style:  { background: 'yellow' },
-      onClick: this.handleAdd
-    }, "hello", React.createElement("span", {
-      style:  {color: 'red', background: 'lightgreen'}
-    }, " water!"), 'name: ' + this.props.name, 'num: ' + this.state.num);
+    return this.props.name + this.state.num
+    // return React.createElement('div', {
+    //   class: 'xx',
+    //   style:  { background: 'yellow' },
+    // },
+    // 'hello',
+    // this.props.name,
+    // React.createElement("span", {
+    //   style:  { color: 'red', background: 'lightgreen'}
+    // }, this.state.num))
   }
 }
 React.render(React.createElement(Box, {name: '哦ono'}), document.getElementById('root'))

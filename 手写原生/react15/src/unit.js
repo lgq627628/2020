@@ -1,23 +1,25 @@
+import { EE } from './common'
 import { PREFIX_REACT_ID } from './const'
-import { Element, Component } from './react'
+import { Element } from './react'
+
 
 const datasetId = PREFIX_REACT_ID.split('-').slice(1).map((_, i) => i === 0 ? _ : _.slice(0, 1).toUpperCase() + _.slice(1)).join('')
 
 const id2EventMap = {}
 
 function createUnit(element) {
-    if (typeof element === 'string' || typeof element === 'number') {
+    if (typeof element === 'string' || typeof element === 'number') { // 普通文本
         return new TextUnit(element)
-    } else if (element instanceof Element && typeof element.type === 'function') {
+    } else if (element instanceof Element && typeof element.type === 'function') { // 类式组件
         return new ClassUnit(element)
-    } else {
+    } else if (element instanceof Element && typeof element.type === 'string') { // 标签组件
         return new TagUnit(element)
     }
 }
 
 class Unit {
     constructor(element) {
-        this.element = element
+        this._element = element
     }
     getHTMLString() {
         throw new Error('具体子类自己实现')
@@ -25,12 +27,12 @@ class Unit {
 }
 class TextUnit extends Unit {
     getHTMLString(reactId) {
-        return `<span ${PREFIX_REACT_ID}=${reactId}>${this.element}</span>`
+        return `<span ${PREFIX_REACT_ID}=${reactId}>${this._element}</span>`
     }
 }
 class TagUnit extends Unit {
     getHTMLString(reactId) {
-        const { type, props = {}, children = [] } = this.element;
+        const { type, props = {}, children = [] } = this._element;
         const startTag = `<${type} ${PREFIX_REACT_ID}=${reactId}`
         const endTag = `</${type}>`
         let propsStr = ''
@@ -65,14 +67,50 @@ class TagUnit extends Unit {
 
 class ClassUnit extends Unit {
     getHTMLString(reactId) {
-        const { type: klass, props = {} } = this.element;
-        const instance = new klass({...props, _reactId: reactId})
-        const component = instance.render()
+        this._reactId = reactId
+        const { type: klass, props = {} } = this._element;
+        const instance = this._instance = new klass({...props})
+        const renderElement = instance.render()
+        instance._unit = this
         instance.componentWillMount && instance.componentWillMount()
-        return createUnit(component).getHTMLString(reactId)
+        const renderInstance = this._renderInstance = createUnit(renderElement)
+        const htmlString = renderInstance.getHTMLString(reactId)
+        EE.on('mounted', () => {
+            instance.componentDidMount && instance.componentDidMount()
+        })
+        return htmlString
+    }
+    update(newElement, partState) {
+        this._element = newElement || this._element
+        const newState = this._instance.state = Object.assign(this._instance.state, partState)
+        const newProps = this._element.props
+        console.log(newState)
+        if (!this._instance.shouldComponentUpdate(newProps, newState)) return
+        const prevRenderElement = this._renderInstance._element
+        const newRenderElement = this._instance.render()
+
+        if (shouldDeepCompare(newRenderElement, prevRenderElement)) {
+            this.update(newRenderElement)
+        } else {
+            const renderInstance = this._renderInstance = createUnit(newRenderElement)
+            const htmlString = renderInstance.getHTMLString(this._reactId)
+            const targetElement = document.querySelector(`[${PREFIX_REACT_ID}="${this._reactId}"]`)
+            targetElement.replaceWith(string2dom(htmlString))
+        }
     }
 }
 
+function shouldDeepCompare(newElement, oldElement) {
+
+    if (newElement.type === oldElement.type) {
+
+    }
+    return false
+}
+
+function string2dom(htmlString) {
+    return document.createRange().createContextualFragment(htmlString)
+}
 export {
     createUnit,
     id2EventMap

@@ -33,6 +33,12 @@ class Component {
     setState(partState) {
         this._unit.update(null, partState)
     }
+    componentDidUpdate() {
+        console.log(this._unit._reactId, '更新完成')
+    }
+    render() {
+        throw new Error('render 函数必须有返回值')
+    }
 }
 
 const React = {

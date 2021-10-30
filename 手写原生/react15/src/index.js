@@ -69,16 +69,15 @@ class Box extends React.Component {
     }, 1000);
   }
   render() {
-    return this.props.name + this.state.num
-    // return React.createElement('div', {
-    //   class: 'xx',
-    //   style:  { background: 'yellow' },
-    // },
-    // 'hello',
-    // this.props.name,
-    // React.createElement("span", {
-    //   style:  { color: 'red', background: 'lightgreen'}
-    // }, this.state.num))
+    return React.createElement('div', {
+      class: 'xx',
+      style:  { background:this.state.num % 2 === 0 ? 'red' : 'green' },
+    },
+    'hello',
+    this.props.name,
+    React.createElement("span", {
+      style:  { color: 'red', background: 'yellow'}
+    }, this.state.num))
   }
 }
 React.render(React.createElement(Box, {name: '哦ono'}), document.getElementById('root'))

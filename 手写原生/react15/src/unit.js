@@ -2,7 +2,7 @@ import { EE } from './common'
 import { PREFIX_REACT_ID } from './const'
 import { Element } from './react'
 
-
+const diffQueue = []
 const datasetId = PREFIX_REACT_ID.split('-').slice(1).map((_, i) => i === 0 ? _ : _.slice(0, 1).toUpperCase() + _.slice(1)).join('')
 
 const id2EventMap = {}
@@ -27,11 +27,20 @@ class Unit {
 }
 class TextUnit extends Unit {
     getHTMLString(reactId) {
+        this._reactId = reactId
         return `<span ${PREFIX_REACT_ID}=${reactId}>${this._element}</span>`
+    }
+    update(newElement) {
+        if (this._element === newElement) return
+        this._element = newElement
+        const targetElement = document.querySelector(`[${PREFIX_REACT_ID}="${this._reactId}"]`)
+        targetElement.innerHTML = newElement
     }
 }
 class TagUnit extends Unit {
     getHTMLString(reactId) {
+        this._reactId = reactId
+        this._unitChildren = []
         const { type, props = {}, children = [] } = this._element;
         const startTag = `<${type} ${PREFIX_REACT_ID}=${reactId}`
         const endTag = `</${type}>`
@@ -60,8 +69,73 @@ class TagUnit extends Unit {
                 propsStr += ` ${key}="${value}"`
             }
         })
-        const childrenStr = children.map((c, i) => createUnit(c).getHTMLString(reactId + '.' + i)).join('')
+        const childrenStr = children.map((c, i) => {
+            const unit = createUnit(c)
+            this._unitChildren.push(unit)
+            return unit.getHTMLString(reactId + '.' + i)
+        }).join('')
         return startTag + propsStr + '>' + childrenStr + endTag
+    }
+    update(newElement) {
+        const newProps = newElement.props
+        const oldProps = this._element.props
+        this.updateProps(newProps, oldProps)
+        this.updateChildren(diffQueue, newElement.children)
+    }
+    updateProps(newProps = {}, oldProps = {}) {
+        const targetElement = document.querySelector(`[${PREFIX_REACT_ID}="${this._reactId}"]`)
+        Object.keys(oldProps).forEach(oldProp => {
+            if (!newProps.hasOwnProperty(oldProp)) {
+                targetElement.removeAttribute(oldProp)
+            }
+        })
+        Object.keys(newProps).forEach(newProp => {
+            if (newProp === 'style') {
+                const style = newProps[newProp]
+                Object.keys(style).forEach(css => {
+                    targetElement.style[css] = style[css]
+                })
+            } else if (newProp === 'className') {
+            } else {
+                targetElement.setAttribute(newProp, newProps[newProp])
+            }
+        })
+    }
+    updateChildren(diffQueue, newElementChildren) {
+        this.diff(diffQueue, newElementChildren)
+    }
+    diff(diffQueue, newElementChildren = []) {
+        const oldUnitChildrenMap = this.getOldUnitChildrenMap()
+        const newChildren = this.getNewChildren(oldUnitChildrenMap, newElementChildren)
+        this._unitChildren = newChildren
+        
+    }
+    getNewChildren(oldUnitChildrenMap, newElementChildren) {
+        const newChildren = []
+        newElementChildren.forEach((newElement, i) => {
+            const newKey = newElement?.props?.key || String(i)
+            const oldUnit = oldUnitChildrenMap[newKey]
+            const oldElement = oldUnit && oldUnit._element
+            if (shouldDeepCompare(newElement, oldElement)) {
+                oldUnit.update(newElement)
+                newChildren.push(oldUnit)
+            } else {
+                const newUnit = createUnit(newElement)
+                newChildren.push(newUnit)
+                const htmlString = newUnit.getHTMLString(this._reactId)
+                const targetElement = document.querySelector(`[${PREFIX_REACT_ID}="${this._reactId}"]`)
+                targetElement.replaceWith(string2dom(htmlString))
+            }
+        })
+        return newChildren
+    }
+    getOldUnitChildrenMap() {
+        const map = {}
+        this._unitChildren.forEach((unit, i) => {
+            const key = unit?.props?.key || String(i)
+            map[key] = unit
+        })
+        return map
     }
 }
 
@@ -84,13 +158,13 @@ class ClassUnit extends Unit {
         this._element = newElement || this._element
         const newState = this._instance.state = Object.assign(this._instance.state, partState)
         const newProps = this._element.props
-        console.log(newState)
         if (!this._instance.shouldComponentUpdate(newProps, newState)) return
         const prevRenderElement = this._renderInstance._element
         const newRenderElement = this._instance.render()
 
         if (shouldDeepCompare(newRenderElement, prevRenderElement)) {
-            this.update(newRenderElement)
+            this._renderInstance.update(newRenderElement)
+            this._instance.componentDidUpdate()
         } else {
             const renderInstance = this._renderInstance = createUnit(newRenderElement)
             const htmlString = renderInstance.getHTMLString(this._reactId)
@@ -101,10 +175,12 @@ class ClassUnit extends Unit {
 }
 
 function shouldDeepCompare(newElement, oldElement) {
-
-    if (newElement.type === oldElement.type) {
-
-    }
+    // if (!newElement || !oldElement) return false // 这样写如果是文本数字 0 就会出现 bug
+    if (newElement == null || oldElement == null) return false
+    const oldType = typeof oldElement
+    const newType = typeof newElement
+    if ((oldType === 'string' || oldType === 'number') && (newType === 'string' || newType === 'number')) return true
+    if (oldElement instanceof Element && newElement instanceof Element) return oldElement.type === newElement.type
     return false
 }
 

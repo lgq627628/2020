@@ -2,26 +2,42 @@ import { INSERT, NORMAL_TAG, ROOT_TAG, TEXT_TAG, TEXT_TYPE } from "./const"
 
 let curWork
 let fiberHead // fiber 链表的头指针
-let effectHead // 有副作用链表的头指针
-
+let effectHead = {} // 有副作用链表的头指针
+let prevEffect
 function startBuild(rootFiber) {
   fiberHead = rootFiber
   curWork = rootFiber
   window.fiberHead = fiberHead
+  window.effectHead = effectHead
 }
 
 function taskLoop(deadline) {
 
-  while(curWork && deadline.timeRemaining () > 1) {
-    console.log(deadline.timeRemaining())
+  while(curWork && deadline.timeRemaining () > 1) { // 构建 fiber 链，可间断
     curWork = handleWork(curWork) // 执行当前任务并返回新任务
   }
 
-  if (!curWork) {
+  if (curWork) {
+    requestIdleCallback(taskLoop)
+  } else {   
+    commit() // 将副作用作用于真实 dom，不能停止
+    curWork = null
+    console.log('ppp')
     // console.log('构建结束', fiberHead)
   }
 
-  requestIdleCallback(taskLoop)
+}
+
+function commit() {
+  let effect = effectHead.nextEffect
+  while(effect) {
+    console.log('1111')
+    if (effect.effectTag === INSERT) {
+      effect.parent.dom.appendChild(effect.dom)
+    }
+    effect.effectTag = ''
+    effect = effect.nextEffect
+  }
 }
 
 // fiber: {
@@ -33,17 +49,9 @@ function taskLoop(deadline) {
 //   }
 // }
 function handleWork(fiber) {
-  const { tag } = fiber
   // 创建 dom 元素及其子 fiber
-  if (tag === ROOT_TAG) {
-    updateRoot(fiber)
-  } else if (tag === NORMAL_TAG) {
-    updateTag(fiber)
-  } else if (tag === TEXT_TAG) {
-    updateText(fiber)
-  }
-
-
+  beginWork(fiber)
+  
 
 
   // 子 fiber 向下构建，这是递归的 递 部分
@@ -60,9 +68,27 @@ function handleWork(fiber) {
 
 
 
+function beginWork(fiber) {
+  const { tag } = fiber
+  if (tag === ROOT_TAG) {
+    updateRoot(fiber)
+  } else if (tag === NORMAL_TAG) {
+    updateTag(fiber)
+  } else if (tag === TEXT_TAG) {
+    updateText(fiber)
+  }
+}
 
-function endWork(fiber) {
-
+function endWork(fiber) { // 在回收的过程中构建副作用链表，该链表存放的就是需要新建、更新、删除的 fiber
+  if (fiber.effectTag) {
+    if (effectHead.nextEffect) { // 其余副作用链条
+      prevEffect.nextEffect = fiber
+    } else { // 副作用联调首部
+      effectHead.nextEffect = fiber
+    }
+    console.log(fiber.props.id || fiber.props.text)
+    prevEffect = fiber
+  }
 }
 
 function updateRoot(fiber) {
@@ -115,7 +141,8 @@ function updateDOMProps(dom, oldProps, newProps) {
   }
   for (const prop in newProps) {
     const value = newProps[prop]
-    if (prop.startsWith('on')) {
+    if (prop === 'children') {
+    } else if (prop.startsWith('on')) {
 
     } else if (prop === 'style') {
       for (const key in value) {

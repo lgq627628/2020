@@ -1,0 +1,7 @@
+export const TEXT_TYPE = 'TEXT_TYPE'
+export const ROOT_TAG = 'ROOT_TAG'
+export const NORMAL_TAG = 'NORMAL_TAG'
+export const TEXT_TAG = 'TEXT_TAG'
+export const INSERT = 'INSERT'
+export const UPDATE = 'UPDATE'
+export const DELETE = 'DELETE'

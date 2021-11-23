@@ -1,0 +1,34 @@
+<p>raf、setTimeout、postMessage的频率测试</p>
+<!-- 一帧里面可以执行多次 setTimeout、postMessage -->
+
+
+
+<script>
+  function loopRAF() {
+    console.log('1:raf=============');
+    requestAnimationFrame(loopRAF);
+  }
+  requestAnimationFrame(loopRAF);
+
+
+
+  function loopTimeout() {
+    console.log('2:timoeout');
+    setTimeout(() => {
+      loopTimeout();
+    })
+  }
+  setTimeout(loopTimeout);
+
+
+  
+
+  window.addEventListener('message', handleMsg, false);
+  function handleMsg(e) {
+    if (e.data === 'message') {
+      console.log('3:message')
+      window.postMessage('message')
+    }
+  }
+  window.postMessage('message')
+</script>

@@ -1,0 +1,40 @@
+<script>
+  // 方法一：用 setTimeout 模拟，但不是完全替代
+  window.requestIdleCallback1 = function(cb) {
+    let start = Date.now();
+    return setTimeout(function () {
+      const deadline = {
+        timeRemaining: () => Math.max(0, 50 - (Date.now() - start))
+      };
+      cb(deadline);
+    });
+  }
+</script>
+
+
+<script>
+  // 方法二：用 requestAnimationFrame + MessageChannel 模拟
+  let deadlineTime // 当前帧结束时间
+  let callback // 需要回调的任务
+
+  let channel = new MessageChannel()
+  let port1 = channel.port1;
+  let port2 = channel.port2;
+
+  port2.onmessage = () => {
+      const timeRemaining = () => deadlineTime - performance.now();
+      if (timeRemaining() > 0 && callback) {
+        const deadline = { timeRemaining };
+        callback(deadline);
+      }
+  }
+
+  window.requestIdleCallback2 = function (cb) {
+      requestAnimationFrame(rafStartTime => {
+          // 结束时间 = 一帧开始时间 + 一帧耗时
+          deadlineTime = rafStartTime + 16.667
+          callback = cb
+          port1.postMessage(null);
+      });
+  }
+</script>

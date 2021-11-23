@@ -1,0 +1,54 @@
+<div id="box"></div>
+<button id="btn1">执行计算任务</button>
+<button id="btn2">更改背景颜色</button>
+<!-- 先点击按钮1，再点击按钮2，就能看到差别 -->
+<style>
+  #box {
+    padding: 20px;
+    background: palegoldenrod;
+  }
+</style>
+
+<script>
+  var box = document.getElementById("box")
+  var btn1 = document.getElementById("btn1")
+  var btn2 = document.getElementById("btn2")
+
+  var number = 99999
+
+  function calc() {
+    while (number > 0) {
+      console.log(number)
+      number--
+    }
+  }
+  btn1.onclick = function () {
+    calc()
+  }
+  btn2.onclick = function () {
+    box.style.background = "green"
+  }
+</script>
+
+<!-- <script>
+  var box = document.getElementById("box")
+  var btn1 = document.getElementById("btn1")
+  var btn2 = document.getElementById("btn2")
+
+  var number = 99999
+
+  function calc(deadline) {
+    while (deadline.timeRemaining() > 1 && number > 0) {
+      console.log(number)
+      number--
+    }
+    // 在这里应该再次执行计算任务
+    requestIdleCallback(calc)
+  }
+  btn1.onclick = function () {
+    requestIdleCallback(calc)
+  }
+  btn2.onclick = function () {
+    box.style.background = "green"
+  }
+</script> -->

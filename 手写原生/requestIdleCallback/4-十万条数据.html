@@ -1,0 +1,42 @@
+<div><button id="btn1">渲染十万条</button><input></div>
+<div><button id="btn2">requestIdleCallback 渲染十万条</button><input></div>
+<ul id="list1"></ul>
+<ul id="list2"></ul>
+
+<script>
+  const NUM1 = 100000;
+  let list1 = document.getElementById("list1");
+  document.getElementById("btn1").addEventListener('click', bigInsert1);
+  function bigInsert1() {
+    let i = 0;
+    while (i < NUM1) {
+      let item = document.createElement("li");
+      item.innerText = `第${i++}条数据`;
+      list1.appendChild(item);
+    }
+  }
+
+
+  // 时间切片
+  const NUM2 = 100000
+  let list2 = document.getElementById("list2");
+  let f = document.createDocumentFragment();
+  let i = 0;
+  document.getElementById("btn2").addEventListener('click', () => {
+    requestIdleCallback(bigInsert2);
+  });
+  function bigInsert2(deadline) {
+    while (deadline.timeRemaining() > 1 && i < NUM2) {
+      console.log('空闲执行中');
+      let item = document.createElement("li");
+      item.innerText = `第${i++}条数据`;
+      f.appendChild(item);
+      if (f.children.length >= 100) break; // 每次渲染 100 条
+    }
+    f.children.length && requestAnimationFrame(() => {
+      list2.appendChild(f);
+      f = document.createDocumentFragment();
+    });
+    if (i < NUM2) requestIdleCallback(bigInsert2)
+  }
+</script>

@@ -1,0 +1,24 @@
+<p>基本用法</p>
+<script>
+    const tasks = [
+        ()=>{ console.log("task 1"); },
+        // ()=>{ sleep(2); },
+        ()=>{ console.log("task 2"); },
+        ()=>{ console.log("task 3"); }
+    ];
+    function work(deadline) {
+        console.log(`当前帧剩余时间: ${deadline.timeRemaining()}`);
+        while (deadline.timeRemaining() > 1 && tasks.length > 0) {
+            tasks.shift()() // 如果有空闲且有任务就执行
+        }
+    
+        if (tasks.length > 0) requestIdleCallback(work);
+    }
+    requestIdleCallback(work);
+
+    function sleep(t) {
+        let now = Date.now();
+        while(Date.now() - now < t * 1000) {}
+    }
+</script>
+

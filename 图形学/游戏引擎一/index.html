@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏引擎</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+        #game {
+            width: 100%;
+            height: 100%;
+            background: lightseagreen;
+        }
+    </style>
+</head>
+<body>
+    <div id="game"></div>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script type="module">
+        import { GameMgr } from './Game.js';
+        window.xx = new GameMgr('#game');
+    </script>
+</body>
+</html>

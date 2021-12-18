@@ -1,0 +1,19 @@
+{
+  "name": "2d-design",
+  "version": "1.0.0",
+  "description": "用 ts 写的 2d 渲染引擎",
+  "main": "index.js",
+  "scripts": {
+    "dev": "lite-server"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "systemjs": "^6.11.0",
+    "systemjs-babel": "^0.3.1",
+    "typescript": "^4.5.4"
+  },
+  "devDependencies": {
+    "lite-server": "^2.6.1"
+  }
+}

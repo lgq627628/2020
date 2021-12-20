@@ -7,16 +7,38 @@
         <title>TS-2D架构设计</title>
         <script src="node_modules/systemjs/dist/system.js"></script>
         <script src="node_modules/systemjs-babel/dist/systemjs-babel.js"></script>
-        <script>
-            System.import('./main.ts') .then(null, console.error.bind(console)); // // 入口文件，如果出现错误，转发到浏览器的console中显示错误信息
-        </script>
         <style>
+            * {
+                margin: 0;
+                padding: 0;
+            }
             #canvas {
-                border: 1px solid;
+                margin: 10px;
+                padding: 20px;
+                border: 10px solid green;
+                background: lightblue;
+            }
+            .btn {
+                position: fixed;
+                top: 100px;
+                right: 40px;
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background: lightblue;
+                cursor: pointer;
+            }
+            .btn-stop {
+                top: 170px;
             }
         </style>
     </head>
     <body>
         <canvas id="canvas" width="800" height="600"></canvas>
+        <button id="start" class="btn">启动</button>
+        <button id="stop" class="btn btn-stop">暂停</button>
+        <script>
+            System.import('./test/test.ts') .then(null, console.error.bind(console)); // // 入口文件，如果出现错误，转发到浏览器的console中显示错误信息
+        </script>
     </body>
 </html>

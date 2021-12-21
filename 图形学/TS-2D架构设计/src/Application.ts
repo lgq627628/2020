@@ -1,26 +1,30 @@
 import { CnavasKeyboardEvent, CnavasMouseEvent } from './CnavasInputEvent.ts';
 import { v2 } from './v2.ts';
+import { Timer, TimerCallback } from './Timer.ts';
 /**
  * 控制主循环
+ * 基于时间的更新和重绘
  * 分发事件
+ * 计时器功能，应对不用频繁渲染的情况
  * 将不变的部分（更新和渲染的流程）封装起来放在基类中，也就是基类固定了整个行为规范
  * 多态：将可变部分以虚函数的方式公开给具体实现者，基类并不知道每个子类要如何更新，也不知道每个子类如何渲染
  */
 export class Application implements EventListenerObject {
     public canvas: HTMLCanvasElement;
-    public ctx: CanvasRenderingContext2D | null;
     protected isStart: boolean = false;
     // raf 返回的 id 都是大于 0 的
     protected rafId: number = -1;
     // 基于时间的物理更新，! 表示可以延迟赋值
     protected startTIme!: number;
     protected lastTime!: number;
-    // 当前帧率
-    protected fps !: number;
+    // 当前帧率，这个其实和屏幕刷新频率一致
+    protected _fps !: number;
     // 事件相关
     public isSupportMouseMove: boolean;
     // 用来判断拖拽
     public isMouseDown: boolean;
+    public timers: Timer[] = [];
+    private _timeId: number = -1;
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         this.isMouseDown = false;
@@ -33,11 +37,6 @@ export class Application implements EventListenerObject {
         window.addEventListener('keypress', this, false);
         window.addEventListener('keyup', this, false);
         window.addEventListener('keydown', this, false);
-        this.ctx = this.canvas.getContext('2d');
-        if (this.ctx) {
-            this.ctx.fillStyle = 'lightgreen';
-            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        }
     }
     start() {
         if (this.isStart) return;
@@ -55,19 +54,20 @@ export class Application implements EventListenerObject {
         this.startTIme = -1;
         this.isStart = false;
     }
-    // 子类在这里写更新逻辑
+    // 子类在这里写更新逻辑，注意单位是 ms
     update(dt: number, passingTime: number) {
     }
     // 子类可以在这里写渲染逻辑
     render() {
 
     }
-    showFPS(): number {
-        return this.fps;
+    get fps(): number {
+        return this._fps;
     }
     isRunning(): boolean {
         return this.isStart;
     }
+    // 基于时间的更新和重绘
     step(timestamp: number) {
         if (this.startTIme < 0) this.startTIme = timestamp;
         if (this.lastTime < 0) this.lastTime = timestamp;
@@ -76,12 +76,14 @@ export class Application implements EventListenerObject {
         // 两帧间隔时间差
         const dt: number = timestamp - this.lastTime;
         this.lastTime = timestamp;
-        this.fps = ~~(1000 / dt);
+        if (dt !== 0) this._fps = ~~(1000 / dt);
+        // 处理定时器，也可以放在 update 中
+        this._handleTimers(dt);
         // 先在 update 里面更新数据
         this.update(dt, passingTime);
         // 再渲染
         this.render();
-        this.rafId = requestAnimationFrame(this.step.bind(this))
+        this.rafId = requestAnimationFrame(this.step.bind(this));
     }
     // 坐标转换，以 canvas 左上角为原点。注意：canvas 的 border 和 padding 会影响坐标的值
     private viewportToCanvasCoords(e: MouseEvent): v2 {
@@ -154,6 +156,50 @@ export class Application implements EventListenerObject {
     protected dispatchKeyPress(e: CnavasKeyboardEvent){}
     protected dispatchKeyUp(e: CnavasKeyboardEvent){}
     protected dispatchKeyDown(e: CnavasKeyboardEvent){}
+    public addTimer(calllback: TimerCallback, timeout: number = 1000, onlyOnce: boolean = false, data: any = undefined): number {
+        let timer: Timer;
+        const idx = this.timers.findIndex(timer => !timer.enabled);
+        if (idx >= 0) {
+            timer = this.timers[idx];
+        } else {
+            timer = new Timer(calllback);
+        }
+        timer.calllbackData = data;
+        timer.timeout = timeout;
+        timer.onlyOnce = onlyOnce;
+        timer.enabled = true;
+        timer.countdown = timeout;
+        timer.id = ++this._timeId;
+        this.timers.push(timer);
+        return timer.id;
+    }
+    public removeTimer(id: number): boolean {
+        const idx = this.timers.findIndex(timer => timer.id === id);
+        if (idx >= 0) {
+            // 仅仅是将 timer 的 enabled 值设置成 false，避免析构 Timer 的内存，也不会动态调整数组，下次需要新增可以重新利用，避免重新 new
+            // 尽量让内存使用与运行效率达到相对平衡
+            this.timers[idx].enabled = false;
+            return true;
+        }
+        return false;
+    }
+    // 注意：只有 start 之后才会开始执行
+    private _handleTimers(dt: number) {
+        for(let i = 0; i < this.timers.length; i++) {
+            const timer: Timer = this.timers[i];
+            if (timer.enabled === false) continue;
+            timer.countdown -= dt;
+            // 实际上 timer 并不精确；比如每次 update 的时间是 160ms，timeout 设置 300ms 一次，则执行的时候是 300 - 320 < 0
+            if (timer.countdown < 0) {
+                timer.calllback(timer.id, timer.calllbackData);
+                if (timer.onlyOnce) {
+                    this.removeTimer(timer.id);
+                } else {
+                    timer.countdown = timer.timeout;
+                }
+            }
+        }
+    }
 }
 
 // 获取 2d 渲染上下文对象，具体渲染由子类继承实现

@@ -19,7 +19,7 @@ class ApplicationTest extends Application {
     }
 }
 
-
+// 测试主流程
 const canvas: HTMLCanvasElement | null = document.getElementById('canvas') as HTMLCanvasElement;
 const app: Application = new ApplicationTest(canvas);
 app.update(0, 0);
@@ -28,10 +28,17 @@ console.log(app);
 const startBtn: HTMLButtonElement = document.getElementById('start') as HTMLButtonElement;
 const stopBtn: HTMLButtonElement = document.getElementById('stop') as HTMLButtonElement;
 
+// 测试定时器
+function timerCallback(id: number, data: any) {
+    console.log('定时器执行回调：', data);
+}
+app.addTimer(timerCallback, 1000, false, '回调传的数据');
 
-startBtn.onclick = (e: MouseEvent) => {
+
+startBtn.addEventListener('click', (e: MouseEvent) => {
     app.start();
-}
-stopBtn.onclick = (e: MouseEvent) => {
+});
+stopBtn.addEventListener('click', (e: MouseEvent) => {
     app.stop();
-}
+});
+

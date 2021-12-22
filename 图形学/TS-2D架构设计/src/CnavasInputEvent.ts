@@ -1,4 +1,4 @@
-import { v2 } from './v2.ts'
+import { v2 } from './v2';
 enum EInputEventType {
     MOUSEEVENT,
     MOUSEDOWN,

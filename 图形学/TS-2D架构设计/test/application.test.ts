@@ -1,5 +1,5 @@
-import { Application } from '../src/Application.ts';
-import { CnavasMouseEvent, CnavasKeyboardEvent } from '../src/CnavasInputEvent.ts';
+import { Application } from '../src/Application';
+import { CnavasMouseEvent, CnavasKeyboardEvent } from '../src/CnavasInputEvent';
 
 class ApplicationTest extends Application {
     constructor(canvas: HTMLCanvasElement) {

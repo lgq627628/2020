@@ -5,8 +5,6 @@
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>TS-2D架构设计</title>
-        <script src="node_modules/systemjs/dist/system.js"></script>
-        <script src="node_modules/systemjs-babel/dist/systemjs-babel.js"></script>
         <style>
             * {
                 margin: 0;
@@ -37,8 +35,11 @@
         <canvas id="canvas" width="800" height="600"></canvas>
         <button id="start" class="btn">启动</button>
         <button id="stop" class="btn btn-stop">暂停</button>
-        <script>
-            System.import('./test/test.ts') .then(null, console.error.bind(console)); // // 入口文件，如果出现错误，转发到浏览器的console中显示错误信息
+    
+        <script type="module">
+            import './test/application.test';
+            // import './test/stack.test';
+            // import './test/draw.test';
         </script>
     </body>
 </html>

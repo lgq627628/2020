@@ -1,6 +1,6 @@
-import { CnavasKeyboardEvent, CnavasMouseEvent } from './CnavasInputEvent.ts';
-import { v2 } from './v2.ts';
-import { Timer, TimerCallback } from './Timer.ts';
+import { CnavasKeyboardEvent, CnavasMouseEvent } from './CnavasInputEvent';
+import { v2 } from './v2';
+import { Timer, TimerCallback } from './Timer';
 /**
  * 控制主循环
  * 基于时间的更新和重绘
@@ -205,9 +205,22 @@ export class Application implements EventListenerObject {
 // 获取 2d 渲染上下文对象，具体渲染由子类继承实现
 export class Canvas2DApplication extends Application {
     public ctx2D: CanvasRenderingContext2D | null;
-    constructor(canvas: HTMLCanvasElement, opts: CanvasRenderingContext2DSettings) {
+    constructor(canvas: HTMLCanvasElement, opts?: CanvasRenderingContext2DSettings) {
         super(canvas);
         this.ctx2D = this.canvas.getContext('2d', opts);
+        this.adaptDPR();
+    }
+    // 根据 dpr 把 canvas 的 width、height 属性都放大，css 大小不变
+    // canvas 会自己把画布缩小到适应 css 的大小，于是放大和缩小的效果就抵消了，这样做的原因是为了解决高清屏的模糊问题
+    adaptDPR() {
+        if (!this.ctx2D) return;
+        const dpr = window.devicePixelRatio;
+        const { width, height } = this.canvas;
+        this.canvas.width = Math.round(width * dpr);
+        this.canvas.height = Math.round(height * dpr);
+        this.canvas.style.width = width + 'px';
+        this.canvas.style.height = height + 'px';
+        this.ctx2D.scale(dpr, dpr);
     }
 }
 

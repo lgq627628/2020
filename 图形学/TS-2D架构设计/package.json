@@ -4,16 +4,17 @@
   "description": "用 ts 写的 2d 渲染引擎",
   "main": "index.js",
   "scripts": {
-    "dev": "lite-server"
+    "dev": "vite",
+    "start": "vite",
+    "serve": "vite",
+    "vite": "vite"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
-    "systemjs": "^6.11.0",
-    "systemjs-babel": "^0.3.1",
     "typescript": "^4.5.4"
   },
   "devDependencies": {
-    "lite-server": "^2.6.1"
+    "vite": "^2.7.6"
   }
 }

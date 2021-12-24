@@ -1,4 +1,5 @@
 import { Canvas2DApplication } from '../src/Application';
+import { Rectangle } from '../src/math2D';
 
 type TextAlign = 'start' | 'left' | 'center' | 'right' | 'end';
 type TextBaseline = 'alphabetic' | 'hanging' | 'top' | 'middle' | 'bottom';
@@ -20,6 +21,12 @@ export enum ETextLayout {
     LEFT_BOTTOM,
     RIGHT_BOTTOM,
     CENTER_BOTTOM
+}
+enum EImageFillType {
+    STRETCH,
+    REPEAT,
+    REPEAT_X,
+    REPEAT_Y,
 }
 
 class Size {
@@ -61,6 +68,13 @@ class TestApplication extends Canvas2DApplication {
         this.drawRect(0, 0, this.canvas.width / 2, this.canvas.height / 2);
         this.drawGrid();
         this.drawText('尤水就下', 50, 50);
+        this.loadAndDrawImage('https://lf-cdn-tos.bytescm.com/obj/static/xitu_extension/static/github.46c47564.png');
+
+        const xx = document.createElement('img');
+        xx.onload = () => {
+            this.drawImage(xx, Rectangle.create(400, 400, 300, 300), Rectangle.create(0, 0, 100, 100), EImageFillType.REPEAT);
+        }
+        xx.src = 'https://lf-cdn-tos.bytescm.com/obj/static/xitu_extension/static/github.46c47564.png';
     }
     drawRect(x: number, y: number, w: number, h: number) {
         // save -> paint -> restore 经典的渲染状态机模式
@@ -164,6 +178,67 @@ class TestApplication extends Canvas2DApplication {
         strs.push(family);
         return strs.join(' ');
     }
+    // 在 Canvas2D 中，repeat、repeat_x 和 repeat_y 这种重复填充模式仅支持使用图案对象（CanvasPattern）来填充路径对象（矢量图形），而 drawImage 使用的是图像对象（HTMLImageElement）来填充目标矩形区域，并且仅支持拉伸缩放（Stretch）的模式，本节目的就是让 drawImage 也能支持 repeat、repeat_x 和 repeat_y 这种图像重复填充模式。
+    loadAndDrawImage(url: string) {
+        const img: HTMLImageElement = document.createElement('img') as HTMLImageElement;
+        img.onload = (e: Event) => {
+            if (!this.ctx2D) return;
+            console.log('url 的图片尺寸为', `[${img.width}, ${img.height}]`);
+            // drawImage 的3个重载方法，可以选择将一幅源图像的全部或部分区域绘制到 Canvas 画布中指定的目标区域内。在绘制过程中，drawImage 会根据目标区域大小的不同，自动应用拉伸缩放（Stretch）效果
+            this.ctx2D.drawImage(img, 100, 100);
+            this.ctx2D.drawImage(img, 200, 200, 100, 200);
+            this.ctx2D.drawImage(img, 50, 50, 100, 100, 300, 300, 350, 350);
+        }
+        img.src = url;
+    }
+    drawImage(img: HTMLImageElement, destRect: Rectangle, srcRect: Rectangle = Rectangle.create(0, 0, img.width, img.height), fillType: EImageFillType = EImageFillType.STRETCH): boolean {
+        if (!this.ctx2D) return false;
+        if (!srcRect) return false;
+        if (!destRect) return false;
+        if (fillType === EImageFillType.STRETCH) {
+            this.ctx2D.drawImage(img, srcRect.origin.x, srcRect.origin.y, srcRect.size.width, srcRect.size.height, destRect.origin.x, destRect.origin.y, destRect.size.width, destRect.size.height)
+        } else {
+            let rows: number = Math.ceil(destRect.size.width / srcRect.size.width);
+            let cols: number = Math.ceil(destRect.size.height / srcRect.size.height);
+
+            let top: number = 0;
+            let left: number = 0;
+            let right: number = 0;
+            let bottom: number = 0;
+            let width: number = 0;
+            let height: number = 0;
+
+            let destRight: number = destRect.origin.x + destRect.size.width;
+            let destBottom: number = destRect.origin.y + destRect.size.height;
+
+            if (fillType === EImageFillType.REPEAT_X) {
+                cols = 1;
+            } else if (fillType === EImageFillType.REPEAT_Y) {
+                rows = 1;
+            }
+
+            for(let i = 0; i < rows; i++) {
+                for(let j = 0; j < cols; j++) {
+                    // 计算第 i 行第 j 列的坐标
+                    left = destRect.origin.x + i * srcRect.size.width;
+                    top = destRect.origin.y + j * srcRect.size.height;
+                    width = srcRect.size.width;
+                    height = srcRect.size.height;
+                    right = left + width;
+                    bottom = top + height;
+
+                    if ( right > destRight) {
+                        width = srcRect.size.width - ( right - destRight);
+                    }
+                    if ( bottom > destBottom) {
+                      height = srcRect.size.height - ( bottom - destBottom);
+                    }
+                    this.ctx2D.drawImage(img, srcRect.origin.x, srcRect.origin.y, width, height, left, top, width, height);
+                }
+            }
+        }
+        return true;
+    }
     timeCallback(id: number, data: any) {
         if (!this.ctx2D) return;
         this.updateLineDashOffset();
@@ -180,7 +255,7 @@ class TestApplication extends Canvas2DApplication {
 // 测试主流程
 const canvas: HTMLCanvasElement | null = document.getElementById('canvas') as HTMLCanvasElement;
 const app: TestApplication = new TestApplication(canvas);
-app.start();
+app.render();
 const startBtn: HTMLButtonElement = document.getElementById('start') as HTMLButtonElement;
 const stopBtn: HTMLButtonElement = document.getElementById('stop') as HTMLButtonElement;
 

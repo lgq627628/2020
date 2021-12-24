@@ -1,4 +1,4 @@
-import { v2 } from './v2';
+import { v2 } from './math2D';
 enum EInputEventType {
     MOUSEEVENT,
     MOUSEDOWN,

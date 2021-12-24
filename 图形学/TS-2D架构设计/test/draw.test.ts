@@ -1,5 +1,31 @@
 import { Canvas2DApplication } from '../src/Application';
 
+type TextAlign = 'start' | 'left' | 'center' | 'right' | 'end';
+type TextBaseline = 'alphabetic' | 'hanging' | 'top' | 'middle' | 'bottom';
+type FontType = '10px sans-serif' | '15px sans-serif' | '20px sans-serif' | '25px sans-serif';
+type FontStyle = 'normal' | 'italic' | 'oblique';
+type FontWeight = 'normal' | 'blod' | 'bolder' | 'lighter' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900';
+type FontVariant = 'normal' | 'small-caps';
+type FontSize = '10px' | '12px' | '16px' | '18px' | '24px' | '50%' | '75%'
+    | '100%' | '125%' | '150%' | 'xx-small' | 'x-small' | 'small' | 'medium'
+    | 'large' | 'x-large' | 'xx-large';
+type FontFamily = 'sans-serif' | 'serif' | 'courier' | 'fantasy' | 'monospace';
+export enum ETextLayout {
+    LEFT_TOP,
+    RIGHT_TOP,
+    CENTER_TOP,
+    LEFT_MIDDLE,
+    RIGHT_MIDDLE,
+    CENTER_MIDDLE,
+    LEFT_BOTTOM,
+    RIGHT_BOTTOM,
+    CENTER_BOTTOM
+}
+
+class Size {
+    public width: number = 0;
+    public height: number = 0;
+}
 class TestApplication extends Canvas2DApplication {
     private _lineDashOffset: number = 0;
     // 由于 Colors 独一无二，没有多个实例，所以可以声明为公开的静态的数组类型
@@ -34,6 +60,7 @@ class TestApplication extends Canvas2DApplication {
         // 具体绘制
         this.drawRect(0, 0, this.canvas.width / 2, this.canvas.height / 2);
         this.drawGrid();
+        this.drawText('尤水就下', 50, 50);
     }
     drawRect(x: number, y: number, w: number, h: number) {
         // save -> paint -> restore 经典的渲染状态机模式
@@ -103,6 +130,39 @@ class TestApplication extends Canvas2DApplication {
         // 绘制全局坐标系，左上角为原点，x 轴向右，y 轴向下，特别适合用来观察坐标变换
         this.drawCircle(0, 0, 5, '#000');
         this.drawCoords(0, 0, this.canvas.width, this.canvas.height);
+    }
+    drawText(text: string, x: number, y: number, color: string = '#000', align: TextAlign = 'left', basline: TextBaseline = 'top', font: FontType = '20px sans-serif') {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        ctx2D.save();
+        ctx2D.textAlign = align;
+        ctx2D.textBaseline = basline;
+        ctx2D.font = font;
+        ctx2D.fillStyle = color;
+        ctx2D.fillText(text, x, y);
+        ctx2D.restore();
+    }
+    // font 属性设定后会影响 Canvas2D 中的 measureText 方法计算文本的宽度值，因为 measureText 方法是基于当前的 font 值来计算文本的宽度。
+    calcTextSize(text: string, char: string = 'W', scale: number = 0.5): Size {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) throw new Error('canvas 上下文环境不能为空');
+        const size: Size = new Size();
+        size.width = ctx2D.measureText(text).width;
+        const w: number = ctx2D.measureText(char).width;
+        // 此高度只是粗略估计，并且针对 sans-serif 字体，你可以理解为经验值
+        size.height = w + w * scale;
+        return size;
+    }
+    // 由于设置 font 属性时，font 字符串必须要按照 font-style font-variant font-weightfont-size font-family 的顺序来设置相关的值，如果顺序不正确，会导致 font 属性不起作用。
+    // 如果大家在 makeFontString 中用不同的字体（FontFamily）来测试，会发现自己实现的 calcTextSize 方法返回的高度也不是很精确，需要自行测试和调整，以获取最佳的 scale 比例值。
+    static makeFontString(size: FontSize = '16px', weight: FontWeight = 'normal', style: FontStyle = 'normal', variant: FontVariant = 'normal', family: FontFamily = 'sans-serif'): string {
+        const strs: string[] = [];
+        strs.push(style);
+        strs.push(variant);
+        strs.push(weight);
+        strs.push(size);
+        strs.push(family);
+        return strs.join(' ');
     }
     timeCallback(id: number, data: any) {
         if (!this.ctx2D) return;

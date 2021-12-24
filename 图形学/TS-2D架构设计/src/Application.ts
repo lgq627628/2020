@@ -1,5 +1,5 @@
 import { CnavasKeyboardEvent, CnavasMouseEvent } from './CnavasInputEvent';
-import { v2 } from './v2';
+import { v2 } from './math2D';
 import { Timer, TimerCallback } from './Timer';
 /**
  * 控制主循环

@@ -1,3 +1,14 @@
+const PiBy180: number = 0.017453292519943295; // Math.PI / 180.0
+export class Math2D {
+    // 将以角度表示的参数转换为弧度表示
+    static toRadian(degree: number): number {
+        return degree * PiBy180;
+    }
+    // 将以弧度表示的参数转换为角度表示
+    static toDegree(radian: number): number {
+        return radian / PiBy180;
+    }
+}
 export class v2 {
     public x: number;
     public y: number;

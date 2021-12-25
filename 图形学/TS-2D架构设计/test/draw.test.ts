@@ -1,5 +1,6 @@
 import { Canvas2DApplication } from '../src/Application';
-import { Rectangle } from '../src/math2D';
+import { CnavasMouseEvent } from '../src/CnavasInputEvent';
+import { Rectangle, Size, Math2D, vec2 } from '../src/math2D';
 
 type TextAlign = 'start' | 'left' | 'center' | 'right' | 'end';
 type TextBaseline = 'alphabetic' | 'hanging' | 'top' | 'middle' | 'bottom';
@@ -11,7 +12,7 @@ type FontSize = '10px' | '12px' | '16px' | '18px' | '24px' | '50%' | '75%'
     | '100%' | '125%' | '150%' | 'xx-small' | 'x-small' | 'small' | 'medium'
     | 'large' | 'x-large' | 'xx-large';
 type FontFamily = 'sans-serif' | 'serif' | 'courier' | 'fantasy' | 'monospace';
-export enum ETextLayout {
+export enum ELayout {
     LEFT_TOP,
     RIGHT_TOP,
     CENTER_TOP,
@@ -29,12 +30,10 @@ enum EImageFillType {
     REPEAT_Y,
 }
 
-class Size {
-    public width: number = 0;
-    public height: number = 0;
-}
 class TestApplication extends Canvas2DApplication {
     private _lineDashOffset: number = 0;
+    private _mouseX: number = 0;
+    private _mouseY: number = 0;
     // 由于 Colors 独一无二，没有多个实例，所以可以声明为公开的静态的数组类型
     public static Colors: string[] = [
         'aqua',                   //浅绿色
@@ -55,6 +54,10 @@ class TestApplication extends Canvas2DApplication {
         'white',                  //白色
         'yellow'                   //黄色
     ];
+    constructor(canvas: HTMLCanvasElement) {
+        super(canvas);
+        this.isSupportMouseMove = true;
+    }
     start() {
         // 更新虚线偏移位置，也可以写在 update 里面
         this.addTimer(this.timeCallback.bind(this), 50);
@@ -65,21 +68,52 @@ class TestApplication extends Canvas2DApplication {
         // 清屏
         this.ctx2D.clearRect(0, 0, this.canvas.width, this.canvas.height);
         // 具体绘制
-        this.drawRect(0, 0, this.canvas.width / 2, this.canvas.height / 2);
+        // this.drawRect(0, 0, this.canvas.width / 2, this.canvas.height / 2);
         this.drawGrid();
-        this.drawText('尤水就下', 50, 50);
-        this.loadAndDrawImage('https://lf-cdn-tos.bytescm.com/obj/static/xitu_extension/static/github.46c47564.png');
+        // this.fillText('尤水就下', 50, 50);
+        // this.loadAndDrawImage('https://lf-cdn-tos.bytescm.com/obj/static/xitu_extension/static/github.46c47564.png');
 
-        const xx = document.createElement('img');
-        xx.onload = () => {
-            this.drawImage(xx, Rectangle.create(400, 400, 300, 300), Rectangle.create(0, 0, 100, 100), EImageFillType.REPEAT);
+        // const xx = document.createElement('img');
+        // xx.onload = () => {
+        //     this.drawImage(xx, Rectangle.create(400, 400, 300, 300), Rectangle.create(0, 0, 100, 100), EImageFillType.REPEAT);
+        // }
+        // xx.src = 'https://lf-cdn-tos.bytescm.com/obj/static/xitu_extension/static/github.46c47564.png';
+
+        // const colorOfflineCanvas = this.getColorCanvas();
+        // this.drawImage(colorOfflineCanvas, Rectangle.create(300, 50, colorOfflineCanvas.width, colorOfflineCanvas.height));
+
+        // this.testChangePartCanvasImageData();
+
+        // 下面是坐标系变换测试：平移、旋转
+        this.strokeCircle(0, 0, this.distance(0, 0, this.canvas.width / 2, this.canvas.height / 2));
+        this.drawCanvasCoordCenter();
+        this.drawCoordInfo(`${this._mouseX},${this._mouseY}`, this._mouseX, this._mouseY);
+        this.doTransform(100, 50, -30);
+        this.doTransform(100, 50, -20, ELayout.LEFT_TOP);
+        this.doTransform(100, 50, -5, ELayout.LEFT_BOTTOM);
+        this.doTransform(100, 50, 10, ELayout.RIGHT_TOP);
+        this.doTransform(100, 50, 30, ELayout.RIGHT_BOTTOM);
+        this.doTransform(100, 50, 45, ELayout.CENTER_BOTTOM);
+    }
+    doTransform(width: number = 200, height: number = 100, degree: number = 0, layout: ELayout = ELayout.CENTER_MIDDLE, rotateFirst: boolean = true, isClockwise: boolean = true) {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        const radians = Math2D.toRadian(degree) * (isClockwise ? 1 : -1);
+        const halfWidth = this.canvas.width / 2;
+        const halfHeight = this.canvas.height / 2;
+        // 画圆做参考
+        ctx2D.save();
+        // 变换顺序对结果是有显著影响的
+        if (rotateFirst) {
+            // 顺时针旋转
+            ctx2D.rotate(radians);
+            ctx2D.translate(halfWidth, halfHeight);
+        } else {
+            ctx2D.translate(halfWidth, halfHeight);
+            ctx2D.rotate(radians);
         }
-        xx.src = 'https://lf-cdn-tos.bytescm.com/obj/static/xitu_extension/static/github.46c47564.png';
-
-        const colorOfflineCanvas = this.getColorCanvas();
-        this.drawImage(colorOfflineCanvas, Rectangle.create(300, 50, colorOfflineCanvas.width, colorOfflineCanvas.height));
-
-        this.testChangePartCanvasImageData();
+        this.fillLocalRectWithTitle(width, height, '', 'rgba(0, 0, 0, 0.3)', layout);
+        ctx2D.restore();
     }
     drawRect(x: number, y: number, w: number, h: number) {
         // save -> paint -> restore 经典的渲染状态机模式
@@ -102,9 +136,111 @@ class TestApplication extends Canvas2DApplication {
         ctx2D.fill();
         // 描边
         ctx2D.stroke();
+        this.fillCircle(x, y, 10);
         ctx2D.restore();
     }
-    drawCircle(x: number, y: number, radius: number, fillStyle: string | CanvasGradient | CanvasPattern = '#000') {
+    strokeRect(x: number, y: number, w: number, h: number, strokeStyle: string = '#000') {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        ctx2D.save();
+        ctx2D.strokeStyle = strokeStyle;
+        ctx2D.rect(x, y, w, h);
+        ctx2D.stroke();
+        ctx2D.restore();
+    }
+    fillRect(x: number, y: number, w: number, h: number, fillStyle: string = '#000') {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        ctx2D.save();
+        ctx2D.fillStyle = fillStyle;
+        ctx2D.rect(x, y, w, h);
+        ctx2D.fill();
+        ctx2D.restore();
+    }
+    /**
+     * local版本增加了坐标的9种原点变换，以及取消了x和y坐标参数，强制让局部坐标系原点位于[0, 0]处，这样可以通过内置的translate、rotate和scale方法进行局部坐标变换，这样更加方便、强大。后续会有很多比较复杂的例子来演示基于局部坐标系的变换操作。
+     * @param width 要绘制的矩形宽度
+     * @param height 要绘制的矩形高度
+     * @param title 矩形中显示的字符串
+     * @param color 要绘制矩形的填充颜色
+     * @param referencePt 坐标系原点位置，默认居中
+     * @param layout 文字框位置，默认居中绘制文本
+     * @param showCoord 是否显示局部坐标系，默认为显示局部坐标系
+     */
+    fillLocalRectWithTitle(width: number, height: number, title: string = '', color: string = '#000', referencePt: ELayout = ELayout.CENTER_MIDDLE, layout: ELayout = ELayout.CENTER_MIDDLE, showCoord: boolean = true) {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        let x: number = 0;
+        let y: number = 0;
+        // 首先根据referencePt的值计算原点相对左上角的偏移量
+        // Canvas2D中，左上角是默认的坐标系原点，所有原点变换都是相对左上角的偏移
+        switch (referencePt) {
+            case ELayout.LEFT_TOP:      //Canvas2D中，默认是左上角为坐标系原点
+                x = 0;
+                y = 0;
+                break;
+            case ELayout.LEFT_MIDDLE:                //左中为原点
+                x = 0;
+                y = - height * 0.5;
+                break;
+            case ELayout.LEFT_BOTTOM:               //左下为原点
+                x = 0;
+                y = - height;
+                break;
+            case ELayout.RIGHT_TOP:                  //右上为原点
+                x = - width;
+                y = 0;
+                break;
+            case ELayout.RIGHT_MIDDLE:               //右中为原点
+                x = - width;
+                y = - height * 0.5;
+                break;
+            case ELayout.RIGHT_BOTTOM:               //右下为原点
+                x = - width;
+                y = - height;
+                break;
+            case ELayout.CENTER_TOP:                //中上为原点
+                x = - width * 0.5;
+                y = 0;
+                break;
+            case ELayout.CENTER_MIDDLE:              //中中为原点
+                x = - width * 0.5;
+                y = - height * 0.5;
+                break;
+            case ELayout.CENTER_BOTTOM:             //中下为原点
+                x = - width * 0.5;
+                y = - height;
+                break;
+        }
+        // 下面的代码和上一章实现的fillRectWithTitle一样
+        ctx2D.save();
+        // 1. 绘制矩形
+        ctx2D.fillStyle = color;
+        ctx2D.beginPath();
+        ctx2D.rect(x, y, width, height);
+        ctx2D.fill();
+        // 如果有文字，先根据枚举值计算x, y坐标
+        if (title.length) {
+            // 2. 绘制文字信息
+            // 在矩形的左上角绘制出相关文字信息，使用的是10px大小的文字
+            let rect: Rectangle = this.calcLocalTextRectangle(layout, title, width, height);
+            // // 绘制文本
+            this.fillText(title, x + rect.origin.x, y + rect.origin.y, 'white', 'left', 'top');
+            // // 绘制文本框
+            this.strokeRect(x + rect.origin.x, y + rect.origin.y, rect.size.width, rect.size.height, 'rgba(0, 0, 0, 0.5)');
+            // // 绘制文本框左上角坐标（相对父矩形表示）
+            this.fillCircle(x + rect.origin.x, y + rect.origin.y, 2);
+        }
+        // // 3. 绘制变换的局部坐标系，局部坐标原点总是为[ 0 , 0 ]
+        // // 附加一个坐标，x轴和y轴比矩形的width和height多20像素
+        // // 并且绘制3像素的原点
+        if (showCoord) {
+            this.strokeCoords(0, 0, width + 20, height + 20);
+            this.fillCircle(0, 0, 3);
+        }
+        ctx2D.restore();
+    }
+    fillCircle(x: number, y: number, radius: number, fillStyle: string | CanvasGradient | CanvasPattern = '#000') {
         const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
         if (!ctx2D) return;
         ctx2D.save();
@@ -112,6 +248,16 @@ class TestApplication extends Canvas2DApplication {
         ctx2D.beginPath();
         ctx2D.arc(x, y, radius, 0, Math.PI * 2);
         ctx2D.fill();
+        ctx2D.restore();
+    }
+    strokeCircle(x: number, y: number, radius: number, strokeStyle: string | CanvasGradient | CanvasPattern = '#000') {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        ctx2D.save();
+        ctx2D.strokeStyle = strokeStyle;
+        ctx2D.beginPath();
+        ctx2D.arc(x, y, radius, 0, Math.PI * 2);
+        ctx2D.stroke();
         ctx2D.restore();
     }
     // 这里画线并没有使用 save 和 restore，因为这个方法一般会被调用多次，所以由开发者进行状态管理和设置
@@ -123,7 +269,7 @@ class TestApplication extends Canvas2DApplication {
         ctx2D.lineTo(x2, y2);
         ctx2D.stroke();
     }
-    drawCoords(originX: number, originY: number, width: number, height: number) {
+    strokeCoords(originX: number, originY: number, width: number, height: number) {
         const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
         if (!ctx2D) return;
         ctx2D.save();
@@ -147,10 +293,10 @@ class TestApplication extends Canvas2DApplication {
         }
         ctx2D.restore();
         // 绘制全局坐标系，左上角为原点，x 轴向右，y 轴向下，特别适合用来观察坐标变换
-        this.drawCircle(0, 0, 5, '#000');
-        this.drawCoords(0, 0, this.canvas.width, this.canvas.height);
+        this.fillCircle(0, 0, 5, '#000');
+        this.strokeCoords(0, 0, this.canvas.width, this.canvas.height);
     }
-    drawText(text: string, x: number, y: number, color: string = '#000', align: TextAlign = 'left', basline: TextBaseline = 'top', font: FontType = '20px sans-serif') {
+    fillText(text: string, x: number, y: number, color: string = '#000', align: TextAlign = 'left', basline: TextBaseline = 'top', font: FontType = '20px sans-serif') {
         const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
         if (!ctx2D) return;
         ctx2D.save();
@@ -182,6 +328,68 @@ class TestApplication extends Canvas2DApplication {
         strs.push(size);
         strs.push(family);
         return strs.join(' ');
+    }
+    // parentWidth / parentHeight是父矩形的尺寸
+    // 函数返回类型是Rectangle，表示9个文本子矩形之一
+    // 这些子矩形是相对父矩形坐标系的表示
+    // 这意味着父矩形原点为[0 , 0]，所以参数是父矩形的width和height，而没有x和y坐标
+    calcLocalTextRectangle(layout: ELayout, text: string, parentWidth: number, parentHeight: number): Rectangle {
+        // 首先计算出要绘制的文本的尺寸（width / hegiht）
+        let s: Size = this.calcTextSize(text);
+        // 创建一个二维向量
+        let o: vec2 = vec2.create();
+        // 计算出当前文本子矩形左上角相对父矩形空间中的3个关键点（左上、中心、右下）坐标
+        // 1．当前文本子矩形左上角相对父矩形左上角坐标，由于局部表示，所以为[ 0 , 0 ]
+        let left: number = 0;
+        let top: number = 0;
+        // 2．当前文本子矩形左上角相对父矩形右下角坐标
+        let right: number = parentWidth - s.width;
+        let bottom: number = parentHeight - s.height;
+        // 3．当前文本子矩形左上角相对父矩形中心点坐标
+        let center: number = right * 0.5;
+        let middle: number = bottom * 0.5;
+        // 根据ELayout的值来匹配这3个点的分量
+        // 计算子矩形相对父矩形原点[ 0 , 0 ]偏移量
+        switch (layout) {
+            case ELayout.LEFT_TOP:
+                o.x = left;
+                o.y = top;
+                break;
+            case ELayout.RIGHT_TOP:
+                o.x = right;
+                o.y = top;
+                break;
+            case ELayout.RIGHT_BOTTOM:
+                o.x = right;
+                o.y = bottom;
+                break;
+            case ELayout.LEFT_BOTTOM:
+                o.x = left;
+                o.y = bottom;
+                break;
+            case ELayout.CENTER_MIDDLE:
+                o.x = center;
+                o.y = middle;
+                break;
+            case ELayout.CENTER_TOP:
+                o.x = center;
+                o.y = 0;
+                break;
+            case ELayout.RIGHT_MIDDLE:
+                o.x = right;
+                o.y = middle;
+                break;
+            case ELayout.CENTER_BOTTOM:
+                o.x = center;
+                o.y = bottom;
+                break;
+            case ELayout.LEFT_MIDDLE:
+                o.x = left;
+                o.y = middle;
+                break;
+        }
+        // 返回子矩形
+        return new Rectangle(o, s);
     }
     // 在 Canvas2D 中，repeat、repeat_x 和 repeat_y 这种重复填充模式仅支持使用图案对象（CanvasPattern）来填充路径对象（矢量图形），而 drawImage 使用的是图像对象（HTMLImageElement）来填充目标矩形区域，并且仅支持拉伸缩放（Stretch）的模式，本节目的就是让 drawImage 也能支持 repeat、repeat_x 和 repeat_y 这种图像重复填充模式。
     loadAndDrawImage(url: string) {
@@ -347,6 +555,31 @@ class TestApplication extends Canvas2DApplication {
         this.ctx2D.shadowOffsetX = shadowOffsetX;
         this.ctx2D.shadowOffsetY = shadowOffsetY;
     }
+    drawCanvasCoordCenter() {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        const halfWidth = this.canvas.width / 2;
+        const halfHeight = this.canvas.height / 2;
+        ctx2D.save();
+        ctx2D.lineWidth = 2;
+        ctx2D.strokeStyle = 'red';
+        this.drawLine(0, halfHeight, this.canvas.width, halfHeight);
+        this.drawLine(halfWidth, 0, halfWidth, this.canvas.height);
+        this.fillCircle(halfWidth, halfHeight, 5);
+        ctx2D.restore();
+    }
+    drawCoordInfo(info: string, x: number = 0, y: number = 0) {
+        this.fillText(info, x, y, '#000', 'center', 'middle');
+    }
+    distance(x1: number, y1: number, x2: number, y2: number): number {
+        const diffX: number = x2 - x1;
+        const diffY: number = y2 - y1;
+        return Math.sqrt(diffX * diffX + diffY * diffY);
+    }
+    protected dispatchMouseMove(e: CnavasMouseEvent) {
+        this._mouseX = e.canvasPos.x;
+        this._mouseY = e.canvasPos.y;
+    }
     timeCallback(id: number, data: any) {
         if (!this.ctx2D) return;
         this.updateLineDashOffset();
@@ -363,7 +596,7 @@ class TestApplication extends Canvas2DApplication {
 // 测试主流程
 const canvas: HTMLCanvasElement | null = document.getElementById('canvas') as HTMLCanvasElement;
 const app: TestApplication = new TestApplication(canvas);
-app.render();
+app.start();
 const startBtn: HTMLButtonElement = document.getElementById('start') as HTMLButtonElement;
 const stopBtn: HTMLButtonElement = document.getElementById('stop') as HTMLButtonElement;
 

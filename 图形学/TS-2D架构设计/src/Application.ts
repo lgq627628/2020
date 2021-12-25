@@ -208,7 +208,7 @@ export class Canvas2DApplication extends Application {
     constructor(canvas: HTMLCanvasElement, opts?: CanvasRenderingContext2DSettings) {
         super(canvas);
         this.ctx2D = this.canvas.getContext('2d', opts);
-        this.adaptDPR();
+        // this.adaptDPR();
     }
     // 根据 dpr 把 canvas 的 width、height 属性都放大，css 大小不变
     // canvas 会自己把画布缩小到适应 css 的大小，于是放大和缩小的效果就抵消了，这样做的原因是为了解决高清屏的模糊问题

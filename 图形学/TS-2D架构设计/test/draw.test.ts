@@ -36,23 +36,23 @@ class Size {
 class TestApplication extends Canvas2DApplication {
     private _lineDashOffset: number = 0;
     // 由于 Colors 独一无二，没有多个实例，所以可以声明为公开的静态的数组类型
-    public static Colors : string[] = [
-        'aqua' ,                   //浅绿色
-        'black' ,                  //黑色
-        'blue' ,                   //蓝色
-        'fuchsia' ,                //紫红色
+    public static Colors: string[] = [
+        'aqua',                   //浅绿色
+        'black',                  //黑色
+        'blue',                   //蓝色
+        'fuchsia',                //紫红色
         'gray',                    //灰色
-        'green' ,                  //绿色
-        'lime' ,                   //绿黄色
-        'maroon' ,                 //褐红色
-        'navy' ,                   //海军蓝
-        'olive' ,                  //橄榄色
-        'orange' ,                 //橙色
-        'purple' ,                 //紫色
+        'green',                  //绿色
+        'lime',                   //绿黄色
+        'maroon',                 //褐红色
+        'navy',                   //海军蓝
+        'olive',                  //橄榄色
+        'orange',                 //橙色
+        'purple',                 //紫色
         'red',                     //红色
-        'silver' ,                 //银灰色
-        'teal' ,                   //蓝绿色
-        'white' ,                  //白色
+        'silver',                 //银灰色
+        'teal',                   //蓝绿色
+        'white',                  //白色
         'yellow'                   //黄色
     ];
     start() {
@@ -75,6 +75,11 @@ class TestApplication extends Canvas2DApplication {
             this.drawImage(xx, Rectangle.create(400, 400, 300, 300), Rectangle.create(0, 0, 100, 100), EImageFillType.REPEAT);
         }
         xx.src = 'https://lf-cdn-tos.bytescm.com/obj/static/xitu_extension/static/github.46c47564.png';
+
+        const colorOfflineCanvas = this.getColorCanvas();
+        this.drawImage(colorOfflineCanvas, Rectangle.create(300, 50, colorOfflineCanvas.width, colorOfflineCanvas.height));
+
+        this.testChangePartCanvasImageData();
     }
     drawRect(x: number, y: number, w: number, h: number) {
         // save -> paint -> restore 经典的渲染状态机模式
@@ -133,11 +138,11 @@ class TestApplication extends Canvas2DApplication {
         ctx2D.strokeStyle = color;
         ctx2D.lineWidth = 0.5;
         // 从左到右画垂直线
-        for(let i = interval + 0.5; i < this.canvas.width; i += interval) {
+        for (let i = interval + 0.5; i < this.canvas.width; i += interval) {
             this.drawLine(i, 0, i, this.canvas.height);
         }
         // 从上到下画水平线
-        for(let i = interval + 0.5; i < this.canvas.height; i += interval) {
+        for (let i = interval + 0.5; i < this.canvas.height; i += interval) {
             this.drawLine(0, i, this.canvas.width, i);
         }
         ctx2D.restore();
@@ -191,7 +196,7 @@ class TestApplication extends Canvas2DApplication {
         }
         img.src = url;
     }
-    drawImage(img: HTMLImageElement, destRect: Rectangle, srcRect: Rectangle = Rectangle.create(0, 0, img.width, img.height), fillType: EImageFillType = EImageFillType.STRETCH): boolean {
+    drawImage(img: HTMLImageElement | HTMLCanvasElement, destRect: Rectangle, srcRect: Rectangle = Rectangle.create(0, 0, img.width, img.height), fillType: EImageFillType = EImageFillType.STRETCH): boolean {
         if (!this.ctx2D) return false;
         if (!srcRect) return false;
         if (!destRect) return false;
@@ -217,8 +222,8 @@ class TestApplication extends Canvas2DApplication {
                 rows = 1;
             }
 
-            for(let i = 0; i < rows; i++) {
-                for(let j = 0; j < cols; j++) {
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
                     // 计算第 i 行第 j 列的坐标
                     left = destRect.origin.x + i * srcRect.size.width;
                     top = destRect.origin.y + j * srcRect.size.height;
@@ -227,17 +232,120 @@ class TestApplication extends Canvas2DApplication {
                     right = left + width;
                     bottom = top + height;
 
-                    if ( right > destRight) {
-                        width = srcRect.size.width - ( right - destRight);
+                    if (right > destRight) {
+                        width = srcRect.size.width - (right - destRight);
                     }
-                    if ( bottom > destBottom) {
-                      height = srcRect.size.height - ( bottom - destBottom);
+                    if (bottom > destBottom) {
+                        height = srcRect.size.height - (bottom - destBottom);
                     }
                     this.ctx2D.drawImage(img, srcRect.origin.x, srcRect.origin.y, width, height, left, top, width, height);
                 }
             }
         }
         return true;
+    }
+    // 获取 4 * 4 = 16 种基本颜色的离屏画布
+    getColorCanvas(amount: number = 32): HTMLCanvasElement {
+        let step: number = 4;
+        // 第1步，使用createElement方法，提供tagName为"canvas"关键字创建一个离屏
+        let canvas: HTMLCanvasElement = document.createElement('canvas') as HTMLCanvasElement;
+        // 第2步，设置该画布的尺寸
+        canvas.width = amount * step;
+        canvas.height = amount * step;
+        // 第3步，从离屏画布中获取渲染上下文对象
+        let context: CanvasRenderingContext2D | null = canvas.getContext('2d');
+        if (context === null) {
+            alert('离屏Canvas获取渲染上下文失败！');
+            throw new Error('离屏Canvas获取渲染上下文失败！');
+        }
+
+        for (let i: number = 0; i < step; i++) {
+            for (let j: number = 0; j < step; j++) {
+                // 将二维索引转换成一维索引，用来在静态的Colors数组中寻址
+                let idx: number = step * i + j;
+                // 第4步，使用渲染上下文对象绘图
+                context.save();
+                // 使用其中16种颜色（由于背景是白色，17种颜色包含白色，所以去除白色）
+                context.fillStyle = TestApplication.Colors[idx];
+                context.fillRect(i * amount, j * amount, amount, amount);
+                context.restore();
+            }
+        }
+        return canvas;
+    }
+    // 参数rRow / rColum表示要替换（replace）的颜色的行列索引，默认情况下，将第3行，第1列的蓝色子矩形替换为红色
+    // 参数cRow / cColum表示要改变（change）的颜色的行列索引，默认情况下，将第2行，第1列的黑色子矩形反转为白色
+    testChangePartCanvasImageData(rRow: number = 2, rColum: number = 0, cRow: number = 1, cColum: number = 0, size: number = 32) {
+        // 调用getColorCanvas方法生成16种标准色块离屏画布
+        let colorCanvas: HTMLCanvasElement = this.getColorCanvas(size);
+        // 获取离屏画布的上下文渲染对象
+        let context: CanvasRenderingContext2D | null = colorCanvas.getContext("2d");
+        if (context === null) {
+            alert('Canvas获取渲染上下文失败！');
+            throw new Error('Canvas获取渲染上下文失败！');
+        }
+        // 显示未修改时的离屏画布的效果
+        // this.drawImage(colorCanvas, Rectangle.create(500, 50, colorCanvas.width, colorCanvas.height));
+
+        // 接上面的代码继续往下来替换颜色
+        //使用creatImageData方法，大小为size * size个像素
+        // 每个像素又有4个分量[ r , g , b , a ]
+        let imgData: ImageData = context.createImageData(size, size);
+        // imgData有3个属性，其中data属性存储的是一个Uint8ClampedArray类型数组对象
+        // 该数组中存储方式为： [ r , g , b , a , r , g , b , a , ........ ]
+        // 所以imgData.data.length = size * size * 4 ;
+        let data: Uint8ClampedArray = imgData.data;
+        // 上面也提到过，imgData.data.length表示的是所有分量的个数
+        // 而为了方便寻址，希望使用像素个数进行遍历，因此要除以4（一个像素由r、g、b、a这4个分量组成）
+        let rbgaCount: number = data.length / 4;
+        for (let i = 0; i < rbgaCount; i++) {
+            // 注意下面索引的计算方式
+            data[i * 4 + 0] = 255;        //红色的rbga = [ 255 , 0 , 0 , 255 ]
+            data[i * 4 + 1] = 0;
+            data[i * 4 + 2] = 0;
+            data[i * 4 + 3] = 255;        // alpha这里设置为255，全不透明
+        }
+
+        // 一定要调用putImageData方法来替换context中的像素数据
+        // 参数imgData表示要替换的像素数据
+        // 参数[ size * rColum  , size * rRow ]表示要绘制到context中的哪个位置
+        // 参数[ 0 , 0 , size , size ]表示从imgData哪个位置获取多少像素
+        context.putImageData(imgData, size * rColum, size * rRow, 0, 0, size, size);
+
+        // 获取离屏画布中位于[ size * cColum , size * cRow ] 处，尺寸为[ size , size ]大小的像素数据
+        // imgData = context.getImageData(size * cColum, size * cRow, size, size);
+        // data = imgData.data;
+        // let component: number = 0;
+        // // 下面使用imgData的width和height属性，二维方式表示像素
+        // for (let i: number = 0; i < imgData.width; i++) {
+        //     for (let j: number = 0; j < imgData.height; j++) {
+        //         // 由于每个像素有包含4个分量，[ r g b a ] 因此三重循环
+        //         for (let k: number = 0; k < 4; k++) {
+        //             // 因为data是一维数组表示，而使用三重循环，因此需要下面算法
+        //             // 将三维数组表示的索引转换为一维数组表示的索引，该算法很重要
+        //             let idx: number = (i * imgData .height  + j ) * 4 + k;
+        //             component = data[idx];
+        //             // 在data数组中，idx % 4 为3时，说明是alpha值
+        //             // 需求是alpha总是保持不变，因此需要下面判断代码，切记
+        //             if (idx % 4! == 3) {
+        //                 data[idx] = 255 - component; //反转rgb，但是alpha 不变，仍旧是255
+        //             }
+        //         }
+        //     }
+        // }
+        // // 使用putImageData更新像素数据
+        // context.putImageData(imgData, size * cColum, size * cRow, 0, 0, size, size);
+        // 将修改后的结果绘制显示出来
+        this.setShadowState();
+        this.drawImage(colorCanvas, Rectangle.create(500, 50, colorCanvas.width, colorCanvas.height));
+    }
+    // 阴影的使用非常简单，但是阴影的绘制非常耗时，除非必要，否则尽量不要使用阴影技术。另外阴影属于全局绘制对象，它影响到矢量图形、图像及文本的绘制效果
+    setShadowState(shadowBlur: number = 5, shadowColor: string = 'rgba( 127 , 127 , 127 , 0.5 )', shadowOffsetX: number = 10, shadowOffsetY: number = 10) {
+        if (!this.ctx2D) return;
+        this.ctx2D.shadowBlur = shadowBlur;
+        this.ctx2D.shadowColor = shadowColor;
+        this.ctx2D.shadowOffsetX = shadowOffsetX;
+        this.ctx2D.shadowOffsetY = shadowOffsetY;
     }
     timeCallback(id: number, data: any) {
         if (!this.ctx2D) return;

@@ -1,3 +1,4 @@
+// 注意：这里绘图 api 都改成了使用 fill 和 stroke 开头，没有使用 draw，这样语义比较分明，一个是填充一个是描边
 import { Canvas2DApplication } from '../src/Application';
 import { CnavasMouseEvent } from '../src/CnavasInputEvent';
 import { Rectangle, Size, Math2D, vec2 } from '../src/math2D';
@@ -34,6 +35,14 @@ class TestApplication extends Canvas2DApplication {
     private _lineDashOffset: number = 0;
     private _mouseX: number = 0;
     private _mouseY: number = 0;
+
+    private _rotationSunSpeed: number = 50 * 0.0001;        //太阳自转的角速度，以角度为单位
+    private _rotationMoonSpeed: number = 100 * 0.0001;      //月球自转的角速度，以角度为单位
+    private _revolutionSpeed: number = 60 * 0.0001;         //月球公转的角速度
+
+    private _rotationSun: number = 0;              //太阳自转的角位移
+    private _rotationMoon: number = 0;             //月亮自转的角位移
+    private _revolution: number = 0;               //月亮围绕太阳公转的角位移
     // 由于 Colors 独一无二，没有多个实例，所以可以声明为公开的静态的数组类型
     public static Colors: string[] = [
         'aqua',                   //浅绿色
@@ -63,6 +72,12 @@ class TestApplication extends Canvas2DApplication {
         this.addTimer(this.timeCallback.bind(this), 50);
         super.start();
     }
+    update(dt: number, passingTime: number): void {
+        // 角位移公式：s = v * t ;
+        this._rotationMoon += this._rotationMoonSpeed * dt;
+        this._rotationSun += this._rotationSunSpeed * dt;
+        this._revolution += this._revolutionSpeed * dt;
+    }
     render() {
         if (!this.ctx2D) return;
         // 清屏
@@ -85,15 +100,68 @@ class TestApplication extends Canvas2DApplication {
         // this.testChangePartCanvasImageData();
 
         // 下面是坐标系变换测试：平移、旋转
-        this.strokeCircle(0, 0, this.distance(0, 0, this.canvas.width / 2, this.canvas.height / 2));
-        this.drawCanvasCoordCenter();
-        this.drawCoordInfo(`${this._mouseX},${this._mouseY}`, this._mouseX, this._mouseY);
-        this.doTransform(100, 50, -30);
-        this.doTransform(100, 50, -20, ELayout.LEFT_TOP);
-        this.doTransform(100, 50, -5, ELayout.LEFT_BOTTOM);
-        this.doTransform(100, 50, 10, ELayout.RIGHT_TOP);
-        this.doTransform(100, 50, 30, ELayout.RIGHT_BOTTOM);
-        this.doTransform(100, 50, 45, ELayout.CENTER_BOTTOM);
+        // this.strokeCircle(0, 0, this.distance(0, 0, this.canvas.width / 2, this.canvas.height / 2));
+        // this.drawCanvasCoordCenter();
+        // this.drawCoordInfo(`${this._mouseX},${this._mouseY}`, this._mouseX, this._mouseY);
+        // this.doTransform(100, 50, -30);
+        // this.doTransform(100, 50, -20, ELayout.LEFT_TOP);
+        // this.doTransform(100, 50, -5, ELayout.LEFT_BOTTOM);
+        // this.doTransform(100, 50, 10, ELayout.RIGHT_TOP);
+        // this.doTransform(100, 50, 30, ELayout.RIGHT_BOTTOM);
+        // this.doTransform(100, 50, 45, ELayout.CENTER_BOTTOM);
+
+        // this.doLocalTransform();
+
+        this.rotationAndRevolutionSimulation();
+    }
+    // 公转自转模拟
+    public rotationAndRevolutionSimulation(radius: number = 220): void {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        // 将自转rotation转换为弧度表示
+        let rotationMoon: number = Math2D.toRadian(this._rotationMoon);
+        let rotationSun: number = Math2D.toRadian(this._rotationSun);
+        // 将公转revolution转换为弧度表示
+        let revolution: number = Math2D.toRadian(this._revolution);
+        // 记录当前渲染状态
+        ctx2D.save();
+        // 将局部坐标系平移到画布中心
+        ctx2D.translate(this.canvas.width * 0.5, this.canvas.height * 0.5);
+        ctx2D.save();
+        // 绘制矩形在画布中心自转
+        ctx2D.rotate(rotationSun);
+        // 绕局部坐标系原点自转
+        this.fillLocalRectWithTitleUV(100, 100, '自转' , 0.5, 0.5);
+        ctx2D.restore();
+        // 公转 + 自转，注意顺序：
+        ctx2D.save();
+        // 先公转
+        ctx2D.rotate(revolution);
+        //然后沿着当前的x轴平移radius个单位，radius半径形成圆路径
+        ctx2D.translate(radius, 0);
+        // 一旦平移到圆的路径上，开始绕局部坐标系原点进行自转
+        ctx2D.rotate(rotationMoon);
+        this.fillLocalRectWithTitleUV(80, 80, '自转 + 公转' , 0.5, 0.5);
+        ctx2D.restore();
+        // 恢复上一次记录的渲染状态
+        ctx2D.restore();
+    }
+    doLocalTransform() {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        let width: number = 100;            // 在局部坐标系中显示的rect的width
+        let height: number = 60;            // 在局部坐标系中显示的rect的height
+        let coordWidth: number = width * 1.5;          // 局部坐标系x轴的长度
+        let coordHeight: number = height * 1.5;       // 局部坐标系y轴的长度
+        let radius: number = 5;             // 绘制原点时使用的半径
+        ctx2D.save();
+
+        ctx2D.translate(this.canvas.width / 2, 50);
+        this.strokeCoords(0, 0, coordWidth, coordHeight);
+        this.fillCircle(0, 0, radius);
+        this.fillLocalRectWithTitle(width, height, '尤水就下');
+
+        ctx2D.restore();
     }
     doTransform(width: number = 200, height: number = 100, degree: number = 0, layout: ELayout = ELayout.CENTER_MIDDLE, rotateFirst: boolean = true, isClockwise: boolean = true) {
         const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
@@ -167,7 +235,7 @@ class TestApplication extends Canvas2DApplication {
      * @param layout 文字框位置，默认居中绘制文本
      * @param showCoord 是否显示局部坐标系，默认为显示局部坐标系
      */
-    fillLocalRectWithTitle(width: number, height: number, title: string = '', color: string = '#000', referencePt: ELayout = ELayout.CENTER_MIDDLE, layout: ELayout = ELayout.CENTER_MIDDLE, showCoord: boolean = true) {
+    fillLocalRectWithTitle(width: number, height: number, title: string = '', color: string = '#000', referencePt: ELayout = ELayout.LEFT_TOP, layout: ELayout = ELayout.CENTER_MIDDLE, showCoord: boolean = false) {
         const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
         if (!ctx2D) return;
         let x: number = 0;
@@ -213,6 +281,50 @@ class TestApplication extends Canvas2DApplication {
                 break;
         }
         // 下面的代码和上一章实现的fillRectWithTitle一样
+        ctx2D.save();
+        // 1. 绘制矩形
+        ctx2D.fillStyle = color;
+        ctx2D.beginPath();
+        ctx2D.rect(x, y, width, height);
+        ctx2D.fill();
+        // 如果有文字，先根据枚举值计算x, y坐标
+        if (title.length) {
+            // 2. 绘制文字信息
+            // 在矩形的左上角绘制出相关文字信息，使用的是10px大小的文字
+            let rect: Rectangle = this.calcLocalTextRectangle(layout, title, width, height);
+            // // 绘制文本
+            this.fillText(title, x + rect.origin.x, y + rect.origin.y, 'white', 'left', 'top');
+            // // 绘制文本框
+            this.strokeRect(x + rect.origin.x, y + rect.origin.y, rect.size.width, rect.size.height, 'rgba(0, 0, 0, 0.5)');
+            // // 绘制文本框左上角坐标（相对父矩形表示）
+            this.fillCircle(x + rect.origin.x, y + rect.origin.y, 2);
+        }
+        // // 3. 绘制变换的局部坐标系，局部坐标原点总是为[ 0 , 0 ]
+        // // 附加一个坐标，x轴和y轴比矩形的width和height多20像素
+        // // 并且绘制3像素的原点
+        if (showCoord) {
+            this.strokeCoords(0, 0, width + 20, height + 20);
+            this.fillCircle(0, 0, 3);
+        }
+        ctx2D.restore();
+    }
+    public fillLocalRectWithTitleUV(
+        width: number, height: number,                     //矩形尺寸
+        title: string = '',                                     //矩形显示的文字内容
+        u: number = 0,
+        v: number = 0,
+        //这里使用u和v参数代替原来的ELayout枚举
+        layout: ELayout = ELayout.CENTER_MIDDLE,         //文字框的对齐方式
+        color: string = 'grey',                                //矩形填充颜色
+        showCoord: boolean = true       // 是否显示局部坐标系，默认显示
+    ) {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        let x: number = - width * u;
+        let y: number = - height * v;
+        // 和fillLocalRectWithTitle中的绘制代码一样
+        // 首先根据referencePt的值计算原点相对左上角的偏移量
+        // Canvas2D中，左上角是默认的坐标系原点，所有原点变换都是相对左上角的偏移
         ctx2D.save();
         // 1. 绘制矩形
         ctx2D.fillStyle = color;

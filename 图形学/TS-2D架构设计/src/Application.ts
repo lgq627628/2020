@@ -1,4 +1,4 @@
-import { CnavasKeyboardEvent, CnavasMouseEvent } from './CnavasInputEvent';
+import { CanvasKeyboardEvent, CanvasMouseEvent } from './CnavasInputEvent';
 import { v2 } from './math2D';
 import { Timer, TimerCallback } from './Timer';
 /**
@@ -111,18 +111,18 @@ export class Application implements EventListenerObject {
         return new v2(x, y);
     }
     // 将 dom 事件转换为自定义的 canvas 事件
-    private toCanvasMouseEvent(e: Event): CnavasMouseEvent {
+    private toCanvasMouseEvent(e: Event): CanvasMouseEvent {
         // 向下转型
         const event: MouseEvent = e as MouseEvent;
         const mousePos = this.viewportToCanvasCoords(event);
-        const canvasMouseEvent: CnavasMouseEvent = new CnavasMouseEvent(this.canvas, mousePos, event.button, event.altKey, event.ctrlKey, event.shiftKey);
+        const canvasMouseEvent: CanvasMouseEvent = new CanvasMouseEvent(this.canvas, mousePos, event.button, event.altKey, event.ctrlKey, event.shiftKey);
         return canvasMouseEvent;
     }
-    private toCanvasKeyBoardEvent(e: Event): CnavasKeyboardEvent {
+    private toCanvasKeyBoardEvent(e: Event): CanvasKeyboardEvent {
         // 向下转型
         const event: KeyboardEvent = e as KeyboardEvent;
-        const cnavasKeyboardEvent: CnavasKeyboardEvent = new CnavasKeyboardEvent(event.key, event.code, event.repeat, event.altKey, event.ctrlKey, event.shiftKey);
-        return cnavasKeyboardEvent;
+        const canvasKeyboardEvent: CanvasKeyboardEvent = new CanvasKeyboardEvent(event.key, event.code, event.repeat, event.altKey, event.ctrlKey, event.shiftKey);
+        return canvasKeyboardEvent;
     }
     public handleEvent(e: Event): void {
         switch (e.type) {
@@ -149,13 +149,13 @@ export class Application implements EventListenerObject {
                 break;
         }
     }
-    protected dispatchMouseDown(e: CnavasMouseEvent){}
-    protected dispatchMouseUp(e: CnavasMouseEvent){}
-    protected dispatchMouseMove(e: CnavasMouseEvent){}
-    protected dispatchMouseDrag(e: CnavasMouseEvent){}
-    protected dispatchKeyPress(e: CnavasKeyboardEvent){}
-    protected dispatchKeyUp(e: CnavasKeyboardEvent){}
-    protected dispatchKeyDown(e: CnavasKeyboardEvent){}
+    protected dispatchMouseDown(e: CanvasMouseEvent){}
+    protected dispatchMouseUp(e: CanvasMouseEvent){}
+    protected dispatchMouseMove(e: CanvasMouseEvent){}
+    protected dispatchMouseDrag(e: CanvasMouseEvent){}
+    protected dispatchKeyPress(e: CanvasKeyboardEvent){}
+    protected dispatchKeyUp(e: CanvasKeyboardEvent){}
+    protected dispatchKeyDown(e: CanvasKeyboardEvent){}
     public addTimer(calllback: TimerCallback, timeout: number = 1000, onlyOnce: boolean = false, data: any = undefined): number {
         let timer: Timer;
         const idx = this.timers.findIndex(timer => !timer.enabled);

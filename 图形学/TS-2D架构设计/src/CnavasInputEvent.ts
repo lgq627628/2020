@@ -25,7 +25,7 @@ export class CnavasInputEvent {
     }
 }
 
-export class CnavasMouseEvent extends CnavasInputEvent {
+export class CanvasMouseEvent extends CnavasInputEvent {
     public canvas: HTMLCanvasElement;
     public canvasPos: v2;
     public button: number;
@@ -39,7 +39,7 @@ export class CnavasMouseEvent extends CnavasInputEvent {
     }
 }
 
-export class CnavasKeyboardEvent extends CnavasInputEvent {
+export class CanvasKeyboardEvent extends CnavasInputEvent {
     // ASCII 字符
     public key: string;
     // ASCII 码，keyCode: number 已弃用，所以这里用 code，但是有兼容性问题

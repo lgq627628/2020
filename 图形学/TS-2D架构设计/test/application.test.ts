@@ -1,14 +1,14 @@
 import { Application } from '../src/Application';
-import { CnavasMouseEvent, CnavasKeyboardEvent } from '../src/CnavasInputEvent';
+import { CanvasMouseEvent, CanvasKeyboardEvent } from '../src/CnavasInputEvent';
 
 class ApplicationTest extends Application {
     constructor(canvas: HTMLCanvasElement) {
         super(canvas);
     }
-    protected dispatchKeyDown(e: CnavasKeyboardEvent): void {
+    protected dispatchKeyDown(e: CanvasKeyboardEvent): void {
         console.log('按下了', e.key);
     }
-    protected dispatchMouseDown(e: CnavasMouseEvent): void {
+    protected dispatchMouseDown(e: CanvasMouseEvent): void {
         console.log('点击坐标', e.canvasPos);
     }
     update(dt: number, passingTime: number): void {

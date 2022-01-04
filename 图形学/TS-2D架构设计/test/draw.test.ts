@@ -1,7 +1,8 @@
 // 注意：这里绘图 api 都改成了使用 fill 和 stroke 开头，没有使用 draw，这样语义比较分明，一个是填充一个是描边
 import { Canvas2DApplication } from '../src/Application';
-import { CnavasMouseEvent } from '../src/CnavasInputEvent';
+import { CanvasKeyboardEvent, CanvasMouseEvent } from '../src/CnavasInputEvent';
 import { Rectangle, Size, Math2D, vec2 } from '../src/math2D';
+import { Tank } from './Tank';
 
 type TextAlign = 'start' | 'left' | 'center' | 'right' | 'end';
 type TextBaseline = 'alphabetic' | 'hanging' | 'top' | 'middle' | 'bottom';
@@ -31,7 +32,7 @@ enum EImageFillType {
     REPEAT_Y,
 }
 
-class TestApplication extends Canvas2DApplication {
+export class TestApplication extends Canvas2DApplication {
     private _lineDashOffset: number = 0;
     private _mouseX: number = 0;
     private _mouseY: number = 0;
@@ -43,6 +44,9 @@ class TestApplication extends Canvas2DApplication {
     private _rotationSun: number = 0;              //太阳自转的角位移
     private _rotationMoon: number = 0;             //月亮自转的角位移
     private _revolution: number = 0;               //月亮围绕太阳公转的角位移
+
+    public _tank: Tank;
+
     // 由于 Colors 独一无二，没有多个实例，所以可以声明为公开的静态的数组类型
     public static Colors: string[] = [
         'aqua',                   //浅绿色
@@ -66,6 +70,15 @@ class TestApplication extends Canvas2DApplication {
     constructor(canvas: HTMLCanvasElement) {
         super(canvas);
         this.isSupportMouseMove = true;
+
+        this._tank = new Tank();
+        this._tank.x = canvas.width / 2;
+        this._tank.y = canvas.height / 2;
+        this._tank.scaleX = 2;
+        this._tank.scaleY = 2;
+        this._tank.tankRotation = Math2D.toRadian(30);
+        this._tank.turretRotation = Math2D.toRadian(-30);
+        this._tank.showCoord = true;
     }
     start() {
         // 更新虚线偏移位置，也可以写在 update 里面
@@ -74,9 +87,10 @@ class TestApplication extends Canvas2DApplication {
     }
     update(dt: number, passingTime: number): void {
         // 角位移公式：s = v * t ;
-        this._rotationMoon += this._rotationMoonSpeed * dt;
-        this._rotationSun += this._rotationSunSpeed * dt;
-        this._revolution += this._revolutionSpeed * dt;
+        // this._rotationMoon += this._rotationMoonSpeed * dt;
+        // this._rotationSun += this._rotationSunSpeed * dt;
+        // this._revolution += this._revolutionSpeed * dt;
+        this._tank.update(dt);
     }
     render() {
         if (!this.ctx2D) return;
@@ -85,6 +99,7 @@ class TestApplication extends Canvas2DApplication {
         // 具体绘制
         // this.drawRect(0, 0, this.canvas.width / 2, this.canvas.height / 2);
         this.drawGrid();
+        this.draw4Quadrant();
         // this.fillText('尤水就下', 50, 50);
         // this.loadAndDrawImage('https://lf-cdn-tos.bytescm.com/obj/static/xitu_extension/static/github.46c47564.png');
 
@@ -112,8 +127,19 @@ class TestApplication extends Canvas2DApplication {
 
         // this.doLocalTransform();
 
-        this.rotationAndRevolutionSimulation();
+        // this.rotationAndRevolutionSimulation();
+
+        this.drawTank();
+        const x = (this._mouseX - this._tank.x).toFixed(2);
+        const y = (this._mouseY - this._tank.y).toFixed(2);
+        const angle = Math2D.toDegree(this._tank.tankRotation).toFixed(2);
+        this.drawCoordInfo(`坐标：[${x}, ${y}]；角度：${angle}`, this._mouseX, this._mouseY);
     }
+
+    drawTank() {
+        this._tank.draw(this);
+    }
+
     // 公转自转模拟
     public rotationAndRevolutionSimulation(radius: number = 220): void {
         const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
@@ -131,7 +157,7 @@ class TestApplication extends Canvas2DApplication {
         // 绘制矩形在画布中心自转
         ctx2D.rotate(rotationSun);
         // 绕局部坐标系原点自转
-        this.fillLocalRectWithTitleUV(100, 100, '自转' , 0.5, 0.5);
+        this.fillLocalRectWithTitleUV(100, 100, '自转', 0.5, 0.5);
         ctx2D.restore();
         // 公转 + 自转，注意顺序：
         ctx2D.save();
@@ -141,7 +167,7 @@ class TestApplication extends Canvas2DApplication {
         ctx2D.translate(radius, 0);
         // 一旦平移到圆的路径上，开始绕局部坐标系原点进行自转
         ctx2D.rotate(rotationMoon);
-        this.fillLocalRectWithTitleUV(80, 80, '自转 + 公转' , 0.5, 0.5);
+        this.fillLocalRectWithTitleUV(80, 80, '自转 + 公转', 0.5, 0.5);
         ctx2D.restore();
         // 恢复上一次记录的渲染状态
         ctx2D.restore();
@@ -380,6 +406,30 @@ class TestApplication extends Canvas2DApplication {
         ctx2D.moveTo(x1, y1);
         ctx2D.lineTo(x2, y2);
         ctx2D.stroke();
+    }
+    strokeLine(x1: number, y1: number, x2: number, y2: number) {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        ctx2D.beginPath();
+        ctx2D.moveTo(x1, y1);
+        ctx2D.lineTo(x2, y2);
+        ctx2D.stroke();
+    }
+    fillLine(x1: number, y1: number, x2: number, y2: number) {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        ctx2D.beginPath();
+        ctx2D.moveTo(x1, y1);
+        ctx2D.lineTo(x2, y2);
+        ctx2D.fill();
+    }
+    strokeCoord(originX: number, originY: number, width: number, height: number) {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        ctx2D.save();
+        this.drawLine(originX, originY, originX + width, originY);
+        this.drawLine(originX, originY, originX, originY + height);
+        ctx2D.restore();
     }
     strokeCoords(originX: number, originY: number, width: number, height: number) {
         const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
@@ -683,14 +733,51 @@ class TestApplication extends Canvas2DApplication {
     drawCoordInfo(info: string, x: number = 0, y: number = 0) {
         this.fillText(info, x, y, '#000', 'center', 'middle');
     }
+    draw4Quadrant() {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        ctx2D.save();
+        this.fillText('第一象限', this.canvas.width, this.canvas.height, 'red', 'right', 'bottom');
+        this.fillText('第二象限', 0, this.canvas.height, 'red', 'left', 'bottom');
+        this.fillText('第三象限', 0, 0, 'red', 'left', 'top');
+        this.fillText('第四象限', this.canvas.width, 0, 'red', 'right', 'top');
+        ctx2D.restore();
+    }
+    // 绘制三角形
+    drawTriangle(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, stroke: boolean = true) {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        ctx2D.save();
+        ctx2D.lineWidth = 3;
+        ctx2D.strokeStyle = 'rgba( 0 , 0 , 0 , 0.5 )';
+        ctx2D.beginPath();
+        ctx2D.lineTo(x1, y1);
+        ctx2D.lineTo(x2, y2);
+        ctx2D.moveTo(x3, y3);
+        ctx2D.closePath();
+
+        if (stroke) {
+            ctx2D.stroke();
+        } else {
+            ctx2D.fill();
+        }
+
+        this.fillCircle(x3, y3, 5);
+        ctx2D.restore();
+    }
     distance(x1: number, y1: number, x2: number, y2: number): number {
         const diffX: number = x2 - x1;
         const diffY: number = y2 - y1;
         return Math.sqrt(diffX * diffX + diffY * diffY);
     }
-    protected dispatchMouseMove(e: CnavasMouseEvent) {
+    protected dispatchMouseMove(e: CanvasMouseEvent) {
         this._mouseX = e.canvasPos.x;
         this._mouseY = e.canvasPos.y;
+
+        this._tank.onMouseMove(e);
+    }
+    protected dispatchKeyPress(e: CanvasKeyboardEvent) {
+        this._tank.onKeyPress(e);
     }
     timeCallback(id: number, data: any) {
         if (!this.ctx2D) return;
@@ -709,6 +796,7 @@ class TestApplication extends Canvas2DApplication {
 const canvas: HTMLCanvasElement | null = document.getElementById('canvas') as HTMLCanvasElement;
 const app: TestApplication = new TestApplication(canvas);
 app.start();
+
 const startBtn: HTMLButtonElement = document.getElementById('start') as HTMLButtonElement;
 const stopBtn: HTMLButtonElement = document.getElementById('stop') as HTMLButtonElement;
 

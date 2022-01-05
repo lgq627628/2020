@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<style type="text/css">
+		#box {
+			width: 100px;
+			height: 100px;
+			background: green;
+		}
+	</style>
+</head>
+<body>
+<div id="box"></div>
+<button id="start">START</button>
+<button id="end">END</button>
+<button id="stop">STOP</button>
+<button id="reset">RESET</button>
+<script type="module" src="./core.js"></script>
+<script type="text/javascript">
+    setTimeout(() => {
+        const el = (name) => document.querySelector(name);
+        const box = el('#box');
+        const timeline = new Core({
+            duration: 3000,
+            value: [[0, 500], [0, 300]],
+            renderFn: function(value1, value2) {
+                box.style.transform = `translate(${ value1 }px, ${ value2 }px)`;
+            },
+            timingFn: 'easeOut',
+            onPlay: () => console.log('play'),
+            onEnd: () => console.log('end'),
+            onReset: () =>  console.log('reset'),
+            onStop: () => console.log('stop')
+        })
+        timeline.play();
+    
+        el('#start').onclick = () => timeline.play();
+        el('#end').onclick = () => timeline.end();
+        el('#stop').onclick = () => timeline.stop()
+        el('#reset').onclick = () => timeline.reset()
+    }, 1000);
+</script>
+</body>
+</html>

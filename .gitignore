@@ -20,3 +20,6 @@ selenium-debug.log
 *.njsproj
 *.sln
 *.cache
+
+.parcel-cache
+package-lock.json

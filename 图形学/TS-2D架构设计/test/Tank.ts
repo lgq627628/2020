@@ -1,5 +1,5 @@
 import { CanvasMouseEvent, CanvasKeyboardEvent } from '../src/CnavasInputEvent';
-import { Math2D } from '../src/math2D';
+import { Math2D, v2, vec2 } from '../src/math2D';
 import { TestApplication } from './draw.test';
 export class Tank {
     public x: number = 100;
@@ -29,6 +29,10 @@ export class Tank {
     // 速度：像素/s
     public linearSpeed: number = 0.1;
     public turretRotateSpeed: number = Math2D.toRadian(5);
+    
+    // 用向量来表示
+    public pos: vec2 = new vec2(100, 100);
+    public target: vec2 = new vec2();
 
     draw(app: TestApplication) {
         const ctx2D: CanvasRenderingContext2D | null = app.ctx2D;
@@ -103,12 +107,15 @@ export class Tank {
     onMouseMove(e: CanvasMouseEvent) {
         this.targetX = e.canvasPos.x;
         this.targetY = e.canvasPos.y;
+        this.target.values[0] = e.canvasPos.x;
+        this.target.values[1] = e.canvasPos.y;
         this._lookAt();
     }
     private _lookAt() {
         const radian = Math.atan2(this.targetY - this.y, this.targetX - this.x);
         this.tankRotation = radian;
     }
+    // 通过三角函数来实现移动
     private _moveTo(dt: number) {
         const diffX: number = this.targetX - this.x;
         const diffY: number = this.targetY - this.y;
@@ -120,7 +127,17 @@ export class Tank {
             // this.y += this.linearSpeed * dt * Math.sin(this.tankRotation);
         }
     }
+    // 通过向量来实现移动，在向量标量相乘版本的朝向运动代码中，没有任何耗时的三角函数操作，全部都是标量（一个二维向量由两个标量组成）的加法、减法，以及乘法操作。
+    private _moveToByVector(dt: number) {
+        const dir = vec2.difference(this.target, this.pos);
+        dir.normalize();
+        // 将坦克沿着单位方向 dir 移动 this.linearSpeed * dt 个单位
+        this.pos = vec2.scaleAdd(this.pos, dir, this.linearSpeed * dt);
+        this.x = this.pos.values[0];
+        this.y = this.pos.values[1];
+    }
     update(dt: number) {
-        this._moveTo(dt);
+        // this._moveTo(dt);
+        this._moveToByVector(dt);
     }
 }

@@ -100,6 +100,9 @@ export class TestApplication extends Canvas2DApplication {
         // this.drawRect(0, 0, this.canvas.width / 2, this.canvas.height / 2);
         this.drawGrid();
         this.draw4Quadrant();
+        this.strokeLine(0, this.canvas.height / 2, this.canvas.width, this.canvas.height / 2);
+        this.strokeLine(this.canvas.width / 2, 0, this.canvas.width / 2, this.canvas.height);
+        this.fillCircle(this.canvas.width / 2, this.canvas.height / 2, 5);
         // this.fillText('尤水就下', 50, 50);
         // this.loadAndDrawImage('https://lf-cdn-tos.bytescm.com/obj/static/xitu_extension/static/github.46c47564.png');
 
@@ -127,13 +130,15 @@ export class TestApplication extends Canvas2DApplication {
 
         // this.doLocalTransform();
 
+        // 下面是自转公转案例
         // this.rotationAndRevolutionSimulation();
 
+        // 下面是坦克案例
         this.drawTank();
-        const x = (this._mouseX - this._tank.x).toFixed(2);
-        const y = (this._mouseY - this._tank.y).toFixed(2);
-        const angle = Math2D.toDegree(this._tank.tankRotation).toFixed(2);
-        this.drawCoordInfo(`坐标：[${x}, ${y}]；角度：${angle}`, this._mouseX, this._mouseY);
+        // const x = (this._mouseX - this._tank.x).toFixed(2);
+        // const y = (this._mouseY - this._tank.y).toFixed(2);
+        // const angle = Math2D.toDegree(this._tank.tankRotation).toFixed(2);
+        // this.drawCoordInfo(`坐标：[${x}, ${y}]；角度：${angle}`, this._mouseX, this._mouseY);
     }
 
     drawTank() {

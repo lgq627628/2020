@@ -15,6 +15,8 @@ dom.classList.toggle('className');
 
 // 修改样式
 dom.setAttribute("class","test1");
+dom.removeAttribute("class");
+
 // 插入元素
 // insertBefore() 某个子节点前面添加
 // https://developer.mozilla.org/zh-CN/docs/Web/API/Node/insertBefore

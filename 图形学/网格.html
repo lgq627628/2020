@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        canvas {
+            border: 1px solid #000;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas width="600" height="600"></canvas>
+    <script>
+        let canvas = document.querySelector('canvas');
+        let ctx = canvas.getContext('2d')
+
+        const gridSize = 40;
+        const canvasWidth = ctx.canvas.width;
+        const canvasHeight = ctx.canvas.height;
+
+        //设置竖线条数
+        const ylineTotal = Math.floor(canvasWidth / gridSize);
+        for (let i = 0; i < ylineTotal; i++) {
+            ctx.beginPath();
+            ctx.moveTo(i * gridSize - 0.5, 0);
+            ctx.lineTo(i * gridSize - 0.5, canvasHeight)
+            ctx.stroke();
+        }
+        const xlineTotal = Math.floor(canvasHeight / gridSize);
+        for (let i = 0; i < xlineTotal; i++) {
+            ctx.beginPath();
+            ctx.moveTo(0, i * gridSize - 0.5);
+            ctx.lineTo(canvasHeight, i * gridSize - 0.5)
+            ctx.stroke();
+        }
+        // 通过设置单元格的大小，比对需要描绘的线条数量
+    </script>
+</body>
+
+</html>

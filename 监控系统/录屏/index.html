@@ -1,0 +1,104 @@
+<!-- 不错的文章 https://blog.csdn.net/qq_28773159/article/details/111998552 https://juejin.cn/post/6924255611374796808#heading-9 -->
+<!-- https://juejin.cn/post/6953533236337197070#heading-23 -->
+<!-- https://zhuanlan.zhihu.com/p/60639266 -->
+<!-- https://juejin.cn/post/6844903925213036552 -->
+<!-- https://juejin.cn/post/6918926609848205325#heading-26 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>录屏测试页面</title>
+    <link rel="stylesheet" href="./index.css">
+    <!-- https://github.com/rrweb-io/rrweb/blob/master/guide.zh_CN.md -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js"></script>
+</head>
+<body>
+    <div class="row"><input type="text" value="不错哟"></div>
+    <div class="row"><textarea>嘻嘻嘻</textarea></div>
+    <div class="row" id="xx">0</div>
+    <button class="row" id="btn">点我加一</button>
+    <div class="row">
+        <div id="record" class="btn">录制</div>
+        <div id="play" class="btn">回放</div>
+    </div>
+    <script>
+            
+        let events = []; // 记录快照
+        let stopFn
+        function addNum() {
+            let el = document.getElementById('xx')
+            let val = +el.innerText
+            el.innerText = val + 1
+        }
+        function record() {
+            console.log('开始录像')
+            // 1.录制
+
+            stopFn = rrweb.record({
+                emit(event) {
+                    // 将 event 存入 events 数组中
+                    events.push(event);
+                    console.log(events)
+                },
+            });
+
+
+            // const observer = new MutationObserver(mutationsList => {
+            //     console.log(mutationsList); // 发生变化的数据
+            // });
+            // // 以上述配置开始观察目标节点
+            // observer.observe(document.body, {
+            //     attributes: true,
+            //     characterData: true,
+            //     childList: true
+            // });
+        }
+        function play() {
+            stopFn()
+            console.log('开始回放')
+            // 2.回放
+            const replayer = new rrweb.Replayer(events);
+            replayer.play();
+        }
+        function ob() {
+            setTimeout(() => {
+                let dom2 = document.getElementById("dom2");
+                dom2.style.background = "red";
+                let dom4 = document.getElementById("dom4");
+                dom4.style.background = "green";
+                }, 5000);
+
+                const callback = function (mutationsList, observer) {
+                for (const mutation of mutationsList) {
+                    if (mutation.type === "childList") {
+                    console.log("子元素增加或者删除.");
+                    } else if (mutation.type === "attributes") {
+                    console.log("元素属性发生改变");
+                    }
+                }
+                };
+
+                document.addEventListener("DOMContentLoaded", function () {
+                const observer = new MutationObserver(callback);
+                observer.observe(document.body, {
+                    attributes: true,
+                    childList: true,
+                    subtree: true,
+                });
+            });
+        }
+
+        document.getElementById('btn').addEventListener('click', addNum)
+        document.getElementById('record').addEventListener('click', record)
+        document.getElementById('play').addEventListener('click', play)
+
+        
+
+
+    </script>
+</body>
+</html>

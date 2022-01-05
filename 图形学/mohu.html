@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1px 模糊问题</title>
+    <style>
+        canvas{
+            border: 1px solid #000;
+            margin-top: 100px;
+            margin-left: 100px;
+        }
+    </style>
+    <script type="text/javascript">
+        function makeHighRes(canvas) {
+            var ctx = canvas.getContext('2d');
+            // Get the device pixel ratio, falling back to 1.               
+            var dpr = window.devicePixelRatio || window.webkitDevicePixelRatio || window.mozDevicePixelRatio || 1;
+
+            // Get the size of the canvas in CSS pixels.
+            var oldWidth = canvas.width;
+            var oldHeight = canvas.height;
+            // Give the canvas pixel dimensions of their CSS
+            // size * the device pixel ratio.
+            canvas.width = Math.round(oldWidth * dpr);
+            canvas.height = Math.round(oldHeight * dpr);
+            canvas.style.width = oldWidth + 'px';
+            canvas.style.height = oldHeight + 'px';
+            // Scale all drawing operations by the dpr, so you
+            // don't have to worry about the difference.
+            ctx.scale(dpr, dpr);
+            return ctx;
+        }
+        window.onload = function () {
+            /*获取元素*/
+            var myCanvas = document.querySelector('#myCanvas');
+            makeHighRes(myCanvas);
+            /*获取绘图工具*/
+            var context = myCanvas.getContext('2d');
+            console.log(context.backingStorePixelRatio)
+            context.strokeStyle = '#000';
+
+            /*绘制第一条线*/
+            /*设置绘图的起始位置*/
+            context.moveTo(100,100);
+            /*绘制路径*/
+            context.lineTo(200,100);
+
+            /*绘制第二条线*/
+            /*设置绘图的起始位置*/
+            context.moveTo(100,200);
+            /*绘制路径*/
+            context.lineTo(200,200);
+            
+            /*描边*/
+            context.stroke();
+        }
+    </script>
+</head>
+<body>
+    <canvas id="myCanvas" width="400" height="400"></canvas>
+</body>
+</html>

@@ -1,0 +1,5 @@
+- 想知道重绘情况，打开 rendering 面板
+- 想检查内存泄漏，打开 Memory 面板，点击 Take Snapshot
+- 想查看某个操作引起的内存变化，打开 Memory 面板，点击 Allocation instrumentation on timeline
+- 想查看垃圾回收，打开 performance 面板查看 timeline
+- 查看发送的请求时间，打开 network，鼠标移动到 waterfall 即可

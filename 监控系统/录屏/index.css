@@ -1,0 +1,27 @@
+* {
+    margin: 0;
+    padding: 0;
+    /* background: lightgreen; */
+}
+.row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 50px auto;
+}
+.btn {
+    margin: 10px;
+    width: 100px;
+    height: 30px;
+    line-height: 30px;
+    background: crimson;
+    text-align: center;
+}
+/* .replayer-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: transparent;
+} */

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线表格</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        #sheet {
+            position:absolute;
+            left: 0px;
+            top: 0px;
+            width:100%;
+            height:100%;
+            border: 1px solid;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="sheet"></canvas>
+    <script type="module" src="./index.js"></script>
+    <script>
+        window.onload = () => {
+            const data = {
+                container: 'sheet',
+                row: 30,
+                col: 20,
+                rowHeight: 16,
+                colWidth: 66,
+                cellData: [{
+                    x: 0,
+                    y: 0,
+                    value: {
+                        v: '哈哈哈',
+                        bg: 'red',
+                        fc: '#fff'
+                    }
+                }, {
+                    x: 0,
+                    y: 0,
+                    value: {
+                        v: '呵呵呵',
+                        bg: 'rgba(0,255,255)',
+                        fc: '#fff',
+                        fs: 14
+                    }
+                }]
+            }
+            const sheet = new Sheet(data);
+            sheet.create();
+            window.xx = sheet;
+            console.log(xx);
+        }
+    </script>
+</body>
+</html>

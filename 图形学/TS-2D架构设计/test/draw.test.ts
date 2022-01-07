@@ -47,6 +47,15 @@ export class TestApplication extends Canvas2DApplication {
 
     public _tank: Tank;
 
+    // 线段起点
+    public lineStart: vec2 = vec2.create(this.canvas.width / 2, this.canvas.height / 2);
+    // 线段终点
+    public lineEnd: vec2 = vec2.create(this.canvas.width / 2 + 300, this.canvas.height / 2  + 200);
+    // 投影点坐标
+    public closePt: vec2 = vec2.create();
+    // 鼠标是否在线段起点和重点范围内
+    private _isHit: boolean = false;
+
     // 由于 Colors 独一无二，没有多个实例，所以可以声明为公开的静态的数组类型
     public static Colors: string[] = [
         'aqua',                   //浅绿色
@@ -134,17 +143,167 @@ export class TestApplication extends Canvas2DApplication {
         // this.rotationAndRevolutionSimulation();
 
         // 下面是坦克案例
-        this.drawTank();
+        // this.drawTank();
         // const x = (this._mouseX - this._tank.x).toFixed(2);
         // const y = (this._mouseY - this._tank.y).toFixed(2);
         // const angle = Math2D.toDegree(this._tank.tankRotation).toFixed(2);
         // this.drawCoordInfo(`坐标：[${x}, ${y}]；角度：${angle}`, this._mouseX, this._mouseY);
+
+        // 下面是向量案例
+        // const v1 = new vec2(this.canvas.width / 2, this.canvas.height / 2);
+        // const v2 = new vec2(this.canvas.width / 2 + 200, this.canvas.height / + 200);
+        // this.drawVecFromLine(v1, v2);
+        this.drawMouseLineProjection();
     }
 
+    /**
+     * 沿着局部坐标系x轴的正方向，绘制长度为len的向量
+     * @param len 要绘制的向量的长度，例如291.55
+     * @param arrowLen 要绘制的向量的箭头长度
+     * @param beginText 表示向量尾部和头部的信息，例如[ 150 , 150 ]和[ 400 , 300 ]
+     * @param endText 表示向量尾部和头部的信息，例如[ 150 , 150 ]和[ 400 , 300 ]
+     * @param lineWidth 用来加粗显示向量
+     * @param isLineDash 是否以虚线方式显示向量
+     * @param showInfo 是否显示向量的长度
+     * @param alpha 是否以半透明方式显示向量
+     * @returns 
+     */
+    drawVec(
+        len: number,
+        arrowLen: number = 10,
+        beginText: string = '',
+        endText = '',
+        lineWidth: number = 1,
+        isLineDash: boolean = false,
+        showInfo: boolean = true,
+        alpha: boolean = false
+    ) {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        // 当绘制向量的负向量时，len是负数
+        // 此时如果不做如下处理，会导致向量的箭头绘制错误
+        if (len < 0) arrowLen = -arrowLen;
+        ctx2D.save();
+        // 设置线宽
+        ctx2D.lineWidth = lineWidth;
+        // 设置是否虚线绘制
+        if (isLineDash) ctx2D.setLineDash([2, 2]);
+
+        // 绘制向量的起点圆圈，如果加粗显示，那么向量的起点也要加大
+        if (lineWidth > 1) {
+            this.fillCircle(0, 0, 5);
+        } else {
+            this.fillCircle(0, 0, 3);
+        }
+
+        // 绘制向量和箭头
+        ctx2D.save();
+        // 设置是否半透明显示向量
+        if (alpha) {
+            ctx2D.strokeStyle = 'rgba( 0 , 0 , 0 , 0.3 )';
+        }
+
+        // 绘制长度为len的线段表示向量
+        this.strokeLine(0, 0, len, 0);
+
+        // 绘制箭头的上半部分
+        ctx2D.save();
+        this.strokeLine(len, 0, len - arrowLen, arrowLen);
+        ctx2D.restore();
+        // 绘制箭头的下半部分
+        ctx2D.save();
+        this.strokeLine(len, 0, len - arrowLen, -arrowLen);
+        ctx2D.restore();
+        ctx2D.restore();
+        // 绘制线段的起点，终点信息
+        let font: FontType = "15px sans-serif";
+        if (beginText && beginText.length !== 0) {
+            if (len > 0) {
+                this.fillText(beginText, 0, 0, 'black', 'right', 'bottom', font);
+            } else {
+                this.fillText(beginText, 0, 0, 'black', 'left', 'bottom', font);
+            }
+        }
+        len = parseFloat(len.toFixed(2));
+        if (beginText && endText.length !== 0) {
+            if (len > 0) {
+                this.fillText(endText, len, 0, 'black', 'left', 'bottom', font);
+            } else {
+                this.fillText(endText, len, 0, 'black', 'right', 'bottom', font);
+            }
+        }
+        // 绘制向量的长度信息
+        if (showInfo) {
+            this.fillText(Math.abs(len).toString(), len * 0.5, 0, 'black', 'center', 'bottom', font);
+        }
+        ctx2D.restore();
+    }
+    // 一个更常用的绘制向量的方法
+    // 从两个点计算出一个向量，然后调用drawVec绘制该向量
+    // 返回值：当前向量与x正方向的夹角，以弧度表示
+    drawVecFromLine(
+        start: vec2,
+        end: vec2,
+        arrowLen: number = 10,
+        beginText: string = '',
+        endText = '',
+        lineWidth: number = 1,
+        isLineDash: boolean = false,
+        showInfo: boolean = false,
+        alpha: boolean = false
+    ): number {
+        let angle: number = vec2.getOrientation(start, end, true);
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return angle;
+        // 获取从start-end形成的向量与x轴正方向[0 , 1]之间以弧度表示的夹角
+        // 计算出向量之间的差，注意方向
+        let diff: vec2 = vec2.difference(end, start);
+        // 计算出向量的大小
+        let len: number = diff.length;
+        ctx2D.save();
+        // 局部坐标系原点变换到start
+        ctx2D.translate(start.x, start.y);
+        // 局部坐标系旋转angle弧度
+        ctx2D.rotate(angle);
+        // 调用drawVec方法
+        this.drawVec(len, arrowLen, beginText, endText, lineWidth, isLineDash, showInfo, alpha);
+        ctx2D.restore();
+        return angle;
+    }
+    // 画向量和投影
+    drawMouseLineProjection() {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        if (this._isHit) { // 鼠标位置在线段范围内
+            let angle: number = 0;
+            let mousePt: vec2 = vec2.create(this._mouseX, this._mouseY);
+            ctx2D.save();
+            // 绘制原向量
+            angle = this.drawVecFromLine(this.lineStart, this.lineEnd, 10, this.lineStart.toString(), this.lineEnd.toString(), 3, false, true);
+            // 绘制投影点
+            this.fillCircle(this.closePt.x, this.closePt.y, 5);
+            // 绘制线段起点到鼠标点向量
+            this.drawVecFromLine(this.lineStart, mousePt, 10, '', '', 1, true, true, false);
+            // 绘制鼠标点到投影点的线段
+            this.drawVecFromLine(mousePt, this.closePt, 10, '', '', 1, true, true, false);
+            ctx2D.restore();
+            // 绘制投影点的坐标信息（相对左上角的表示）
+            ctx2D.save();
+            ctx2D.translate(this.closePt.x, this.closePt.y);
+            ctx2D.rotate(angle);
+            this.drawCoordInfo('[' + (this.closePt.x).toFixed(2) + '  ,  ' + (this.closePt.y).toFixed(2) + " ]", 0, 0);
+            ctx2D.restore();
+            // 计算出线段与鼠标之间的夹角，以弧度表示
+            angle = vec2.getAngle(vec2.difference(this.lineEnd, this.lineStart), vec2.difference(mousePt, this.lineStart), false);
+            // 绘制出夹角信息
+            this.drawCoordInfo(angle.toFixed(2) + '°', this.lineStart.x + 10, this.lineStart.y + 10);
+        } else { // 鼠标位置在线段范围外的绘制效果
+            this.drawVecFromLine(this.lineStart, this.lineEnd, 10, this.lineStart.toString(), this.lineEnd.toString(), 1, false, true);
+        }
+    }
     drawTank() {
         this._tank.draw(this);
     }
-
     // 公转自转模拟
     public rotationAndRevolutionSimulation(radius: number = 220): void {
         const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
@@ -779,7 +938,9 @@ export class TestApplication extends Canvas2DApplication {
         this._mouseX = e.canvasPos.x;
         this._mouseY = e.canvasPos.y;
 
-        this._tank.onMouseMove(e);
+        // this._tank.onMouseMove(e);
+
+        this._isHit = Math2D.projectPointOnLineSegment(vec2.create(this._mouseX, this._mouseY), this.lineStart, this.lineEnd, this.closePt);
     }
     protected dispatchKeyPress(e: CanvasKeyboardEvent) {
         this._tank.onKeyPress(e);

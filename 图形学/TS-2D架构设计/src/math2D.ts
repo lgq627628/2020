@@ -12,6 +12,46 @@ export class Math2D {
     static isEquals(value1: number, value2: number) {
         return value1 === value2;
     }
+    // 将一个点pt投影到start和end形成的线段上：先把原向量转换成单位向量，这样向量的点积就是投影长度
+    // 返回值：true表示pt在线段起点和终点之间，此时closePoint输出参数返回线段上的投影点坐标
+    //      false表示在线段起点或终点之外，此时closePoint输出参数返回线段的起点或终点
+    // 本方法使用了向量的difference、normalize、dotProduct、scaleAdd（scale和sum）方法
+    static projectPointOnLineSegment(pt: vec2, start: vec2, end: vec2, closePoint: vec2): boolean {
+        // 向量的create方法
+        let v0: vec2 = vec2.create();
+        let v1: vec2 = vec2.create();
+        let d: number = 0;
+        // 向量减法，形成方向向量
+        vec2.difference(pt, start, v0);
+        // 线段的起点到某个点（例如鼠标位置点）的方向向量
+        vec2.difference(end, start, v1);
+        // 获取线段
+        // 使用向量的normalize方法，原向量变成单位向量，并返回原向量的长度
+        // 需要注意的是，normalize起点到终点线段形成的向量
+        // 要投影到哪个向量，就要将这个向量normalize成单位向量
+        d = v1.normalize();
+        // 将v0投影在v1上，获取投影长度t；这是根据 cosθ = a·b / ( || a || || b || ) 公式来计算的，此时 b 向量为单位向量，长度为 1，所以 a·b = || a ||cosθ = 几何意义就是投影长度
+        let t: number = vec2.dotProduct(v0, v1);
+        // 如果投影长度t < 0，说明鼠标位置点在线段的起点范围之外
+        // 处理的方式是：
+        // closePt输出线段起点并且返回false
+        if (t < 0) {
+            closePoint.x = start.x;
+            closePoint.y = start.y;
+            return false;
+        } else if (t > d) {// 如果投影长度 > 线段的长度，说明鼠标位置点超过线段终点范围
+            // closePt输出线段起点并且返回false
+            closePoint.x = end.x;
+            closePoint.y = end.y;
+            return false;
+        } else {
+            // 说明鼠标位置点位于线段起点和终点之间
+            // 使用scaleAdd方法计算出相对全局坐标（左上角）的坐标偏移信息
+            // 只有此时才返回true
+            vec2.scaleAdd(start, v1, t, closePoint);
+            return true;
+        }
+    }
 }
 export class v2 {
     public x: number;
@@ -150,14 +190,16 @@ export class vec2 {
     static dotProduct(left: vec2, right: vec2): number {
         return left.values[0] * right.values[0] + left.values[1] * right.values[1];
     }
-    // 用来计算两向量之间的夹角 cosθ = a·b / ( || a || || b || )
-    static getAgle(a: vec2, b: vec2, isRadian: boolean = false): number {
+    // 用来计算两向量之间的夹角 cosθ = a·b / ( || a || || b || )，getAngle返回的是相对方向，由于其取值范围，无法确定角度的旋转方向（是逆时针旋转还是顺时针旋转）。
+    static getAngle(a: vec2, b: vec2, isRadian: boolean = false): number {
+        // getAngle方法内部使用Math类的acos方法，acos方法返回的是两个向量之间的夹角，其返回值的取值范围为[ 0, Math.PI ]。
         const radian = Math.acos(vec2.dotProduct(a, b) / (a.length * b.length))
         if (isRadian) return radian;
         return Math2D.toDegree(radian);
     }
-    // 用来表示物体朝向，需要与夹角区分
-    static getOrietation(from: vec2, to: vec2, isRadian: boolean = false): number {
+    // 用来表示物体朝向，需要与夹角区分，可以将getOrientation看作绝对方向的表示，能唯一地确定物体的方向。
+    static getOrientation(from: vec2, to: vec2, isRadian: boolean = false): number {
+        // atan2 方法返回的总是与x轴正方向向量之间的夹角，其取值范围为[ -Math.PI , Math.PI ]之间。
         const diff = vec2.difference(to, from);
         const radian = Math.atan2(diff.y, diff.x);
         if (isRadian) return radian;

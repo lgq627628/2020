@@ -12,6 +12,17 @@ export class Math2D {
     static isEquals(value1: number, value2: number) {
         return value1 === value2;
     }
+    /**
+     * 计算三角形两条边向量的叉积，用于判断三角形的顶点顺序
+     * @param v0 三角形的顶点
+     * @param v1 三角形的顶点
+     * @param v2 三角形的顶点
+     */
+    static sign(v0: vec2, v1: vec2, v2: vec2): number {
+        const e1: vec2 = vec2.difference(v0, v2);
+        const e2: vec2 = vec2.difference(v1, v2);
+        return vec2.crossProduct(e1, e2);
+    }
     // 将一个点pt投影到start和end形成的线段上：先把原向量转换成单位向量，这样向量的点积就是投影长度
     // 返回值：true表示pt在线段起点和终点之间，此时closePoint输出参数返回线段上的投影点坐标
     //      false表示在线段起点或终点之外，此时closePoint输出参数返回线段的起点或终点
@@ -51,6 +62,76 @@ export class Math2D {
             vec2.scaleAdd(start, v1, t, closePoint);
             return true;
         }
+    }
+    static isPointInCircle(pt: vec2, center: vec2, radius: number): boolean {
+        const diff: vec2 = vec2.difference(pt, center);
+        // 避免使用 Math.sqrt 方法
+        return diff.squaredLength <= radius ** 2;
+    }
+    /**
+     * 判断点是否在线段上：先判断点的投影是否在线上 + 再判断点和投影点之间的距离是否在一定范围内
+     * @param pt 点
+     * @param start 线段起点
+     * @param end 线段终点
+     * @param closePt 投影点
+     * @param radius 误差半径
+     * @returns 点是否在线段上
+     */
+    static isPointOnLineSegement(pt: vec2, start: vec2, end: vec2, closePt: vec2 = vec2.create(), radius: number = EPSILON): boolean {
+        const isIn = Math2D.projectPointOnLineSegment(pt, start, end, closePt);
+        if (!isIn) return false;
+        return Math2D.isPointInCircle(pt, closePt, radius);
+    }
+    static isPointInRect(ptX: number, ptY: number, x: number, y: number, width: number, height: number): boolean {
+        return ptX >= x && ptX <= x + width && ptY >= y && ptY <= y + height;
+    }
+    static isPointInEllipse(ptX: number, ptY: number, centerX: number, centerY: number, radiusX: number, radiusY: number): boolean {
+        const diffX = ptX - centerX;
+        const diffY = ptY - centerY;
+        return diffX ** 2 / radiusX ** 2 + diffY ** 2 / radiusY ** 2 <= 1.0;
+    }
+    /**
+     * 点是否在三角形内部
+     * 方法一：如果 pt 与三角形的三个顶点连线形成的三个三角形的顶点方向一致，则 pt 在三角形内部
+     * 方法二：面积法，如果点 pt 在三角形内部，则 pt 与三角形顶点分割成的三个三角形的面积之和等于三角形的面积。三角形的面积就等于叉乘模长的一半
+     * 方法三：内角和为 180°，效率低不管它
+     * @param pt 点
+     * @param v0 三角形顶点
+     * @param v1 三角形顶点
+     * @param v2 三角形顶点
+     * @returns 
+     */
+    static isPointInTriangle(pt: vec2, v0: vec2, v1: vec2, v2: vec2): boolean {
+        // 三角形三条边的方向都一致就说明点在三角形内部
+        const b1: boolean = Math2D.sign(v0, v1, pt) < 0.0;
+        const b2: boolean = Math2D.sign(v1, v2, pt) < 0.0;
+        const b3: boolean = Math2D.sign(v2, v0, pt) < 0.0;
+        return (b1 === b2) && (b2 === b3);
+    }
+    static isPointInPolygon(pt: vec2, points: vec2[]): boolean {
+        // 凸多边形至少三条边
+        if (points.length < 3) return false;
+        // 以 points[0] 为共享点遍历凸多边形顶点
+        for(let i = 2; i < points.length; i++) {
+            if (Math2D.isPointInTriangle(pt, points[0], points[i - 1], points[i])) return true;
+        }
+        return false;
+    }
+    /**
+     * 判断是否为凸多边形：分割成三角形，每个三角形顶点顺序一致
+     * @param points 顶点数组，全部顺时针或全部逆时针
+     * @returns 
+     */
+    static isConvex(points: vec2[]): boolean {
+        const firstSign = Math2D.sign(points[0], points[1], points[2]) < 0;
+        let j: number;
+        let k: number;
+        for(let i = 1; i <points.length; i++) {
+            j = (i + 1) % points.length;
+            k = (i + 2) % points.length;
+            if (firstSign !== Math2D.sign(points[i], points[j], points[k]) < 0) return false;
+        }
+        return true;
     }
 }
 export class v2 {
@@ -186,9 +267,14 @@ export class vec2 {
         // start + result = result，然后将result返回给调用者
         return vec2.sum(start, result, result);
     }
-    // 点积，两个向量的点乘就是对应分量的乘积的和，其返回的结果是一个标量（number类型），结果大于 0 表示锐角，正相关；等于 0 就是直角，小于 0 就是钝角，负相关
+    // 点积，两个向量的点乘就是对应分量的乘积的和，其返回的结果是一个标量（number类型），结果大于 0 表示锐角，正相关；等于 0 就是直角，小于 0 就是钝角，负相关；一般用来判断垂直和投影
     static dotProduct(left: vec2, right: vec2): number {
         return left.values[0] * right.values[0] + left.values[1] * right.values[1];
+    }
+    // 叉乘：两个向量叉乘的模长的几何意义是该两个向量所围成的平行四边形的面积，叉乘的结果其实是个向量，暂时理解为标量
+    // A x B = |A||B|Sin(θ)，然而角度 θ和上面点乘的角度有一点点不同，他是有正负的，是指从A到B的角度
+    static crossProduct(left: vec2, right: vec2): number {
+        return left.x * right.y - left.y * right.x;
     }
     // 用来计算两向量之间的夹角 cosθ = a·b / ( || a || || b || )，getAngle返回的是相对方向，由于其取值范围，无法确定角度的旋转方向（是逆时针旋转还是顺时针旋转）。
     static getAngle(a: vec2, b: vec2, isRadian: boolean = false): number {

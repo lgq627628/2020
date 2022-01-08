@@ -50,7 +50,7 @@ export class TestApplication extends Canvas2DApplication {
     // 线段起点
     public lineStart: vec2 = vec2.create(this.canvas.width / 2, this.canvas.height / 2);
     // 线段终点
-    public lineEnd: vec2 = vec2.create(this.canvas.width / 2 + 300, this.canvas.height / 2  + 200);
+    public lineEnd: vec2 = vec2.create(this.canvas.width / 2 + 300, this.canvas.height / 2 + 200);
     // 投影点坐标
     public closePt: vec2 = vec2.create();
     // 鼠标是否在线段起点和重点范围内
@@ -153,9 +153,51 @@ export class TestApplication extends Canvas2DApplication {
         // const v1 = new vec2(this.canvas.width / 2, this.canvas.height / 2);
         // const v2 = new vec2(this.canvas.width / 2 + 200, this.canvas.height / + 200);
         // this.drawVecFromLine(v1, v2);
-        this.drawMouseLineProjection();
-    }
+        // this.drawMouseLineProjection();
 
+        // 下面碰撞检测案例
+        this.drawMouseLineHitTest(); // 点线碰撞
+        this.drawCoordInfo('[' + (this._mouseX).toFixed(2) + ', ' + (this._mouseY).toFixed(2) + " ]", this._mouseX, this._mouseY);
+
+        // 下面是多边形绘制案例
+        this.ctx2D.save();
+        this.ctx2D.translate(-250, 150);
+        // 绘制凸多边形并进行三角扇形化显示
+        app.drawPolygon([vec2.create(-100, -50),
+        vec2.create(0, -100),
+        vec2.create(100, -50),
+        vec2.create(100, 50),
+        vec2.create(0, 100),
+        vec2.create(-100, 50)], 400, 300, true);
+        this.ctx2D.restore();
+        // 绘制凹多边形，不进行扇形化显示
+        this.ctx2D.save();
+        this.ctx2D.translate(150, 200);
+        app.drawPolygon([
+            vec2.create(0, 0),
+            vec2.create(100, -100),
+            vec2.create(100, 50),
+            vec2.create(-100, 50),
+            vec2.create(-100, -100)
+        ], 0, 0);
+        this.ctx2D.restore();
+    }
+    drawMouseLineHitTest() {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        // 鼠标位置在线段范围外的绘制效果
+        if (this._isHit) {
+            // let mousePt: vec2 = vec2.create(this._mouseX, this._mouseY);
+            ctx2D.save();
+            // 绘制原向量
+            this.drawVecFromLine(this.lineStart, this.lineEnd, 10, this.lineStart.toString(), this.lineEnd.toString(), 3, false, true);
+            // 绘制投影点
+            this.fillCircle(this.closePt.x, this.closePt.y, 5);
+            ctx2D.restore();
+        } else {
+            this.drawVecFromLine(this.lineStart, this.lineEnd, 10, this.lineStart.toString(), this.lineEnd.toString(), 1, false, true);
+        }
+    }
     /**
      * 沿着局部坐标系x轴的正方向，绘制长度为len的向量
      * @param len 要绘制的向量的长度，例如291.55
@@ -929,18 +971,46 @@ export class TestApplication extends Canvas2DApplication {
         this.fillCircle(x3, y3, 5);
         ctx2D.restore();
     }
+    drawPolygon(points: vec2[], ptX: number, ptY: number, drawSubTriangle: boolean = false) {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        ctx2D.save();
+        ctx2D.strokeStyle = 'rgba( 0, 0, 0, 0.5 )';
+        ctx2D.lineWidth = 3;
+        ctx2D.translate(ptX, ptY);
+        // 绘制多边形
+        ctx2D.beginPath();
+        ctx2D.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+            ctx2D.lineTo(points[i].x, points[i].y);
+        }
+        ctx2D.closePath();
+        ctx2D.stroke();
+        // 绘制虚线，形成子三角形
+        if (drawSubTriangle) {
+            ctx2D.lineWidth = 2;
+            ctx2D.setLineDash([3, 3]);
+            for (let i: number = 1; i < points.length - 1; i++) {
+                this.strokeLine(points[0].x, points[0].y, points[i].x, points[i].y);
+            }
+        }
+        this.fillCircle(points[0].x, points[0].y, 5, 'red');
+        ctx2D.restore();
+    }
     distance(x1: number, y1: number, x2: number, y2: number): number {
         const diffX: number = x2 - x1;
         const diffY: number = y2 - y1;
         return Math.sqrt(diffX * diffX + diffY * diffY);
     }
     protected dispatchMouseMove(e: CanvasMouseEvent) {
+        // 必须要设置 this.isSupportMouseMove = true 才能处理moveMove事件
         this._mouseX = e.canvasPos.x;
         this._mouseY = e.canvasPos.y;
 
         // this._tank.onMouseMove(e);
 
-        this._isHit = Math2D.projectPointOnLineSegment(vec2.create(this._mouseX, this._mouseY), this.lineStart, this.lineEnd, this.closePt);
+        // this._isHit = Math2D.projectPointOnLineSegment(vec2.create(this._mouseX, this._mouseY), this.lineStart, this.lineEnd, this.closePt);
+        this._isHit = Math2D.isPointOnLineSegement(vec2.create(this._mouseX, this._mouseY), this.lineStart, this.lineEnd, this.closePt, 1);
     }
     protected dispatchKeyPress(e: CanvasKeyboardEvent) {
         this._tank.onKeyPress(e);

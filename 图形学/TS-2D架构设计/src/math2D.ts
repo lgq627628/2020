@@ -112,7 +112,7 @@ export class Math2D {
         // 凸多边形至少三条边
         if (points.length < 3) return false;
         // 以 points[0] 为共享点遍历凸多边形顶点
-        for(let i = 2; i < points.length; i++) {
+        for (let i = 2; i < points.length; i++) {
             if (Math2D.isPointInTriangle(pt, points[0], points[i - 1], points[i])) return true;
         }
         return false;
@@ -126,13 +126,27 @@ export class Math2D {
         const firstSign = Math2D.sign(points[0], points[1], points[2]) < 0;
         let j: number;
         let k: number;
-        for(let i = 1; i <points.length; i++) {
+        for (let i = 1; i < points.length; i++) {
             j = (i + 1) % points.length;
             k = (i + 2) % points.length;
             if (firstSign !== Math2D.sign(points[i], points[j], points[k]) < 0) return false;
         }
         return true;
     }
+    /**
+     * 矩阵和向量相乘
+     * @param mat 
+     * @param pt 
+     * @param result 
+     * @returns 
+     */
+    static transform(mat: mat2d, pt: vec2, result: vec2 | null = null): vec2 {
+        if (!result) result = vec2.create();
+        result.values[0] = mat.values[0] * pt.values[0] + mat.values[2] * pt.values[1] + mat.values[4];
+        result.values[1] = mat.values[1] * pt.values[0] + mat.values[3] * pt.values[1] + mat.values[5];
+        return result;
+    }
+
 }
 export class v2 {
     public x: number;
@@ -291,6 +305,34 @@ export class vec2 {
         if (isRadian) return radian;
         return Math2D.toDegree(radian);
     }
+    /**
+     * sin(a) = || a⊗ b || = a.x * b.y - b.x * a.y
+     * @param a 
+     * @param b 
+     * @param norm 
+     * @returns 
+     */
+    static sinAngle(a: vec2, b: vec2, norm: boolean = false): number {
+        if (norm) {
+            a.normalize();
+            b.normalize();
+        }
+        return (a.x * b.y - b.x * a.y);
+    }
+    /**
+     * cos(a) = a · b = a.x * b.x + a.y * b.y
+     * @param a 
+     * @param b 
+     * @param norm 
+     * @returns 
+     */
+    static cosAngle(a: vec2, b: vec2, norm: boolean = false): number {
+        if (norm) {
+            a.normalize();
+            b.normalize();
+        }
+        return vec2.dotProduct(a, b);
+    }
 }
 
 export class Size {
@@ -324,5 +366,183 @@ export class Rectangle {
     }
     static create(x: number, y: number, width: number, height: number) {
         return new Rectangle(new vec2(x, y), new Size(width, height));
+    }
+}
+
+/**
+ * 矩阵并没有使用3×3数组来表示，而是使用了六个浮点数组成的强类型数组，因为3×3仿射变换矩阵的最后一行总是为[0 , 0 , 1]，因此不需要多浪费三个浮点数来存储这三个常量。
+ */
+export class mat2d {
+    public values: Float32Array;
+    /**
+     * 矩阵默认初始值也是单位矩阵
+     */
+    constructor(a: number = 1, b: number = 0, c: number = 0, d: number = 1, x: number = 0, y: number = 0) {
+        this.values = new Float32Array([a, b, c, d, x, y]);
+    }
+    /**
+     * 将矩阵重置为单位矩阵
+     */
+    identity() {
+        this.values[0] = 1.0;
+        this.values[1] = 0.0;
+        this.values[2] = 0.0;
+        this.values[3] = 1.0;
+        this.values[4] = 0.0;
+        this.values[5] = 0.0;
+    }
+    static create(a: number = 1, b: number = 0, c: number = 0, d: number = 1, x: number = 0, y: number = 0): mat2d {
+        return new mat2d(a, b, c, d, x, y);
+    }
+    // 矩阵乘法不符合交换律，即A×B≠B×A，因此在进行矩阵乘法运算时必须要一直注意乘法的顺序。
+    // 矩阵还有加法、减法、矩阵与标量相乘运算等，由于这些运算在图形或游戏中基本不会用到，因此忽略这些操作。
+    static multiply(left: mat2d, right: mat2d, result: mat2d | null = null): mat2d {
+        if (!result) result = new mat2d();
+        let a0: number = left.values[0];
+        let a1: number = left.values[1];
+        let a2: number = left.values[2];
+        let a3: number = left.values[3];
+        let a4: number = left.values[4];
+        let a5: number = left.values[5];
+
+        let b0: number = right.values[0];
+        let b1: number = right.values[1];
+        let b2: number = right.values[2];
+        let b3: number = right.values[3];
+        let b4: number = right.values[4];
+        let b5: number = right.values[5];
+
+        // 参考上面矩阵乘法的结果
+        result.values[0] = a0 * b0 + a2 * b1;
+        result.values[1] = a1 * b0 + a3 * b1;
+        result.values[2] = a0 * b2 + a2 * b3;
+        result.values[3] = a1 * b2 + a3 * b3;
+        result.values[4] = a0 * b4 + a2 * b5 + a4;
+        result.values[5] = a1 * b4 + a3 * b5 + a5;
+
+        return result;
+    }
+    /**
+     * 计算矩阵的行列式
+     * @param mat 
+     * @returns 
+     */
+    // 计算矩阵的行列式
+    static determinant(mat: mat2d): number {
+        return mat.values[0] * mat.values[3] - mat.values[2] * mat.values[1];
+    }
+    /**
+     * 求矩阵src的逆矩阵，将结算后的逆矩阵从result参数中输出，下面的代码中使用：伴随矩阵 / 行列式 的方式来求矩阵的逆
+     * 优点：通用省心，适合所有情况。
+     * 缺点：计算量稍微大一些。
+     * @param src 
+     * @param result 
+     * @returns 如果有逆矩阵，返回true；否则返回false
+     */
+    static invert(src: mat2d, result: mat2d): boolean {
+        // 1. 获取要求逆的矩阵的行列式
+        let det: number = mat2d.determinant(src);
+        // 2. 如果行列式为0，则无法求逆，直接返回false
+        if (Math2D.isEquals(det, 0)) return false;
+        // 3. 使用：伴随矩阵 / 行列式 的算法来求矩阵的逆
+        // 由于计算机中除法效率较低，先进行一次除法，求行列式的倒数
+        // 后面代码就可以直接乘以行列式的倒数，这样避免了多次除法操作
+        det = 1.0 / det;
+        // 4. 下面的代码中，* det之前的代码都是求标准伴随矩阵的源码
+        //    最后乘以行列式的倒数，获得每个元素的正确数值
+        result.values[0] = src.values[3] * det;
+        result.values[1] = -src.values[1] * det;
+        result.values[2] = -src.values[2] * det;
+        result.values[3] = src.values[0] * det;
+        result.values[4] = (src.values[2] * src.values[5] - src.values[3] * src.values[4]) * det;
+        result.values[5] = (src.values[1] * src.values[4] - src.values[0] * src.values[5]) * det;
+        // 如果矩阵求逆成功，返回true
+        return true;
+    }
+    /**
+     * 平移矩阵
+     * @param tx 
+     * @param ty 
+     * @param result 
+     * @returns 
+     */
+    static makeTranslation(tx: number, ty: number, result: mat2d | null = null): mat2d {
+        if (!result) result = new mat2d();
+        result.values[0] = 1;
+        result.values[1] = 0;
+        result.values[2] = 0;
+        result.values[3] = 1;
+        // 会看到平移矩阵只需要设置第4个和第5个元素的值
+        result.values[4] = tx;
+        result.values[5] = ty;
+        return result;
+    }
+    /**
+     * 缩放矩阵
+     * @param sx 
+     * @param sy 
+     * @param result 
+     * @returns 
+     */
+    static makeScale(sx: number, sy: number, result: mat2d | null = null): mat2d {
+        if (Math2D.isEquals(sx, 0) || Math2D.isEquals(sy, 0)) {
+            alert(" x轴或y轴缩放系数为0 ");
+            throw new Error(" x轴或y轴缩放系数为0 ");
+        }
+        if (!result) result = new mat2d();
+        result.values[0] = sx;
+        result.values[1] = 0;
+        result.values[2] = 0;
+        result.values[3] = sy;
+        result.values[4] = 0;
+        result.values[5] = 0;
+        return result;
+    }
+    /**
+     * 旋转矩阵
+     * @param radians 弧度
+     * @param result 
+     * @returns 
+     */
+    static makeRotation(radians: number, result: mat2d | null = null): mat2d {
+        if (!result) result = new mat2d();
+        let s: number = Math.sin(radians), c: number = Math.cos(radians);
+        result.values[0] = c;
+        result.values[1] = s;
+        result.values[2] = -s;
+        result.values[3] = c;
+        result.values[4] = 0;
+        result.values[5] = 0;
+        return result;
+    }
+    // 会修改this指向的数据
+    /**
+     * 仅适用于旋转矩阵的逆矩阵
+     * @returns 
+     */
+    onlyRotationMatrixInvert(): mat2d {
+        let s: number = this.values[1];
+        // 矩阵的第1个元素和第2个元素值交换
+        this.values[1] = this.values[2];
+        this.values[2] = s;
+        return this;
+    }
+    /**
+     * 两个单位向量构造旋转矩阵
+     * @param v1 
+     * @param v2 
+     * @param norm 指明是否要normlize两个向量
+     * @param result 
+     * @returns 
+     */
+    public static makeRotationFromVectors(v1: vec2, v2: vec2, norm: boolean = false, result: mat2d | null = null): mat2d {
+        if (!result) result = new mat2d();
+        result.values[0] = vec2.cosAngle(v1, v2, norm);
+        result.values[1] = vec2.sinAngle(v1, v2, norm);
+        result.values[2] = -vec2.sinAngle(v1, v2, norm);
+        result.values[3] = vec2.cosAngle(v1, v2, norm);
+        result.values[4] = 0;
+        result.values[5] = 0;
+        return result;
     }
 }

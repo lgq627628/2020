@@ -1,7 +1,7 @@
 // 注意：这里绘图 api 都改成了使用 fill 和 stroke 开头，没有使用 draw，这样语义比较分明，一个是填充一个是描边
 import { Canvas2DApplication } from '../src/Application';
 import { CanvasKeyboardEvent, CanvasMouseEvent } from '../src/CnavasInputEvent';
-import { Rectangle, Size, Math2D, vec2 } from '../src/math2D';
+import { Rectangle, Size, Math2D, vec2, mat2d } from '../src/math2D';
 import { Tank } from './Tank';
 
 type TextAlign = 'start' | 'left' | 'center' | 'right' | 'end';
@@ -143,11 +143,11 @@ export class TestApplication extends Canvas2DApplication {
         // this.rotationAndRevolutionSimulation();
 
         // 下面是坦克案例
-        // this.drawTank();
-        // const x = (this._mouseX - this._tank.x).toFixed(2);
-        // const y = (this._mouseY - this._tank.y).toFixed(2);
-        // const angle = Math2D.toDegree(this._tank.tankRotation).toFixed(2);
-        // this.drawCoordInfo(`坐标：[${x}, ${y}]；角度：${angle}`, this._mouseX, this._mouseY);
+        this.drawTank();
+        const x = (this._mouseX - this._tank.x).toFixed(2);
+        const y = (this._mouseY - this._tank.y).toFixed(2);
+        const angle = Math2D.toDegree(this._tank.tankRotation).toFixed(2);
+        this.drawCoordInfo(`坐标：[${x}, ${y}]；角度：${angle}`, this._mouseX, this._mouseY);
 
         // 下面是向量案例
         // const v1 = new vec2(this.canvas.width / 2, this.canvas.height / 2);
@@ -156,31 +156,31 @@ export class TestApplication extends Canvas2DApplication {
         // this.drawMouseLineProjection();
 
         // 下面碰撞检测案例
-        this.drawMouseLineHitTest(); // 点线碰撞
-        this.drawCoordInfo('[' + (this._mouseX).toFixed(2) + ', ' + (this._mouseY).toFixed(2) + " ]", this._mouseX, this._mouseY);
+        // this.drawMouseLineHitTest(); // 点线碰撞
+        // this.drawCoordInfo('[' + (this._mouseX).toFixed(2) + ', ' + (this._mouseY).toFixed(2) + " ]", this._mouseX, this._mouseY);
 
-        // 下面是多边形绘制案例
-        this.ctx2D.save();
-        this.ctx2D.translate(-250, 150);
-        // 绘制凸多边形并进行三角扇形化显示
-        app.drawPolygon([vec2.create(-100, -50),
-        vec2.create(0, -100),
-        vec2.create(100, -50),
-        vec2.create(100, 50),
-        vec2.create(0, 100),
-        vec2.create(-100, 50)], 400, 300, true);
-        this.ctx2D.restore();
-        // 绘制凹多边形，不进行扇形化显示
-        this.ctx2D.save();
-        this.ctx2D.translate(150, 200);
-        app.drawPolygon([
-            vec2.create(0, 0),
-            vec2.create(100, -100),
-            vec2.create(100, 50),
-            vec2.create(-100, 50),
-            vec2.create(-100, -100)
-        ], 0, 0);
-        this.ctx2D.restore();
+        // // 下面是多边形绘制案例
+        // this.ctx2D.save();
+        // this.ctx2D.translate(-250, 150);
+        // // 绘制凸多边形并进行三角扇形化显示
+        // app.drawPolygon([vec2.create(-100, -50),
+        // vec2.create(0, -100),
+        // vec2.create(100, -50),
+        // vec2.create(100, 50),
+        // vec2.create(0, 100),
+        // vec2.create(-100, 50)], 400, 300, true);
+        // this.ctx2D.restore();
+        // // 绘制凹多边形，不进行扇形化显示
+        // this.ctx2D.save();
+        // this.ctx2D.translate(150, 200);
+        // app.drawPolygon([
+        //     vec2.create(0, 0),
+        //     vec2.create(100, -100),
+        //     vec2.create(100, 50),
+        //     vec2.create(-100, 50),
+        //     vec2.create(-100, -100)
+        // ], 0, 0);
+        // this.ctx2D.restore();
     }
     drawMouseLineHitTest() {
         const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
@@ -1002,12 +1002,44 @@ export class TestApplication extends Canvas2DApplication {
         const diffY: number = y2 - y1;
         return Math.sqrt(diffX * diffX + diffY * diffY);
     }
+    /**
+     * 将我们自己实现的mat2d矩阵传递给canvasRederingContext2D上下文渲染对象，亦即将当前栈顶矩阵乘以参数矩阵，因此会累积上一次的变换。
+     * @param mat 
+     * @returns 
+     */
+    transform(mat: mat2d) {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        ctx2D.transform(
+            mat.values[0],
+            mat.values[1],
+            mat.values[2],
+            mat.values[3],
+            mat.values[4],
+            mat.values[5]);
+    }
+    /**
+     * setTransform方法的作用和MatrixStack的loadMatrix一致，是将参数矩阵中各个元素的值直接复制到CanvasRenderingContext2D上下文渲染对像所持有的矩阵堆栈的栈顶矩阵中
+     * @param mat 
+     * @returns 
+     */
+    setTransform(mat: mat2d) {
+        const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
+        if (!ctx2D) return;
+        ctx2D.setTransform(
+            mat.values[0],
+            mat.values[1],
+            mat.values[2],
+            mat.values[3],
+            mat.values[4],
+            mat.values[5]);
+    }
     protected dispatchMouseMove(e: CanvasMouseEvent) {
         // 必须要设置 this.isSupportMouseMove = true 才能处理moveMove事件
         this._mouseX = e.canvasPos.x;
         this._mouseY = e.canvasPos.y;
 
-        // this._tank.onMouseMove(e);
+        this._tank.onMouseMove(e);
 
         // this._isHit = Math2D.projectPointOnLineSegment(vec2.create(this._mouseX, this._mouseY), this.lineStart, this.lineEnd, this.closePt);
         this._isHit = Math2D.isPointOnLineSegement(vec2.create(this._mouseX, this._mouseY), this.lineStart, this.lineEnd, this.closePt, 1);

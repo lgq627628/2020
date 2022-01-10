@@ -394,6 +394,23 @@ export class mat2d {
     static create(a: number = 1, b: number = 0, c: number = 0, d: number = 1, x: number = 0, y: number = 0): mat2d {
         return new mat2d(a, b, c, d, x, y);
     }
+    static copy(origin: mat2d, result: mat2d | null = null) {
+        if (!result) result = mat2d.create();
+        const a: number = origin.values[0];
+        const b: number = origin.values[1];
+        const c: number = origin.values[2];
+        const d: number = origin.values[3];
+        const x: number = origin.values[4];
+        const y: number = origin.values[5];
+        
+        result.values[0] = a;
+        result.values[1] = b;
+        result.values[2] = c;
+        result.values[3] = d;
+        result.values[4] = x;
+        result.values[5] = y;
+        return result;
+    }
     // 矩阵乘法不符合交换律，即A×B≠B×A，因此在进行矩阵乘法运算时必须要一直注意乘法的顺序。
     // 矩阵还有加法、减法、矩阵与标量相乘运算等，由于这些运算在图形或游戏中基本不会用到，因此忽略这些操作。
     static multiply(left: mat2d, right: mat2d, result: mat2d | null = null): mat2d {

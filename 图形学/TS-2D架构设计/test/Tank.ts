@@ -1,5 +1,5 @@
 import { CanvasMouseEvent, CanvasKeyboardEvent } from '../src/CnavasInputEvent';
-import { Math2D, v2, vec2 } from '../src/math2D';
+import { Math2D, v2, vec2, mat2d } from '../src/math2D';
 import { TestApplication } from './draw.test';
 export class Tank {
     public x: number = 100;
@@ -29,7 +29,7 @@ export class Tank {
     // 速度：像素/s
     public linearSpeed: number = 0.1;
     public turretRotateSpeed: number = Math2D.toRadian(5);
-    
+
     // 用向量来表示
     public pos: vec2 = new vec2(100, 100);
     public target: vec2 = new vec2();
@@ -139,5 +139,57 @@ export class Tank {
     update(dt: number) {
         // this._moveTo(dt);
         this._moveToByVector(dt);
+    }
+}
+
+/**
+ * 如果用矩阵来写坦克，大致如下
+ */
+export class TankWithMatrix {
+    // 坦克当前的位置
+    public pos: vec2 = new vec2(100, 100);
+    // 坦克当前的x和y方向上的缩放系数
+    public scale: vec2 = new vec2(1, 1);
+    // 坦克当前的旋转角度，使用旋转矩阵表示
+    public tankRotation: mat2d = new mat2d();
+    public target: vec2 = new vec2();
+    public initYAxis: boolean = false;
+    public linearSpeed: number = 0.1;
+    public x: number = 100;
+    public y: number = 100;
+    // 其他成员变量与原来Tank类一样，不再列出
+
+    draw(app: TestApplication) {
+        const ctx2D: CanvasRenderingContext2D | null = app.ctx2D;
+        if (!ctx2D) return;
+        // ...省略
+        // 整个坦克移动和旋转，注意局部变换的经典结合顺序（trs:translate -> rotate -> scale )
+        // 原本是app.ctx2D.translate ( 弧度 )，现在改成如下调用方式
+        ctx2D.translate(this.pos.x, this.pos.y);
+        // tankRotation目前不是弧度表示，而是旋转矩阵
+        app.transform(this.tankRotation);
+        ctx2D.scale(this.scale.x, this.scale.y);
+        // ...省略
+    }
+    private _lookAt() {
+        const v = vec2.difference(this.target, this.pos);
+        v.normalize();
+        // 注意下面旋转的角度是从 x 轴到 v
+        this.tankRotation = mat2d.makeRotationFromVectors(vec2.xAxis, v);
+
+        // 如果是从 v 到 x 轴则组要这样写
+        // this.tankRotation = mat2d.makeRotationFromVectors(v, vec2.xAxis);
+        // // 将求得tankRotation旋转矩阵后使用通用的invert方法获得逆矩阵，不然方向不正确，下面两行代码都可以
+        // this.tankRotation.onlyRotationMatrixInvert();
+        // // mat2d.invert(this.tankRotation, this.tankRotation);
+    }
+    // 通过向量来实现移动，在向量标量相乘版本的朝向运动代码中，没有任何耗时的三角函数操作，全部都是标量（一个二维向量由两个标量组成）的加法、减法，以及乘法操作。
+    private _moveToByVector(dt: number) {
+        const dir = vec2.difference(this.target, this.pos);
+        dir.normalize();
+        // 将坦克沿着单位方向 dir 移动 this.linearSpeed * dt 个单位
+        this.pos = vec2.scaleAdd(this.pos, dir, this.linearSpeed * dt);
+        this.x = this.pos.values[0];
+        this.y = this.pos.values[1];
     }
 }

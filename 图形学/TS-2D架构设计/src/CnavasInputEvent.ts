@@ -1,4 +1,4 @@
-import { v2 } from './math2D';
+import { vec2 } from './math2D';
 enum EInputEventType {
     MOUSEEVENT,
     MOUSEDOWN,
@@ -27,15 +27,13 @@ export class CnavasInputEvent {
 
 export class CanvasMouseEvent extends CnavasInputEvent {
     public canvas: HTMLCanvasElement;
-    public canvasPos: v2;
+    public canvasPos: vec2;
     public button: number;
-    public localPos: v2;
-    constructor(canvas: HTMLCanvasElement, canvasPos: v2, button: number, altKey: boolean = false, ctrlKey: boolean = false, shiftKey: boolean = false) {
+    constructor(canvas: HTMLCanvasElement, canvasPos: vec2, button: number, altKey: boolean = false, ctrlKey: boolean = false, shiftKey: boolean = false) {
         super(altKey, ctrlKey, shiftKey);
         this.canvas = canvas;
         this.canvasPos = canvasPos;
         this.button = button;
-        this.localPos = new v2(0, 0);
     }
 }
 

@@ -1,3 +1,5 @@
+import { BezierEnumerator, IBezierEnumerator } from "./QuadraticBezierCurve";
+
 const PiBy180: number = 0.017453292519943295; // Math.PI / 180.0
 const EPSILON: number = 0.00001;
 export class Math2D {
@@ -146,7 +148,84 @@ export class Math2D {
         result.values[1] = mat.values[1] * pt.values[0] + mat.values[3] * pt.values[1] + mat.values[5];
         return result;
     }
-
+    /**
+     * 二次贝塞尔曲线标量版
+     * B(t) = (1 - t)^2 * P0 + 2t * (1 - t) * P1 + t^2 * P2, t ∈ [0,1]
+     * @param start 
+     * @param ctrl 
+     * @param end 
+     * @param t 
+     * @returns 
+     */
+    static getQuadraticBezierPosition(start: number, ctrl: number, end: number, t: number): number {
+        if (t < 0.0 || t > 1.0) {
+            alert(" t的取值范围必须为[ 0 , 1 ] ");
+            throw new Error(" t的取值范围必须为[ 0 , 1 ] ");
+        }
+        let t1: number = 1.0 - t;
+        let t2: number = t1 * t1;
+        return t2 * start + 2.0 * t * t1 * ctrl + t * t * end;
+    }
+    /**
+     * 二次贝塞尔曲线向量版
+     * B(t) = (1 - t)^2 * P0 + 2t * (1 - t) * P1 + t^2 * P2, t ∈ [0,1]
+     * @param start 
+     * @param ctrl 
+     * @param end 
+     * @param t 
+     * @param result 
+     * @returns 
+     */
+    static getQuadraticBezierVector(start: vec2, ctrl: vec2, end: vec2, t: number, result: vec2 | null = null): vec2 {
+        if (result === null) result = vec2.create();
+        result.x = Math2D.getQuadraticBezierPosition(start.x, ctrl.x, end.x, t);
+        result.y = Math2D.getQuadraticBezierPosition(start.y, ctrl.y, end.y, t);
+        return result;
+    }
+    /**
+     * 三次贝塞尔曲线标量版
+     * B(t) = P0 * (1-t)^3 + 3 * P1 * t * (1-t)^2 + 3 * P2 * t^2 * (1-t) + P3 * t^3, t ∈ [0,1]
+     * @param start 
+     * @param ctrl0 
+     * @param ctrl1 
+     * @param end 
+     * @param t 
+     * @returns 
+     */
+    static getCubicBezierPosition(start: number, ctrl0: number, ctrl1: number, end: number, t: number): number {
+        if (t < 0.0 || t > 1.0) {
+            alert(" t的取值范围必须为[ 0 , 1 ] ");
+            throw new Error(" t的取值范围必须为[ 0 , 1 ] ");
+        }
+        let t1: number = (1.0 - t);
+        let t2: number = t * t;
+        let t3: number = t2 * t;
+        return (t1 * t1 * t1 ) * start + 3 * t * (t1 * t1 )  * ctrl0 + (3 * t2 * t1 ) * ctrl1 + t3 * end;
+    }
+    /**
+     * 三次贝塞尔曲线向量版
+     * B(t) = P0 * (1-t)^3 + 3 * P1 * t * (1-t)^2 + 3 * P2 * t^2 * (1-t) + P3 * t^3, t ∈ [0,1]
+     * @param start 
+     * @param ctrl0 
+     * @param ctrl1 
+     * @param end 
+     * @param t 
+     * @param result 
+     * @returns 
+     */
+    static getCubicBezierVector(start: vec2, ctrl0: vec2, ctrl1: vec2, end: vec2, t: number, result: vec2 | null = null): vec2 {
+        if (result === null) result = vec2.create();
+        result.x = Math2D.getCubicBezierPosition(start.x, ctrl0.x, ctrl1.x, end.x, t);
+        result.y = Math2D.getCubicBezierPosition(start.y, ctrl0.y, ctrl1.y, end.y, t);
+        return result;
+    }
+    // 实现创建贝塞尔迭代器接口的工厂方法
+    static createQuadraticBezierEnumerator(start : vec2, ctrl : vec2, end : vec2, steps : number = 30) : IBezierEnumerator {
+        return new BezierEnumerator(start, end, ctrl, null, steps);
+    }
+    static createCubicBezierEnumerator(start : vec2, ctrl0 : vec2, ctrl1 : vec2, end : vec2, steps : number = 30) : IBezierEnumerator {
+        return new BezierEnumerator(start, end, ctrl0, ctrl1, steps);
+    }
 }
 export class v2 {
     public x: number;
@@ -402,7 +481,7 @@ export class mat2d {
         const d: number = origin.values[3];
         const x: number = origin.values[4];
         const y: number = origin.values[5];
-        
+
         result.values[0] = a;
         result.values[1] = b;
         result.values[2] = c;

@@ -2,6 +2,7 @@
 import { Canvas2DApplication } from '../src/Application';
 import { CanvasKeyboardEvent, CanvasMouseEvent } from '../src/CnavasInputEvent';
 import { Rectangle, Size, Math2D, vec2, mat2d } from '../src/math2D';
+import { CubeBezierCurve, QuadraticBezierCurve } from '../src/QuadraticBezierCurve';
 import { Tank } from './Tank';
 
 type TextAlign = 'start' | 'left' | 'center' | 'right' | 'end';
@@ -56,6 +57,8 @@ export class TestApplication extends Canvas2DApplication {
     // 鼠标是否在线段起点和重点范围内
     private _isHit: boolean = false;
 
+    private _quadCurve: QuadraticBezierCurve;
+    private _cubeCurve: CubeBezierCurve;
     // 由于 Colors 独一无二，没有多个实例，所以可以声明为公开的静态的数组类型
     public static Colors: string[] = [
         'aqua',                   //浅绿色
@@ -88,6 +91,18 @@ export class TestApplication extends Canvas2DApplication {
         this._tank.tankRotation = Math2D.toRadian(30);
         this._tank.turretRotation = Math2D.toRadian(-30);
         this._tank.showCoord = true;
+
+        this._quadCurve = new QuadraticBezierCurve(
+            vec2.create(400, 100),
+			vec2.create(550, 200),
+			vec2.create(400, 300),
+        );
+        this._cubeCurve = new CubeBezierCurve(
+            vec2.create(60, 100),
+			vec2.create(240, 100),
+			vec2.create(60, 300),
+			vec2.create(240, 300)
+        );
     }
     start() {
         // 更新虚线偏移位置，也可以写在 update 里面
@@ -100,6 +115,9 @@ export class TestApplication extends Canvas2DApplication {
         // this._rotationSun += this._rotationSunSpeed * dt;
         // this._revolution += this._revolutionSpeed * dt;
         this._tank.update(dt);
+
+        this._quadCurve.update(dt);
+		this._cubeCurve.update(dt);
     }
     render() {
         if (!this.ctx2D) return;
@@ -143,11 +161,11 @@ export class TestApplication extends Canvas2DApplication {
         // this.rotationAndRevolutionSimulation();
 
         // 下面是坦克案例
-        this.drawTank();
-        const x = (this._mouseX - this._tank.x).toFixed(2);
-        const y = (this._mouseY - this._tank.y).toFixed(2);
-        const angle = Math2D.toDegree(this._tank.tankRotation).toFixed(2);
-        this.drawCoordInfo(`坐标：[${x}, ${y}]；角度：${angle}`, this._mouseX, this._mouseY);
+        // this.drawTank();
+        // const x = (this._mouseX - this._tank.x).toFixed(2);
+        // const y = (this._mouseY - this._tank.y).toFixed(2);
+        // const angle = Math2D.toDegree(this._tank.tankRotation).toFixed(2);
+        // this.drawCoordInfo(`坐标：[${x}, ${y}]；角度：${angle}`, this._mouseX, this._mouseY);
 
         // 下面是向量案例
         // const v1 = new vec2(this.canvas.width / 2, this.canvas.height / 2);
@@ -181,6 +199,13 @@ export class TestApplication extends Canvas2DApplication {
         //     vec2.create(-100, -100)
         // ], 0, 0);
         // this.ctx2D.restore();
+
+        // 下面是贝塞尔曲线案例
+        this.drawQuadraticBezierCurve();
+    }
+    drawQuadraticBezierCurve() {
+        this._quadCurve.draw(this);
+        this._cubeCurve.draw(this);
     }
     drawMouseLineHitTest() {
         const ctx2D: CanvasRenderingContext2D | null = this.ctx2D;
@@ -453,6 +478,7 @@ export class TestApplication extends Canvas2DApplication {
         if (!ctx2D) return;
         ctx2D.save();
         ctx2D.fillStyle = fillStyle;
+        ctx2D.beginPath(); // 切记要 beginPath，否则绘制状态会沿用上一次
         ctx2D.rect(x, y, w, h);
         ctx2D.fill();
         ctx2D.restore();
@@ -1034,6 +1060,14 @@ export class TestApplication extends Canvas2DApplication {
             mat.values[4],
             mat.values[5]);
     }
+    protected dispatchMouseDown(e: CanvasMouseEvent): void {
+        this._quadCurve.onMouseDown(e);
+        this._cubeCurve.onMouseDown(e);
+    }
+    protected dispatchMouseUp(e: CanvasMouseEvent): void {
+        this._quadCurve.onMouseUp(e);
+        this._cubeCurve.onMouseUp(e);
+    }
     protected dispatchMouseMove(e: CanvasMouseEvent) {
         // 必须要设置 this.isSupportMouseMove = true 才能处理moveMove事件
         this._mouseX = e.canvasPos.x;
@@ -1043,6 +1077,9 @@ export class TestApplication extends Canvas2DApplication {
 
         // this._isHit = Math2D.projectPointOnLineSegment(vec2.create(this._mouseX, this._mouseY), this.lineStart, this.lineEnd, this.closePt);
         this._isHit = Math2D.isPointOnLineSegement(vec2.create(this._mouseX, this._mouseY), this.lineStart, this.lineEnd, this.closePt, 1);
+
+        this._quadCurve.onMouseMove(e);
+        this._cubeCurve.onMouseMove(e);
     }
     protected dispatchKeyPress(e: CanvasKeyboardEvent) {
         this._tank.onKeyPress(e);

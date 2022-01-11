@@ -1,5 +1,5 @@
 import { CanvasKeyboardEvent, CanvasMouseEvent } from './CnavasInputEvent';
-import { v2 } from './math2D';
+import { vec2 } from './math2D';
 import { Timer, TimerCallback } from './Timer';
 /**
  * 控制主循环
@@ -86,7 +86,7 @@ export class Application implements EventListenerObject {
         this.rafId = requestAnimationFrame(this.step.bind(this));
     }
     // 坐标转换，以 canvas 左上角为原点。注意：canvas 的 border 和 padding 会影响坐标的值
-    private viewportToCanvasCoords(e: MouseEvent): v2 {
+    private viewportToCanvasCoords(e: MouseEvent): vec2 {
         if (!this.canvas) throw new Error('canvas 不能为空');
         const { clientX, clientY, target } = e;
         if (!target) throw new Error('点击事件的 target 为空');
@@ -108,7 +108,7 @@ export class Application implements EventListenerObject {
 
         const x: number = clientX - rect.left - borderLeftWidth - paddingLeft;
         const y: number = clientY - rect.top - borderTopWidth - paddingTop;
-        return new v2(x, y);
+        return vec2.create(x, y);
     }
     // 将 dom 事件转换为自定义的 canvas 事件
     private toCanvasMouseEvent(e: Event): CanvasMouseEvent {

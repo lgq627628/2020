@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+    <head>
+        <meta charset="UTF-8"/>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>canvas 绘制函数</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+            }
+            html, body {
+                width: 100%;
+                height: 100%;
+            }
+            #canvas {
+                display: block;
+                width: 800px;
+                height: 600px;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="canvas" width="800" height="600"></canvas>
+        <script type="module">
+            import { FnApp } from './main';
+
+            const canvas = document.getElementById('canvas');
+            const app = new FnApp(canvas);
+            app.addFn(x => x + 100);
+            // app.addFn(x => x * x);
+            // app.addFn(x => 1 / x);
+            // app.addFn(x => 100 * Math.sin(x));
+            // app.addFn(x => Math.sqrt(x));
+            // app.addFn(x => Math.log(x));
+            
+            app.draw();
+            window.app = app;
+        </script>
+    </body>
+</html>

@@ -17,12 +17,13 @@
             #canvas {
                 display: block;
                 width: 800px;
-                height: 600px;
+                height: 800px;
+                border: 1px solid;
             }
         </style>
     </head>
     <body>
-        <canvas id="canvas" width="800" height="600"></canvas>
+        <canvas id="canvas" width="800" height="800"></canvas>
         <script type="module">
             import { FnApp } from './main';
 
@@ -34,7 +35,6 @@
             // app.addFn(x => 100 * Math.sin(x));
             // app.addFn(x => Math.sqrt(x));
             // app.addFn(x => Math.log(x));
-            
             app.draw();
             window.app = app;
         </script>

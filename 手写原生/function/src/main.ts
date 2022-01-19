@@ -16,6 +16,15 @@ export class FnApp {
     public rightY: number;
     /** 背景网格的宽高大小 */
     public gridSize: Size;
+    public steps: number;
+    public scaleSteps: number;
+
+    public state: IState = {
+        scale: 1,
+        isDrag: false,
+        startPos: null,
+        endPos: null
+    };
 
     public fnList: Function[] = [];
 
@@ -34,13 +43,60 @@ export class FnApp {
         this.rightY = opts.rightY || this.halfHeight;
 
         this.gridSize = opts.gridSize || new Size(~~(this.halfWidth / 10), ~~(this.halfHeight / 10));
+        this.steps = opts.steps || 1;
+        this.scaleSteps = opts.scaleSteps || 0.01;
 
+        this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this), false);
+        document.addEventListener('mouseup', this.handleMouseUp.bind(this), false);
+        this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this), false);
+        this.canvas.addEventListener('mousewheel', this.handleMouseWheel.bind(this), false);
     }
-    /** 更新数据 */
-    update() {
+    handleMouseDown(e: MouseEvent) {
+        const canvasPos: vec2 = this.viewportToCanvasPosition(e);
+        this.state.startPos = canvasPos;
+    }
+    handleMouseMove(e: MouseEvent) {
+        if (!this.state.startPos) return;
+        const canvasPos: vec2 = this.viewportToCanvasPosition(e);
+        this.state.endPos = canvasPos;
+        const dir = vec2.diff(this.state.endPos, this.state.startPos);
+        this.updateRange(new vec2(dir.x, -dir.y));
+        this.draw();
+        this.state.startPos = canvasPos;
+    }
+    handleMouseUp(e: MouseEvent) {
+        this.state.startPos = null;
+        this.state.endPos = null;
+    }
+    handleMouseWheel(e: Event) {
+        e.preventDefault();
+        const event: WheelEvent = e as WheelEvent;
+        const canvasPos: vec2 = this.viewportToCanvasPosition(event);
+        const { deltaY } = event;
+        if (deltaY > 0) {
+            console.log('放大');
+            this.state.scale += this.scaleSteps;
+        } else if (deltaY < 0) {
+            console.log('缩小');
+            this.state.scale -= this.scaleSteps;
+        }
+    }
+    viewportToCanvasPosition(e: MouseEvent): vec2 {
+        const { clientX, clientY } = e;
+        const { top, left } = this.canvas.getBoundingClientRect();
+        return new vec2(clientX - top, clientY - left);
+    }
+    /** 更新边界数据 */
+    updateRange(dir: vec2) {
+        const { x, y } = dir;
+        this.leftX += x;
+        this.rightX += x;
+        this.leftY += y;
+        this.rightY += y;
     }
     /** 重新绘制 */
     draw() {
+        this.ctx2d?.clearRect(0, 0, this.width, this.height);
         this.drawGrid();
         this.drawFn();
     }
@@ -84,14 +140,14 @@ export class FnApp {
         this.fnList.forEach(fn => {
             for(let i = 0; i < width; i++) {
                 // 像素点 / 画布宽 = x / 实际表示的 x 轴长度
-                const x = i * xLen / width;
+                const x = i / width * xLen + leftX;
                 let y = fn(x);
                 // 换算到具体绘制点
-                y = height - y / height * yLen;
+                y = height - (y - leftY) / yLen * height;
                 if (i === 0) {
-                    ctx2d.moveTo(x, y);
+                    ctx2d.moveTo(i, y);
                 } else {
-                    ctx2d.lineTo(x, y);
+                    ctx2d.lineTo(i, y);
                 }
             }
             ctx2d.stroke();
@@ -126,10 +182,10 @@ export class FnApp {
 type TextAlign = 'left' | 'center';
 
 interface IState {
-    startPos: vec2,
-    endPos: vec2,
-    startX: number,
-    endX: number
+    scale: number,
+    isDrag: boolean,
+    startPos: vec2 | null,
+    endPos: vec2 | null
 }
 
 interface IConfig {
@@ -138,6 +194,8 @@ interface IConfig {
     leftY?: number,
     rightY?: number,
     gridSize?: Size,
+    steps?: number,
+    scaleSteps?: number,
 }
 
 

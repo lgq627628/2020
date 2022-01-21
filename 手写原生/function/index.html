@@ -24,17 +24,20 @@
     </head>
     <body>
         <canvas id="canvas" width="800" height="800"></canvas>
-        <script type="module">
+        <script type="module" lang="ts">
             import { FnApp } from './src/main';
 
             const canvas = document.getElementById('canvas');
-            const app = new FnApp(canvas);
-            app.addFn(x => x + 400);
+            const app = new FnApp(canvas, {
+                // leftX: -50,
+                // rightX: 50
+            });
+            // app.addFn(x => x + 400);
             // app.addFn(x => x * x);
             // app.addFn(x => 1 / x);
-            // app.addFn(x => 100 * Math.sin(x));
-            // app.addFn(x => Math.sqrt(x));
-            // app.addFn(x => Math.log(x));
+            app.addFn(x => 100 * Math.sin(x / 30));
+            app.addFn(x => 10 * Math.sqrt(x));
+            app.addFn(x => 10 * Math.log(x));
             app.draw();
             window.app = app;
         </script>

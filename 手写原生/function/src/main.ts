@@ -18,8 +18,11 @@ export class FnApp {
     public yLen: number;
     /** 背景网格的宽高大小 */
     public gridSize: Size;
+    public gridCount: number;
     public steps: number;
     public scaleSteps: number;
+    /** 刻度字体大小 */
+    public fontSize: number;
 
     public state: IState = {
         startPos: null,
@@ -45,12 +48,14 @@ export class FnApp {
         this.yLen = this.rightY - this.leftY;
 
         this.gridSize = opts.gridSize || new Size(~~(this.halfWidth / 10), ~~(this.halfHeight / 10));
+        this.gridCount = opts.gridCount || 20;
         this.steps = opts.steps || 1;
         this.scaleSteps = opts.scaleSteps || 0.05;
+        this.fontSize = opts.fontSize || 14;
 
         this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this), false);
         document.addEventListener('mouseup', this.handleMouseUp.bind(this), false);
-        this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this), false);
+        document.addEventListener('mousemove', this.handleMouseMove.bind(this), false);
         this.canvas.addEventListener('mousewheel', this.handleMouseWheel.bind(this), false);
     }
     handleMouseDown(e: MouseEvent) {
@@ -58,8 +63,11 @@ export class FnApp {
         this.state.startPos = canvasPos;
     }
     handleMouseMove(e: MouseEvent) {
-        if (!this.state.startPos) return;
         const canvasPos: vec2 = this.viewportToCanvasPosition(e);
+        if (!this.state.startPos) {
+            this.drawSubLine(canvasPos);
+            return;
+        }
         this.state.endPos = canvasPos;
         const { width, height, xLen, yLen, state: { startPos, endPos } } = this;
         const dx = -(endPos.x - startPos.x) / width * xLen;
@@ -85,10 +93,12 @@ export class FnApp {
         const { leftX, rightX, leftY, rightY, scaleSteps } = this;
         let scale: number;
         if (deltaY > 0) {
-            // 放大
+            // 缩小
+            console.log('缩小');
             scale = 1 + scaleSteps;
         } else {
-            // 缩小
+            // 放大
+            console.log('放大');
             scale = 1 - scaleSteps;
         }
         const { x, y } = this.canvasPosToFnVal(canvasPos);
@@ -112,6 +122,12 @@ export class FnApp {
         const y = leftY + canvasPos.y / height * yLen;
         return new vec2(x, y);
     }
+    fnValToCanvasPos(fnVal: Point): Point {
+        const { width, height, leftX, leftY, xLen, yLen } = this;
+        const x = (fnVal.x - leftX) / xLen * width;
+        const y = (fnVal.y - leftY) / yLen * height;
+        return new Point(x, height - y);
+    }
     /** 重新绘制 */
     draw() {
         this.ctx2d?.clearRect(0, 0, this.width, this.height);
@@ -119,26 +135,54 @@ export class FnApp {
         this.drawFn();
     }
     drawGrid() {
-        const { width, height, leftX, rightX, leftY, rightY, xLen, yLen, gridSize, ctx2d } = this;
+        const { width, height, leftX, rightX, leftY, rightY, xLen, yLen, gridSize, gridCount, ctx2d } = this;
         ctx2d?.save();
+
+        let gridWidth = 1;
+        let unitX = xLen / gridCount;
+        while (gridWidth < unitX) {
+            gridWidth *= 10
+        }
+        while (gridWidth / 10 > unitX) {
+            gridWidth /= 10
+        }
+        if(gridWidth / 5 > unitX) {
+            gridWidth /= 5;
+        } else if(gridWidth / 2 > unitX) {
+            gridWidth /= 2;
+        }
+        let gridHeight = 1;
+        let unitY = yLen / gridCount;
+        while (gridHeight < unitY) {
+            gridHeight *= 10
+        }
+        while (gridHeight / 10 > unitY) {
+            gridHeight /= 10
+        }
+        if(gridHeight / 5 > unitY) {
+            gridHeight /= 5;
+        } else if(gridHeight / 2 > unitY) {
+            gridHeight /= 2;
+        }
+        console.log(gridWidth, gridHeight);
         // 最左边的竖线下标
-        let i = Math.floor(leftX / gridSize.w);
+        let i = Math.floor(leftX / gridWidth);
         //从左到右绘制竖线
-        for (++i; i * gridSize.w < rightX; i++) {
+        for (++i; i * gridWidth < rightX; i++) {
             // 绘制像素点 / 整个画布宽度 = 实际 x 值 / 实际表示的 x 轴长度
-            const x = (i * gridSize.w - leftX) / xLen * width;
+            const x = (i * gridWidth - leftX) / xLen * width;
             const color = i ? '#ddd' : '#000';
             this.drawLine(x, 0, x, height, color);
-            this.fillText(String(i * gridSize.w), x, height, 'center');
+            this.fillText(String(i * gridWidth), x, height, this.fontSize, 'center');
         }
         // 绘制横线也是和上面一样的方法，就是要注意画布的 y 轴向下，需要用 height 剪一下，或者用 scale(1, -1);
-        let j = Math.floor(leftY / gridSize.h);
-        for (++j; j * gridSize.h < rightY; j++) {
-            let y = (j * gridSize.w - leftY) / yLen * height;
+        let j = Math.floor(leftY / gridHeight);
+        for (++j; j * gridHeight < rightY; j++) {
+            let y = (j * gridWidth - leftY) / yLen * height;
             y = height - y;
             const color = j ? '#ddd' : '#000';
             this.drawLine(0, y, width, y, color);
-            this.fillText(String(j * gridSize.h), 0, y);
+            this.fillText(String(j * gridHeight), 0, y + this.fontSize / 2, this.fontSize);
         }
         ctx2d?.restore();
     }
@@ -146,10 +190,10 @@ export class FnApp {
     drawFn() {
         const { width, height, leftX, leftY, xLen, yLen, ctx2d } = this;
         if (!ctx2d) return;
-        ctx2d?.save();
-        ctx2d.strokeStyle = 'red';
-        ctx2d.beginPath();
+        ctx2d.save();
         this.fnList.forEach(fn => {
+            ctx2d.strokeStyle = (fn as any).color;
+            ctx2d.beginPath();
             for (let i = 0; i < width; i++) {
                 // 像素点 / 画布宽 = x / 实际表示的 x 轴长度
                 const x = i / width * xLen + leftX;
@@ -166,19 +210,50 @@ export class FnApp {
         });
         ctx2d?.restore();
     }
-    drawLine(x1: number, y1: number, x2: number, y2: number, strokeStyle: string | CanvasGradient | CanvasPattern = '#000') {
+    /** 绘制辅助线 */
+    drawSubLine(canvasPos: vec2) {
+        const ctx2d: CanvasRenderingContext2D | null = this.ctx2d;
+        if (!ctx2d) return;
+        const { width, height } = this;
+        const { x, y } = canvasPos;
+        let subLineVisible = true;
+        if (x <= 0 || x >= width || y <= 0 || y >= height) subLineVisible = false;
+        this.draw();
+        if (!subLineVisible) return;
+        ctx2d.save();
+        this.drawLine(x, 0, x, height, '#999',true);
+        this.drawLine(0, y, width, y, '#999', true);
+        ctx2d.restore();
+        const centerRectLen: number = 8;
+        ctx2d.strokeRect(x - centerRectLen / 2, y - centerRectLen / 2, centerRectLen, centerRectLen);
+        const actualPos = this.canvasPosToFnVal(canvasPos);
+        // 绘制鼠标坐标点
+        // this.fillText(`[${actualPos.x}, ${-actualPos.y}]`, x, y);
+        this.handleCrosspoint(actualPos.x);
+    }
+    handleCrosspoint(x: number) {
+        const pointList: Point[] = this.checkCrosspoint(x);
+        pointList.forEach(point => {
+            const { x, y } = this.fnValToCanvasPos(point);
+            this.fillCircle(x, y, 5, 'red');
+            this.fillText(`[${point.x}, ${point.y}]`, x, y);
+        });
+    }
+    drawLine(x1: number, y1: number, x2: number, y2: number, strokeStyle: string | CanvasGradient | CanvasPattern = '#000', isDashLine: boolean = false) {
         const ctx2d: CanvasRenderingContext2D | null = this.ctx2d;
         if (!ctx2d) return;
         ctx2d.strokeStyle = strokeStyle;
+        if (isDashLine) ctx2d.setLineDash([6, 6]);
         ctx2d.beginPath();
         ctx2d.moveTo(x1, y1);
         ctx2d.lineTo(x2, y2);
         ctx2d.stroke();
     }
-    fillText(text: string, x: number, y: number, textAlign: TextAlign = 'left') {
+    fillText(text: string, x: number, y: number, fontSize: number = 16, textAlign: TextAlign = 'left') {
         const ctx2d: CanvasRenderingContext2D | null = this.ctx2d;
         if (!ctx2d) return;
         ctx2d.save();
+        ctx2d.font = `${fontSize}px sans-serif`;
         if (textAlign === 'center') {
             const w = ctx2d.measureText(text).width;
             x = x - w / 2;
@@ -186,8 +261,30 @@ export class FnApp {
         ctx2d.fillText(text, x, y);
         ctx2d.restore();
     }
+    fillCircle(x: number, y: number, radius: number, fillStyle: string | CanvasGradient | CanvasPattern = '#000') {
+        const ctx2d: CanvasRenderingContext2D | null = this.ctx2d;
+        if (!ctx2d) return;
+        ctx2d.save();
+        ctx2d.fillStyle = fillStyle;
+        ctx2d.beginPath();
+        ctx2d.arc(x, y, radius, 0, Math.PI * 2);
+        ctx2d.fill();
+        ctx2d.restore();
+    }
     addFn(fn: Function) {
+        (fn as any).color = '#' + Math.random().toString(16).slice(2, 8);
         this.fnList.push(fn);
+    }
+    checkCrosspoint(x: number) {
+        const { leftX, rightX, leftY, rightY } = this;
+        const rs: Point[] = [];
+        this.fnList.forEach(fn => {
+            const y = fn(x);
+            if (leftX <= x && x <= rightX && y >= leftY && y <= rightY) {
+                rs.push(new Point(x, y));
+            }
+        });
+        return rs;
     }
 }
 
@@ -204,8 +301,10 @@ interface IConfig {
     leftY?: number,
     rightY?: number,
     gridSize?: Size,
+    gridCount?: number,
     steps?: number,
-    scaleSteps?: number
+    scaleSteps?: number,
+    fontSize?: number
 }
 
 
@@ -223,6 +322,15 @@ export class vec2 {
     }
     static diff(v1: vec2, v2: vec2) {
         return new vec2(v2.x - v1.x, v2.y - v1.y);
+    }
+}
+
+export class Point {
+    public x: number;
+    public y: number;
+    constructor(x: number, y: number) {
+        this.x = x;
+        this.y = y;
     }
 }
 

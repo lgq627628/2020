@@ -1,4 +1,6 @@
-
+/**
+ * 绘制函数类
+ */
 export class FnApp {
     public canvas: HTMLCanvasElement;
     public ctx2d: CanvasRenderingContext2D | null;
@@ -8,21 +10,25 @@ export class FnApp {
     public halfWidth: number;
     public halfHeight: number;
 
-    /** 最左边的 x 值 */
+    /** 最左边表示的 x 值 */
     public leftX: number;
-    /** 最右边的 x 值 */
+    /** 最右边表示的 x 值 */
     public rightX: number;
+    /** x 轴表示的长度，注意不是画布长度 */
     public xLen: number;
     public leftY: number;
     public rightY: number;
     public yLen: number;
     /** 网格数量 */
-    public gridCount: number;
+    public gridCount: Count;
+    /** 函数采样点间隔（整数），默认值为 1，越大曲线越不平滑，还可能因为曲线值变化太大导致曲线两端是空白 */
     public steps: number;
+    /** 每次缩放的量 */
     public scaleSteps: number;
-    /** 刻度字体大小 */
+    /** 坐标刻度字体大小 */
     public fontSize: number;
-
+    /** 横纵坐标保留的数值 */
+    public fixedCount: Count = { x: 0, y: 0 };
     public MAX_DELTA: number = 1e3;
     public MIN_DELTA: number = 1e-3;
 
@@ -33,6 +39,10 @@ export class FnApp {
 
     public fnList: Function[] = [];
 
+    /**
+     * @param canvas canvas 画布元素
+     * @param opts 绘制函数的一些可选参数
+     */
     constructor(canvas: HTMLCanvasElement, opts: IConfig = {}) {
         this.canvas = canvas;
         this.ctx2d = canvas.getContext('2d');
@@ -50,7 +60,7 @@ export class FnApp {
         this.xLen = this.rightX - this.leftX;
         this.yLen = this.rightY - this.leftY;
 
-        this.gridCount = opts.gridCount || 20;
+        this.gridCount = opts.gridCount || { x: 20, y: 20 };
         this.steps = opts.steps || 1;
         this.scaleSteps = opts.scaleSteps || 0.05;
         this.fontSize = opts.fontSize || 14;
@@ -61,11 +71,11 @@ export class FnApp {
         this.canvas.addEventListener('mousewheel', this.handleMouseWheel.bind(this), false);
     }
     handleMouseDown(e: MouseEvent) {
-        const canvasPos: vec2 = this.viewportToCanvasPosition(e);
+        const canvasPos: Point = this.viewportToCanvasPosition(e);
         this.state.startPos = canvasPos;
     }
     handleMouseMove(e: MouseEvent) {
-        const canvasPos: vec2 = this.viewportToCanvasPosition(e);
+        const canvasPos: Point = this.viewportToCanvasPosition(e);
         if (!this.state.startPos) {
             this.drawSubLine(canvasPos);
             return;
@@ -92,7 +102,7 @@ export class FnApp {
     handleMouseWheel(e: Event) {
         e.preventDefault();
         const event: WheelEvent = e as WheelEvent;
-        const canvasPos: vec2 = this.viewportToCanvasPosition(event);
+        const canvasPos: Point = this.viewportToCanvasPosition(event);
         const { deltaY } = event;
         const { leftX, rightX, leftY, rightY, scaleSteps } = this;
         let scale: number;
@@ -116,16 +126,16 @@ export class FnApp {
         this.yLen = this.rightY - this.leftY;
         this.draw();
     }
-    viewportToCanvasPosition(e: MouseEvent): vec2 {
+    viewportToCanvasPosition(e: MouseEvent): Point {
         const { clientX, clientY } = e;
         const { top, left } = this.canvas.getBoundingClientRect();
-        return new vec2(clientX - top, clientY - left);
+        return new Point(clientX - top, clientY - left);
     }
-    canvasPosToFnVal(canvasPos: vec2): vec2 {
+    canvasPosToFnVal(canvasPos: Point): Point {
         const { width, height, leftX, leftY, xLen, yLen } = this;
         const x = leftX + canvasPos.x / width * xLen;
         const y = leftY + canvasPos.y / height * yLen;
-        return new vec2(x, y);
+        return new Point(x, y);
     }
     fnValToCanvasPos(fnVal: Point): Point {
         const { width, height, leftX, leftY, xLen, yLen } = this;
@@ -154,7 +164,7 @@ export class FnApp {
         // 背景网格的宽高大小并没有做成配置项，因为会和 leftX 和 rightX 冲突
         // 比如 x 的值从 [-1, 1]，但是网格大小设置成 [50, 50]，那么页面就是近乎空白，所以我们这里设置大概网格数即可
         let gridWidth = 1;
-        let unitX = xLen / gridCount;
+        let unitX = xLen / gridCount.x;
         while (gridWidth < unitX) {
             gridWidth *= 10
         }
@@ -167,7 +177,7 @@ export class FnApp {
             gridWidth /= 2;
         }
         let gridHeight = 1;
-        let unitY = yLen / gridCount;
+        let unitY = yLen / gridCount.y;
         while (gridHeight < unitY) {
             gridHeight *= 10
         }
@@ -179,37 +189,43 @@ export class FnApp {
         } else if(gridHeight / 2 > unitY) {
             gridHeight /= 2;
         }
-        console.log(gridWidth, gridHeight);
+        // 由于计算会产生浮点数偏差，所以要控制下小数点后面的数字个数
+        if (gridWidth < 1) {
+            this.fixedCount.x = gridWidth.toString().split('.')[1].length;
+        }
+        if (gridHeight < 1) {
+            this.fixedCount.y = gridHeight.toString().split('.')[1].length;
+        }
         // 最左边的竖线下标
         let i = Math.floor(leftX / gridWidth);
         //从左到右绘制竖线
-        for (++i; i * gridWidth < rightX; i++) {
+        for (; i * gridWidth < rightX; i++) {
             // 绘制像素点 / 整个画布宽度 = 实际 x 值 / 实际表示的 x 轴长度
             const x = (i * gridWidth - leftX) / xLen * width;
             const color = i ? '#ddd' : '#000';
-            this.drawLine(x, 0, x, height, color);
-            this.fillText(String(i * gridWidth), x, height, this.fontSize, 'center');
+            this.drawLine(x, 0, x, height, color)
+            this.fillText(String(this.formatNum(i * gridWidth, this.fixedCount.x)), x, height, this.fontSize, 'center');
         }
         // 绘制横线也是和上面一样的方法，就是要注意画布的 y 轴向下，需要用 height 剪一下，或者用 scale(1, -1);
         let j = Math.floor(leftY / gridHeight);
-        for (++j; j * gridHeight < rightY; j++) {
+        for (; j * gridHeight < rightY; j++) {
             let y = (j * gridWidth - leftY) / yLen * height;
             y = height - y;
             const color = j ? '#ddd' : '#000';
             this.drawLine(0, y, width, y, color);
-            this.fillText(String(j * gridHeight), 0, y + this.fontSize / 2, this.fontSize);
+            this.fillText(String(this.formatNum(j * gridHeight, this.fixedCount.y)), 0, y + this.fontSize / 2, this.fontSize);
         }
         ctx2d?.restore();
     }
     /** 绘制函数曲线，就是用一段段直线连起来 */
     drawFn() {
-        const { width, height, leftX, leftY, xLen, yLen, ctx2d } = this;
+        const { width, height, leftX, leftY, xLen, yLen, steps, ctx2d } = this;
         if (!ctx2d) return;
         ctx2d.save();
         this.fnList.forEach(fn => {
             ctx2d.strokeStyle = (fn as any).color;
             ctx2d.beginPath();
-            for (let i = 0; i < width; i++) {
+            for (let i = 0; i < width; i += steps) {
                 // 像素点 / 画布宽 = x / 实际表示的 x 轴长度
                 const x = i / width * xLen + leftX;
                 let y = fn(x);
@@ -226,7 +242,7 @@ export class FnApp {
         ctx2d?.restore();
     }
     /** 绘制辅助线 */
-    drawSubLine(canvasPos: vec2) {
+    drawSubLine(canvasPos: Point) {
         const ctx2d: CanvasRenderingContext2D | null = this.ctx2d;
         if (!ctx2d) return;
         const { width, height } = this;
@@ -251,7 +267,8 @@ export class FnApp {
         pointList.forEach(point => {
             const { x, y } = this.fnValToCanvasPos(point);
             this.fillCircle(x, y, 5, 'red');
-            this.fillText(`[${point.x}, ${point.y}]`, x, y);
+            
+            this.fillText(`[${this.formatNum(point.x, this.fixedCount.x + 1)}, ${this.formatNum(point.x, this.fixedCount.y + 1)}]`, x, y);
         });
     }
     drawLine(x1: number, y1: number, x2: number, y2: number, strokeStyle: string | CanvasGradient | CanvasPattern = '#000', isDashLine: boolean = false) {
@@ -301,42 +318,40 @@ export class FnApp {
         });
         return rs;
     }
+    /**
+     * 保留 fixedCount 位小数，整数不补零
+     * @param num 
+     * @param fixedCount 
+     * @returns
+     */
+    formatNum(num: number, fixedCount: number): number {
+        return parseFloat(num.toFixed(fixedCount));
+    }
 }
 
 type TextAlign = 'left' | 'center';
 
 interface IState {
-    startPos: vec2 | null,
-    endPos: vec2 | null
+    startPos: Point | null,
+    endPos: Point | null
 }
 
+/** 绘制函数的一些配置项 */
 interface IConfig {
     leftX?: number,
     rightX?: number,
     leftY?: number,
     rightY?: number,
-    gridCount?: number,
+    gridCount?: Count,
     steps?: number,
     scaleSteps?: number,
     fontSize?: number
 }
 
-
-export class vec2 {
-    public x: number;
-    public y: number;
-    constructor(x: number, y: number) {
-        this.x = x;
-        this.y = y;
-    }
-    multi(scale: number) {
-        this.x = this.x * scale;
-        this.y = this.y * scale;
-        return this;
-    }
-    static diff(v1: vec2, v2: vec2) {
-        return new vec2(v2.x - v1.x, v2.y - v1.y);
-    }
+/** 网格数量 */
+interface Count {
+    x: number,
+    y: number
 }
 
 export class Point {
@@ -354,5 +369,15 @@ export class Size {
     constructor(w: number, h: number) {
         this.w = w;
         this.h = h;
+    }
+}
+
+export class Calc {
+    static MAX: number = 1e12;
+    constructor() {
+
+    }
+    multi(a: number, b: number) {
+        a * b
     }
 }

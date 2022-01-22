@@ -19,8 +19,8 @@ export class FnApp {
     public leftY: number;
     public rightY: number;
     public yLen: number;
-    /** 网格数量 */
-    public gridCount: Count;
+    /** 网格数量，注意并不一定是设置了多少就是多少格，而是在这个值的左右波动 */
+    public gridCount: number;
     /** 函数采样点间隔（整数），默认值为 1，越大曲线越不平滑，还可能因为曲线值变化太大导致曲线两端是空白 */
     public steps: number;
     /** 每次缩放的量 */
@@ -28,9 +28,9 @@ export class FnApp {
     /** 坐标刻度字体大小 */
     public fontSize: number;
     /** 横纵坐标保留的数值 */
-    public fixedCount: Count = { x: 0, y: 0 };
-    public MAX_DELTA: number = 1e3;
-    public MIN_DELTA: number = 1e-3;
+    public fixedCount: number = 0;
+    public MAX_DELTA: number = 1e6;
+    public MIN_DELTA: number = 1e-6;
 
     public state: IState = {
         startPos: null,
@@ -41,7 +41,7 @@ export class FnApp {
 
     /**
      * @param canvas canvas 画布元素
-     * @param opts 绘制函数的一些可选参数
+     * @param opts 绘制函数的一些可选参数，leftX 和 rightX 是需要配对传进来的
      */
     constructor(canvas: HTMLCanvasElement, opts: IConfig = {}) {
         this.canvas = canvas;
@@ -52,15 +52,16 @@ export class FnApp {
         this.halfWidth = canvas.width / 2;
         this.halfHeight = canvas.height / 2;
 
-        // 因为一般 canvas 宽高都是几百，所以这里默认值就简单的 / 100
+        // 因为一般 canvas 宽高都是几百，所以这里默认值就简单的 / 100，此外还要主要我们的坐标是 1:1 的，如果 x 和 y 表示的值不一样，则下面的 leftY 和 rightY 不能这样简单的赋值
         this.leftX = opts.leftX || -this.halfWidth / 100;
         this.rightX = opts.rightX || this.halfWidth / 100;
-        this.leftY = opts.leftY || -this.halfHeight / 100;
-        this.rightY = opts.rightY || this.halfHeight / 100;
         this.xLen = this.rightX - this.leftX;
-        this.yLen = this.rightY - this.leftY;
+        // 初始化时，y 的取值默认和 x 值一样，因为他们代表的值一样，不然 leftY，rightY 也要当做参数传进来
+        this.leftY = this.leftX;
+        this.rightY = this.rightX;
+        this.yLen = this.xLen;
 
-        this.gridCount = opts.gridCount || { x: 20, y: 20 };
+        this.gridCount = opts.gridCount || 10;
         this.steps = opts.steps || 1;
         this.scaleSteps = opts.scaleSteps || 0.05;
         this.fontSize = opts.fontSize || 14;
@@ -108,11 +109,9 @@ export class FnApp {
         let scale: number;
         if (deltaY > 0) {
             // 缩小
-            console.log('缩小');
             scale = 1 + scaleSteps;
         } else {
             // 放大
-            console.log('放大');
             scale = 1 - scaleSteps;
         }
         if (this.isInvalidVal(scale)) return;
@@ -161,50 +160,22 @@ export class FnApp {
     drawGrid() {
         const { width, height, leftX, rightX, leftY, rightY, xLen, yLen, gridCount, ctx2d } = this;
         ctx2d?.save();
-        // 背景网格的宽高大小并没有做成配置项，因为会和 leftX 和 rightX 冲突
+
+        // 注意这里我们并没有将背景网格的宽高大小做成配置项，而是将网格数作为配置项，不然会和 leftX、rightX 冲突，
         // 比如 x 的值从 [-1, 1]，但是网格大小设置成 [50, 50]，那么页面就是近乎空白，所以我们这里设置大概网格数即可
-        let gridWidth = 1;
-        let unitX = xLen / gridCount.x;
-        while (gridWidth < unitX) {
-            gridWidth *= 10
-        }
-        while (gridWidth / 10 > unitX) {
-            gridWidth /= 10
-        }
-        if(gridWidth / 5 > unitX) {
-            gridWidth /= 5;
-        } else if(gridWidth / 2 > unitX) {
-            gridWidth /= 2;
-        }
-        let gridHeight = 1;
-        let unitY = yLen / gridCount.y;
-        while (gridHeight < unitY) {
-            gridHeight *= 10
-        }
-        while (gridHeight / 10 > unitY) {
-            gridHeight /= 10
-        }
-        if(gridHeight / 5 > unitY) {
-            gridHeight /= 5;
-        } else if(gridHeight / 2 > unitY) {
-            gridHeight /= 2;
-        }
+        const [gridWidth, gridHeight] = this.calcGridSize(xLen, gridCount);
         // 由于计算会产生浮点数偏差，所以要控制下小数点后面的数字个数
-        if (gridWidth < 1) {
-            this.fixedCount.x = gridWidth.toString().split('.')[1].length;
-        }
-        if (gridHeight < 1) {
-            this.fixedCount.y = gridHeight.toString().split('.')[1].length;
-        }
+        if (gridWidth < 1) this.fixedCount = gridWidth.toString().split('.')[1].length;
+        
         // 最左边的竖线下标
         let i = Math.floor(leftX / gridWidth);
-        //从左到右绘制竖线
+        // 从左到右绘制竖线
         for (; i * gridWidth < rightX; i++) {
             // 绘制像素点 / 整个画布宽度 = 实际 x 值 / 实际表示的 x 轴长度
             const x = (i * gridWidth - leftX) / xLen * width;
             const color = i ? '#ddd' : '#000';
             this.drawLine(x, 0, x, height, color)
-            this.fillText(String(this.formatNum(i * gridWidth, this.fixedCount.x)), x, height, this.fontSize, 'center');
+            this.fillText(String(this.formatNum(i * gridWidth, this.fixedCount)), x, height, this.fontSize, 'center');
         }
         // 绘制横线也是和上面一样的方法，就是要注意画布的 y 轴向下，需要用 height 剪一下，或者用 scale(1, -1);
         let j = Math.floor(leftY / gridHeight);
@@ -213,9 +184,34 @@ export class FnApp {
             y = height - y;
             const color = j ? '#ddd' : '#000';
             this.drawLine(0, y, width, y, color);
-            this.fillText(String(this.formatNum(j * gridHeight, this.fixedCount.y)), 0, y + this.fontSize / 2, this.fontSize);
+            this.fillText(String(this.formatNum(j * gridHeight, this.fixedCount)), 0, y + this.fontSize / 2, this.fontSize);
         }
         ctx2d?.restore();
+    }
+    /**
+     * 计算每一个网格的宽高大小，注意并不是 gridCount 是多少就会有多少网格
+     * 因为我们的坐标刻度通常都是 10、5、1、0.5、0.1 这个样子，大部分都是以 2、5、10 的倍数
+     * @param len x 轴或 y 轴代表的长度
+     * @param gridCount 网格个数
+     */
+    calcGridSize(len: number, gridCount: number): number[] {
+        let gridWidth = 1;
+        // 事实上，要是图方便的话，你也可以直接用 unitX 来当做网格大小，不过记得要取整
+        // 而这里呢，我们需要找到离 unitX 最近的（稍微偏整数的）值
+        let unitX = len / gridCount;
+        while (gridWidth < unitX) {
+            gridWidth *= 10
+        }
+        while (gridWidth / 10 > unitX) {
+            gridWidth /= 10
+        }
+        if (gridWidth / 5 > unitX) {
+            gridWidth /= 5;
+        } else if (gridWidth / 2 > unitX) {
+            gridWidth /= 2;
+        }
+        // 因为 x 轴长度和 y 轴的长度是一样的，所以可以这样赋值
+        return [gridWidth, gridWidth];
     }
     /** 绘制函数曲线，就是用一段段直线连起来 */
     drawFn() {
@@ -268,7 +264,7 @@ export class FnApp {
             const { x, y } = this.fnValToCanvasPos(point);
             this.fillCircle(x, y, 5, 'red');
             
-            this.fillText(`[${this.formatNum(point.x, this.fixedCount.x + 1)}, ${this.formatNum(point.x, this.fixedCount.y + 1)}]`, x, y);
+            this.fillText(`[${this.formatNum(point.x, this.fixedCount + 1)}, ${this.formatNum(point.y, this.fixedCount + 1)}]`, x, y);
         });
     }
     drawLine(x1: number, y1: number, x2: number, y2: number, strokeStyle: string | CanvasGradient | CanvasPattern = '#000', isDashLine: boolean = false) {
@@ -342,16 +338,10 @@ interface IConfig {
     rightX?: number,
     leftY?: number,
     rightY?: number,
-    gridCount?: Count,
+    gridCount?: number,
     steps?: number,
     scaleSteps?: number,
     fontSize?: number
-}
-
-/** 网格数量 */
-interface Count {
-    x: number,
-    y: number
 }
 
 export class Point {
@@ -369,15 +359,5 @@ export class Size {
     constructor(w: number, h: number) {
         this.w = w;
         this.h = h;
-    }
-}
-
-export class Calc {
-    static MAX: number = 1e12;
-    constructor() {
-
-    }
-    multi(a: number, b: number) {
-        a * b
     }
 }

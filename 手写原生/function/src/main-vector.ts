@@ -1,5 +1,3 @@
-import { IConfig, IState } from "./IConfig";
-
 export class FnApp {
     public canvas: HTMLCanvasElement;
     public ctx2d: CanvasRenderingContext2D | null;
@@ -284,4 +282,26 @@ export class Size {
         this.w = w;
         this.h = h;
     }
+}
+
+export interface IConfig {
+    /** x 轴最左边的值 */
+    startX: number,
+    /** x 轴右左边的值 */
+    endX: number,
+    xLength: number,
+    yLength: number,
+    startY: number,
+    endY: number,
+    steps: number,
+    fontSize: number,
+    scaleSteps: number
+}
+
+export interface IState {
+    startPos: vec2 | null,
+    endPos: vec2 | null,
+    translateX: number,
+    translateY: number,
+    scale: number
 }

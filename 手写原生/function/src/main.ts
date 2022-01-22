@@ -16,13 +16,15 @@ export class FnApp {
     public leftY: number;
     public rightY: number;
     public yLen: number;
-    /** 背景网格的宽高大小 */
-    public gridSize: Size;
+    /** 网格数量 */
     public gridCount: number;
     public steps: number;
     public scaleSteps: number;
     /** 刻度字体大小 */
     public fontSize: number;
+
+    public MAX_DELTA: number = 1e3;
+    public MIN_DELTA: number = 1e-3;
 
     public state: IState = {
         startPos: null,
@@ -40,14 +42,14 @@ export class FnApp {
         this.halfWidth = canvas.width / 2;
         this.halfHeight = canvas.height / 2;
 
-        this.leftX = opts.leftX || -this.halfWidth;
-        this.rightX = opts.rightX || this.halfWidth;
-        this.leftY = opts.leftY || -this.halfHeight;
-        this.rightY = opts.rightY || this.halfHeight;
+        // 因为一般 canvas 宽高都是几百，所以这里默认值就简单的 / 100
+        this.leftX = opts.leftX || -this.halfWidth / 100;
+        this.rightX = opts.rightX || this.halfWidth / 100;
+        this.leftY = opts.leftY || -this.halfHeight / 100;
+        this.rightY = opts.rightY || this.halfHeight / 100;
         this.xLen = this.rightX - this.leftX;
         this.yLen = this.rightY - this.leftY;
 
-        this.gridSize = opts.gridSize || new Size(~~(this.halfWidth / 10), ~~(this.halfHeight / 10));
         this.gridCount = opts.gridCount || 20;
         this.steps = opts.steps || 1;
         this.scaleSteps = opts.scaleSteps || 0.05;
@@ -68,6 +70,7 @@ export class FnApp {
             this.drawSubLine(canvasPos);
             return;
         }
+        document.body.style.cursor = 'move';
         this.state.endPos = canvasPos;
         const { width, height, xLen, yLen, state: { startPos, endPos } } = this;
         const dx = -(endPos.x - startPos.x) / width * xLen;
@@ -84,6 +87,7 @@ export class FnApp {
     handleMouseUp(e: MouseEvent) {
         this.state.startPos = null;
         this.state.endPos = null;
+        document.body.style.cursor = 'auto';
     }
     handleMouseWheel(e: Event) {
         e.preventDefault();
@@ -101,6 +105,7 @@ export class FnApp {
             console.log('放大');
             scale = 1 - scaleSteps;
         }
+        if (this.isInvalidVal(scale)) return;
         const { x, y } = this.canvasPosToFnVal(canvasPos);
         // 注意缩放和拖拽不一样，left 的左右两边一边是加一边是减
         this.leftX = x - (x - leftX) * scale;
@@ -128,6 +133,15 @@ export class FnApp {
         const y = (fnVal.y - leftY) / yLen * height;
         return new Point(x, height - y);
     }
+    /** 缩放过大过小都没啥意义，所以设置下边界值 */
+    isInvalidVal(ratio: number): boolean {
+        const { xLen, yLen, MIN_DELTA, MAX_DELTA } = this;
+        if (ratio > 1 && (xLen > MAX_DELTA || yLen > MAX_DELTA)) return true;
+        if (ratio < 1 && (xLen < MIN_DELTA || yLen < MIN_DELTA)) return true;
+        // 上面的判断为什么不直接 （xLen > MAX_DELTA || yLen > MAX_DELTA || xLen < MIN_DELTA || yLen < MIN_DELTA）这样判断呢？
+        // 因为如果这样判断你会发现缩放到最大和最小的时候，再继续操作都是无效的。
+        return false;
+    }
     /** 重新绘制 */
     draw() {
         this.ctx2d?.clearRect(0, 0, this.width, this.height);
@@ -135,9 +149,10 @@ export class FnApp {
         this.drawFn();
     }
     drawGrid() {
-        const { width, height, leftX, rightX, leftY, rightY, xLen, yLen, gridSize, gridCount, ctx2d } = this;
+        const { width, height, leftX, rightX, leftY, rightY, xLen, yLen, gridCount, ctx2d } = this;
         ctx2d?.save();
-
+        // 背景网格的宽高大小并没有做成配置项，因为会和 leftX 和 rightX 冲突
+        // 比如 x 的值从 [-1, 1]，但是网格大小设置成 [50, 50]，那么页面就是近乎空白，所以我们这里设置大概网格数即可
         let gridWidth = 1;
         let unitX = xLen / gridCount;
         while (gridWidth < unitX) {
@@ -300,7 +315,6 @@ interface IConfig {
     rightX?: number,
     leftY?: number,
     rightY?: number,
-    gridSize?: Size,
     gridCount?: number,
     steps?: number,
     scaleSteps?: number,

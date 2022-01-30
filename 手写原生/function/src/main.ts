@@ -5,10 +5,10 @@ export class FnApp {
     public canvas: HTMLCanvasElement;
     public ctx2d: CanvasRenderingContext2D | null;
 
-    public width: number;
-    public height: number;
-    public halfWidth: number;
-    public halfHeight: number;
+    public width!: number;
+    public height!: number;
+    public halfWidth!: number;
+    public halfHeight!: number;
 
     /** 最左边表示的 x 值 */
     public leftX: number;
@@ -40,7 +40,7 @@ export class FnApp {
         startPos: null,
         endPos: null
     };
-
+    /** 存放所有函数 */
     public fnList: Function[] = [];
 
     /**
@@ -52,14 +52,9 @@ export class FnApp {
         this.ctx2d = canvas.getContext('2d');
         this.adaptDPR();
 
-        this.width = canvas.width;
-        this.height = canvas.height;
-        this.halfWidth = canvas.width / 2;
-        this.halfHeight = canvas.height / 2;
-
         // 因为一般 canvas 宽高都是几百，所以这里默认值就简单的 / 100，此外还要主要我们的坐标是 1:1 的，如果 x 和 y 表示的值不一样，则下面的 leftY 和 rightY 不能这样简单的赋值
-        this.leftX = (opts.leftX || -this.halfWidth / 100) / this.dpr;
-        this.rightX = (opts.rightX || this.halfWidth / 100) / this.dpr;
+        this.leftX = opts.leftX || -this!.halfWidth / 100;
+        this.rightX = -this.leftX;
         this.xLen = this.rightX - this.leftX;
         // 初始化时，y 的取值默认和 x 值一样，因为他们代表的值一样，不然 leftY，rightY 也要当做参数传进来
         this.leftY = this.leftX;
@@ -69,7 +64,7 @@ export class FnApp {
         this.gridCount = opts.gridCount || 10;
         this.steps = opts.steps || 1;
         this.scaleSteps = opts.scaleSteps || 0.05;
-        this.fontSize = (opts.fontSize || 14)  * this.dpr;
+        this.fontSize = opts.fontSize || 14;
         this.animateDuration = opts.animateDuration || 0;
 
         this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this), false);
@@ -81,14 +76,21 @@ export class FnApp {
     // 根据 dpr 把 canvas 的 width、height 属性都放大，css 大小不变
     // canvas 会自己把画布缩小到适应 css 的大小，于是放大和缩小的效果就抵消了，这样做的原因是为了解决高清屏的模糊问题
     adaptDPR() {
-        if (!this.ctx2d) return;
         const dpr = window.devicePixelRatio;
         const { width, height } = this.canvas;
         this.dpr = dpr;
+        // 这里我们把初始的宽高记下来，用于后面的计算用，因为这里我们适配的高清屏只是自己偷偷放大，值还是要原来真实的值
+        this.width = width;
+        this.height = height;
+        this.halfWidth = width / 2;
+        this.halfHeight = height / 2;
+        // 重新设置 canvas 自身宽高大小和 css 大小
         this.canvas.width = Math.round(width * dpr);
         this.canvas.height = Math.round(height * dpr);
         this.canvas.style.width = width + 'px';
         this.canvas.style.height = height + 'px';
+        // 到这里我们就已经把画布放大了，所以接下来的绘制操作都需要乘以 dpr，这样一来就会很麻烦；
+        // 所以我们需要把一些绘制的入口收敛统一成一些工具方法，也就是封装成一个个绘制函数，比如 drawLine、fillText、strokeRect 等方法
     }
     handleMouseDown(e: MouseEvent) {
         if (this.isAnimate) return;
@@ -152,7 +154,7 @@ export class FnApp {
         const { top, left } = this.canvas.getBoundingClientRect();
         const x = clientX - top;
         const y = clientY - left;
-        return new Point(x * this.dpr, y * this.dpr);
+        return new Point(x, y);
     }
     canvasPosToFnVal(canvasPos: Point): Point {
         const { width, height, leftX, leftY, xLen, yLen } = this;
@@ -178,13 +180,13 @@ export class FnApp {
     /** 重新绘制 */
     draw() {
         if (this.isAnimate) return;
-        this.ctx2d?.clearRect(0, 0, this.width, this.height);
+        this.clearCanvas();
         this.drawGrid();
         this.drawFn();
     }
     drawAnimate() {
         if (this.isAnimate) return;
-        this.ctx2d?.clearRect(0, 0, this.width, this.height);
+        this.clearCanvas();
         this.drawGrid();
         this.drawFnAnimate();
     }
@@ -206,7 +208,7 @@ export class FnApp {
             const x = (i * gridWidth - leftX) / xLen * width;
             const color = i ? '#ddd' : '#000';
             this.drawLine(x, 0, x, height, color)
-            this.fillText(String(this.formatNum(i * gridWidth, this.fixedCount)), x, height, this.fontSize, 'center');
+            this.fillText(String(this.formatNum(i * gridWidth, this.fixedCount)), x, height, this.fontSize, TextAlign.Center);
         }
         // 绘制横线也是和上面一样的方法，就是要注意画布的 y 轴向下，需要用 height 剪一下，或者用 scale(1, -1);
         let j = Math.floor(leftY / gridHeight);
@@ -215,7 +217,7 @@ export class FnApp {
             y = height - y;
             const color = j ? '#ddd' : '#000';
             this.drawLine(0, y, width, y, color);
-            this.fillText(String(this.formatNum(j * gridHeight, this.fixedCount)), 0, y + this.fontSize / 2, this.fontSize);
+            this.fillText(String(this.formatNum(j * gridHeight, this.fixedCount)), 0, y, this.fontSize, TextAlign.Middle);
         }
         ctx2d?.restore();
     }
@@ -246,7 +248,7 @@ export class FnApp {
     }
     /** 绘制函数曲线，就是用一段段直线连起来 */
     drawFn() {
-        const { width, height, leftX, leftY, xLen, yLen, steps, ctx2d } = this;
+        const { width, height, leftX, leftY, xLen, yLen, steps, ctx2d, dpr } = this;
         if (!ctx2d) return;
         ctx2d.save();
         this.fnList.forEach(fn => {
@@ -259,9 +261,9 @@ export class FnApp {
                 // 换算到具体绘制点
                 y = height - (y - leftY) / yLen * height;
                 if (i === 0) {
-                    ctx2d.moveTo(i, y);
+                    ctx2d.moveTo(i * dpr, y * dpr);
                 } else {
-                    ctx2d.lineTo(i, y);
+                    ctx2d.lineTo(i * dpr, y * dpr);
                 }
             }
             ctx2d.stroke();
@@ -269,7 +271,7 @@ export class FnApp {
         ctx2d?.restore();
     }
     drawFnAnimate() {
-        const { width, height, leftX, leftY, xLen, yLen, steps, ctx2d, fnList, animateDuration } = this;
+        const { width, height, leftX, leftY, xLen, yLen, steps, ctx2d, fnList, animateDuration, dpr } = this;
         if (!ctx2d) return;
         this.isAnimate = true;
         ctx2d.save();
@@ -300,9 +302,9 @@ export class FnApp {
                 let y: number = fn(x);
                 y = height - (y - leftY) / yLen * height;
                 if (i === 0) {
-                    ctx2d?.moveTo(i, y);
+                    ctx2d?.moveTo(i * dpr, y * dpr);
                 } else {
-                    ctx2d?.lineTo(i, y);
+                    ctx2d?.lineTo(i * dpr, y * dpr);
                     ctx2d?.stroke();
                 }
                 i += steps;
@@ -331,8 +333,8 @@ export class FnApp {
         this.drawLine(x, 0, x, height, '#999',true);
         this.drawLine(0, y, width, y, '#999', true);
         ctx2d.restore();
-        const centerRectLen: number = 8 * this.dpr;
-        ctx2d.strokeRect(x - centerRectLen / 2, y - centerRectLen / 2, centerRectLen, centerRectLen);
+        const centerRectLen: number = 8;
+        this.strokeRect(x - centerRectLen / 2, y - centerRectLen / 2, centerRectLen, centerRectLen);
         const actualPos = this.canvasPosToFnVal(canvasPos);
         // 绘制鼠标坐标点
         // this.fillText(`[${actualPos.x}, ${-actualPos.y}]`, x, y);
@@ -342,41 +344,72 @@ export class FnApp {
         const pointList: Point[] = this.checkCrosspoint(x);
         pointList.forEach(point => {
             const { x, y } = this.fnValToCanvasPos(point);
-            this.fillCircle(x, y, 4 * this.dpr, 'red');
+            this.fillCircle(x, y, 4, 'red');
             this.fillText(`[${this.formatNum(point.x, this.fixedCount + 1)}, ${this.formatNum(point.y, this.fixedCount + 1)}]`, x, y, this.fontSize);
         });
     }
     drawLine(x1: number, y1: number, x2: number, y2: number, strokeStyle: string | CanvasGradient | CanvasPattern = '#000', isDashLine: boolean = false) {
-        const ctx2d: CanvasRenderingContext2D | null = this.ctx2d;
+        const { ctx2d, dpr } = this;
         if (!ctx2d) return;
         ctx2d.strokeStyle = strokeStyle;
-        if (isDashLine) ctx2d.setLineDash([6 * this.dpr, 6 * this.dpr]);
+        if (isDashLine) ctx2d.setLineDash([6 * dpr, 6 * dpr]);
+        x1 = x1 * dpr;
+        y1 = y1 * dpr;
+        x2 = x2 * dpr;
+        y2 = y2 * dpr;
         ctx2d.beginPath();
         ctx2d.moveTo(x1, y1);
         ctx2d.lineTo(x2, y2);
         ctx2d.stroke();
     }
-    fillText(text: string, x: number, y: number, fontSize: number = 16, textAlign: TextAlign = 'left') {
-        const ctx2d: CanvasRenderingContext2D | null = this.ctx2d;
+    fillText(text: string, x: number, y: number, fontSize: number = 10, textAlign: TextAlign = TextAlign.Left) {
+        const { ctx2d, dpr } = this;
         if (!ctx2d) return;
         ctx2d.save();
+        fontSize = fontSize * dpr;
+        x = x * dpr;
+        y = y * dpr;
         ctx2d.font = `${fontSize}px sans-serif`;
-        if (textAlign === 'center') {
+        if (textAlign === TextAlign.Center) {
             const w = ctx2d.measureText(text).width;
             x = x - w / 2;
+        } else if (textAlign === TextAlign.Middle) {
+            // 其实这样计算高度并不能很好的垂直居中，但是这不打紧
+            y = y + fontSize / 2;
         }
         ctx2d.fillText(text, x, y);
         ctx2d.restore();
     }
     fillCircle(x: number, y: number, radius: number, fillStyle: string | CanvasGradient | CanvasPattern = '#000') {
-        const ctx2d: CanvasRenderingContext2D | null = this.ctx2d;
+        const { ctx2d, dpr } = this;
         if (!ctx2d) return;
         ctx2d.save();
         ctx2d.fillStyle = fillStyle;
+        x = x * dpr;
+        y = y * dpr;
+        radius = radius * dpr;
         ctx2d.beginPath();
         ctx2d.arc(x, y, radius, 0, Math.PI * 2);
         ctx2d.fill();
         ctx2d.restore();
+    }
+    strokeRect(x: number, y: number, w: number, h: number) {
+        const { ctx2d, dpr } = this;
+        if (!ctx2d) return;
+        x = x * dpr;
+        y = y * dpr;
+        w = w * dpr;
+        h = h * dpr;
+        ctx2d.strokeRect(x, y, w, h);
+    }
+    clearCanvas(x: number = 0, y: number = 0, w: number = this.width, h: number = this.height) {
+        const { ctx2d, dpr } = this;
+        if (!ctx2d) return;
+        x = x * dpr;
+        y = y * dpr;
+        w = w * dpr;
+        h = h * dpr;
+        ctx2d.clearRect(x, y, w, h);
     }
     addFn(fn: Function) {
         (fn as any).color = '#' + Math.random().toString(16).slice(2, 8);
@@ -404,8 +437,11 @@ export class FnApp {
     }
 }
 
-type TextAlign = 'left' | 'center';
-
+enum TextAlign {
+    Left = 'left',
+    Center = 'center',
+    Middle = 'middle',
+}
 interface IState {
     startPos: Point | null,
     endPos: Point | null
@@ -413,7 +449,9 @@ interface IState {
 
 /** 绘制函数的一些配置项 */
 interface IConfig {
+    /** 最左边的 x 值，如果给了，右边最好也要给 */
     leftX?: number,
+    /** 最右边的 x 值，如果给了，坐边最好也要给 */
     rightX?: number,
     leftY?: number,
     rightY?: number,

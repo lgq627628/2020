@@ -33,12 +33,13 @@
                 // rightX: -10
                 gridCount: 20
             });
-            app.addFn(x => x * x);
             app.addFn(x => 1 / x);
+            app.addFn(x => x * x);
             app.addFn(x => Math.sin(x));
             app.addFn(x => Math.sqrt(x));
             app.addFn(x => Math.log(x));
-            app.draw();
+            // app.draw();
+            app.drawAnimate();
             window.app = app;
         </script>
     </body>

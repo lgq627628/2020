@@ -31,6 +31,8 @@ export class FnApp {
     public fixedCount: number = 0;
     public MAX_DELTA: number = 1e6;
     public MIN_DELTA: number = 1e-6;
+    public isAnimate: boolean = false;
+    public animateDuration: number = 0;
 
     public state: IState = {
         startPos: null,
@@ -65,6 +67,7 @@ export class FnApp {
         this.steps = opts.steps || 1;
         this.scaleSteps = opts.scaleSteps || 0.05;
         this.fontSize = opts.fontSize || 14;
+        this.animateDuration = opts.animateDuration || 0;
 
         this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this), false);
         document.addEventListener('mouseup', this.handleMouseUp.bind(this), false);
@@ -72,10 +75,12 @@ export class FnApp {
         this.canvas.addEventListener('mousewheel', this.handleMouseWheel.bind(this), false);
     }
     handleMouseDown(e: MouseEvent) {
+        if (this.isAnimate) return;
         const canvasPos: Point = this.viewportToCanvasPosition(e);
         this.state.startPos = canvasPos;
     }
     handleMouseMove(e: MouseEvent) {
+        if (this.isAnimate) return;
         const canvasPos: Point = this.viewportToCanvasPosition(e);
         if (!this.state.startPos) {
             this.drawSubLine(canvasPos);
@@ -102,6 +107,7 @@ export class FnApp {
     }
     handleMouseWheel(e: Event) {
         e.preventDefault();
+        if (this.isAnimate) return;
         const event: WheelEvent = e as WheelEvent;
         const canvasPos: Point = this.viewportToCanvasPosition(event);
         const { deltaY } = event;
@@ -153,9 +159,16 @@ export class FnApp {
     }
     /** 重新绘制 */
     draw() {
+        if (this.isAnimate) return;
         this.ctx2d?.clearRect(0, 0, this.width, this.height);
         this.drawGrid();
         this.drawFn();
+    }
+    drawAnimate() {
+        if (this.isAnimate) return;
+        this.ctx2d?.clearRect(0, 0, this.width, this.height);
+        this.drawGrid();
+        this.drawFnAnimate();
     }
     drawGrid() {
         const { width, height, leftX, rightX, leftY, rightY, xLen, yLen, gridCount, ctx2d } = this;
@@ -236,6 +249,55 @@ export class FnApp {
             ctx2d.stroke();
         });
         ctx2d?.restore();
+    }
+    drawFnAnimate() {
+        const { width, height, leftX, leftY, xLen, yLen, steps, ctx2d, fnList, animateDuration } = this;
+        if (!ctx2d) return;
+        this.isAnimate = true;
+        ctx2d.save();
+        
+        // 第 idx 个函数
+        let idx = 0;
+        // 第 i 采样点
+        let i = 0;
+        let t = 0;
+        let self = this;
+        function play() {
+            if (i < 0 || i >= width || idx < 0 || idx >= fnList.length || !ctx2d) {
+                self.isAnimate = false;
+                return;
+            }
+            let fn = fnList[idx];
+            ctx2d.save();
+            ctx2d.strokeStyle = (fn as any).color;
+            ctx2d.beginPath();
+            function playFn(timestamp: number) {
+                if (i >= width) {
+                    i = 0;
+                    idx++;
+                    play();
+                    return;
+                }
+                const x: number = i / width * xLen + leftX;
+                let y: number = fn(x);
+                y = height - (y - leftY) / yLen * height;
+                if (i === 0) {
+                    ctx2d?.moveTo(i, y);
+                } else {
+                    ctx2d?.lineTo(i, y);
+                    ctx2d?.stroke();
+                }
+                i += steps;
+                setTimeout(playFn, animateDuration);
+                // requestAnimationFrame(playFn);
+            }
+            // 这里也可以用 requestAnimationFrame，但是 requestAnimationFrame 自带节流画起来有点慢，所以简单用了 setTimeout
+            setTimeout(playFn, animateDuration);
+            // requestAnimationFrame(playFn);
+        }
+        play();
+
+        ctx2d.restore();
     }
     /** 绘制辅助线 */
     drawSubLine(canvasPos: Point) {
@@ -341,7 +403,8 @@ interface IConfig {
     gridCount?: number,
     steps?: number,
     scaleSteps?: number,
-    fontSize?: number
+    fontSize?: number,
+    animateDuration?: number
 }
 
 export class Point {

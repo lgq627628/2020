@@ -33,6 +33,8 @@ export class FnApp {
     public MIN_DELTA: number = 1e-6;
     public isAnimate: boolean = false;
     public animateDuration: number = 0;
+    /** 设备像素比，为了解决高清屏模糊问题 */
+    public dpr: number = 1;
 
     public state: IState = {
         startPos: null,
@@ -48,6 +50,7 @@ export class FnApp {
     constructor(canvas: HTMLCanvasElement, opts: IConfig = {}) {
         this.canvas = canvas;
         this.ctx2d = canvas.getContext('2d');
+        this.adaptDPR();
 
         this.width = canvas.width;
         this.height = canvas.height;
@@ -55,8 +58,8 @@ export class FnApp {
         this.halfHeight = canvas.height / 2;
 
         // 因为一般 canvas 宽高都是几百，所以这里默认值就简单的 / 100，此外还要主要我们的坐标是 1:1 的，如果 x 和 y 表示的值不一样，则下面的 leftY 和 rightY 不能这样简单的赋值
-        this.leftX = opts.leftX || -this.halfWidth / 100;
-        this.rightX = opts.rightX || this.halfWidth / 100;
+        this.leftX = (opts.leftX || -this.halfWidth / 100) / this.dpr;
+        this.rightX = (opts.rightX || this.halfWidth / 100) / this.dpr;
         this.xLen = this.rightX - this.leftX;
         // 初始化时，y 的取值默认和 x 值一样，因为他们代表的值一样，不然 leftY，rightY 也要当做参数传进来
         this.leftY = this.leftX;
@@ -66,13 +69,26 @@ export class FnApp {
         this.gridCount = opts.gridCount || 10;
         this.steps = opts.steps || 1;
         this.scaleSteps = opts.scaleSteps || 0.05;
-        this.fontSize = opts.fontSize || 14;
+        this.fontSize = (opts.fontSize || 14)  * this.dpr;
         this.animateDuration = opts.animateDuration || 0;
 
         this.canvas.addEventListener('mousedown', this.handleMouseDown.bind(this), false);
+        // 也可以把 mouseup 和 mousemove 这两个监听写在 mousedown 的回调中，因为
         document.addEventListener('mouseup', this.handleMouseUp.bind(this), false);
         document.addEventListener('mousemove', this.handleMouseMove.bind(this), false);
         this.canvas.addEventListener('mousewheel', this.handleMouseWheel.bind(this), false);
+    }
+    // 根据 dpr 把 canvas 的 width、height 属性都放大，css 大小不变
+    // canvas 会自己把画布缩小到适应 css 的大小，于是放大和缩小的效果就抵消了，这样做的原因是为了解决高清屏的模糊问题
+    adaptDPR() {
+        if (!this.ctx2d) return;
+        const dpr = window.devicePixelRatio;
+        const { width, height } = this.canvas;
+        this.dpr = dpr;
+        this.canvas.width = Math.round(width * dpr);
+        this.canvas.height = Math.round(height * dpr);
+        this.canvas.style.width = width + 'px';
+        this.canvas.style.height = height + 'px';
     }
     handleMouseDown(e: MouseEvent) {
         if (this.isAnimate) return;
@@ -134,7 +150,9 @@ export class FnApp {
     viewportToCanvasPosition(e: MouseEvent): Point {
         const { clientX, clientY } = e;
         const { top, left } = this.canvas.getBoundingClientRect();
-        return new Point(clientX - top, clientY - left);
+        const x = clientX - top;
+        const y = clientY - left;
+        return new Point(x * this.dpr, y * this.dpr);
     }
     canvasPosToFnVal(canvasPos: Point): Point {
         const { width, height, leftX, leftY, xLen, yLen } = this;
@@ -313,7 +331,7 @@ export class FnApp {
         this.drawLine(x, 0, x, height, '#999',true);
         this.drawLine(0, y, width, y, '#999', true);
         ctx2d.restore();
-        const centerRectLen: number = 8;
+        const centerRectLen: number = 8 * this.dpr;
         ctx2d.strokeRect(x - centerRectLen / 2, y - centerRectLen / 2, centerRectLen, centerRectLen);
         const actualPos = this.canvasPosToFnVal(canvasPos);
         // 绘制鼠标坐标点
@@ -324,16 +342,15 @@ export class FnApp {
         const pointList: Point[] = this.checkCrosspoint(x);
         pointList.forEach(point => {
             const { x, y } = this.fnValToCanvasPos(point);
-            this.fillCircle(x, y, 5, 'red');
-            
-            this.fillText(`[${this.formatNum(point.x, this.fixedCount + 1)}, ${this.formatNum(point.y, this.fixedCount + 1)}]`, x, y);
+            this.fillCircle(x, y, 4 * this.dpr, 'red');
+            this.fillText(`[${this.formatNum(point.x, this.fixedCount + 1)}, ${this.formatNum(point.y, this.fixedCount + 1)}]`, x, y, this.fontSize);
         });
     }
     drawLine(x1: number, y1: number, x2: number, y2: number, strokeStyle: string | CanvasGradient | CanvasPattern = '#000', isDashLine: boolean = false) {
         const ctx2d: CanvasRenderingContext2D | null = this.ctx2d;
         if (!ctx2d) return;
         ctx2d.strokeStyle = strokeStyle;
-        if (isDashLine) ctx2d.setLineDash([6, 6]);
+        if (isDashLine) ctx2d.setLineDash([6 * this.dpr, 6 * this.dpr]);
         ctx2d.beginPath();
         ctx2d.moveTo(x1, y1);
         ctx2d.lineTo(x2, y2);

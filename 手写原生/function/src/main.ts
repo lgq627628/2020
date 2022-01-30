@@ -258,9 +258,11 @@ export class FnApp {
                 // 像素点 / 画布宽 = x / 实际表示的 x 轴长度
                 const x = i / width * xLen + leftX;
                 let y = fn(x);
+                if (isNaN(y)) continue;
                 // 换算到具体绘制点
                 y = height - (y - leftY) / yLen * height;
-                if (i === 0) {
+                // 在画布之外是不用绘制的所以用 moveTo 即可
+                if (i === 0 || y > height || y < 0) {
                     ctx2d.moveTo(i * dpr, y * dpr);
                 } else {
                     ctx2d.lineTo(i * dpr, y * dpr);
@@ -268,10 +270,11 @@ export class FnApp {
             }
             ctx2d.stroke();
         });
-        ctx2d?.restore();
+        ctx2d.restore();
     }
     drawFnAnimate() {
         const { width, height, leftX, leftY, xLen, yLen, steps, ctx2d, fnList, animateDuration, dpr } = this;
+        if (this.isAnimate) return;
         if (!ctx2d) return;
         this.isAnimate = true;
         ctx2d.save();
@@ -288,28 +291,38 @@ export class FnApp {
                 return;
             }
             let fn = fnList[idx];
-            ctx2d.save();
-            ctx2d.strokeStyle = (fn as any).color;
+            const color = (fn as any).color;
             ctx2d.beginPath();
-            function playFn(timestamp: number) {
+            function playFn() {
                 if (i >= width) {
                     i = 0;
                     idx++;
                     play();
                     return;
                 }
+                // 下面这部分计算点的逻辑和不是动画的 drawFn 方法是一样的，只不过这里是一次画一条线
                 const x: number = i / width * xLen + leftX;
                 let y: number = fn(x);
+                // 如果 y 是个无效的值就跳过，比如根号 x，当 x 为负值就无效
+                if (isNaN(y)) {
+                    i += steps;
+                    playFn();
+                    return;
+                }
                 y = height - (y - leftY) / yLen * height;
-                if (i === 0) {
+                // 在画布之外是不用绘制的所以用 moveTo 即可
+                if (i === 0 ||  y > height || y < 0) {
                     ctx2d?.moveTo(i * dpr, y * dpr);
+                    i += steps;
+                    playFn();
                 } else {
                     ctx2d?.lineTo(i * dpr, y * dpr);
+                    ctx2d!.strokeStyle = color;
                     ctx2d?.stroke();
+                    i += steps;
+                    setTimeout(playFn, animateDuration);
+                    // requestAnimationFrame(playFn);
                 }
-                i += steps;
-                setTimeout(playFn, animateDuration);
-                // requestAnimationFrame(playFn);
             }
             // 这里也可以用 requestAnimationFrame，但是 requestAnimationFrame 自带节流画起来有点慢，所以简单用了 setTimeout
             setTimeout(playFn, animateDuration);
@@ -411,8 +424,8 @@ export class FnApp {
         h = h * dpr;
         ctx2d.clearRect(x, y, w, h);
     }
-    addFn(fn: Function) {
-        (fn as any).color = '#' + Math.random().toString(16).slice(2, 8);
+    addFn(fn: Function, color: string) {
+        (fn as any).color = color || '#' + Math.random().toString(16).slice(2, 8);
         this.fnList.push(fn);
     }
     checkCrosspoint(x: number) {

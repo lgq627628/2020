@@ -15,6 +15,7 @@
                 height: 100%;
             }
             #canvas {
+                margin: 50px;
                 display: block;
                 width: 800px;
                 height: 800px;
@@ -33,13 +34,13 @@
                 // rightX: -10
                 gridCount: 20
             });
-            app.addFn(x => 1 / x);
-            app.addFn(x => x * x);
-            app.addFn(x => Math.sin(x));
-            app.addFn(x => Math.sqrt(x));
-            app.addFn(x => Math.log(x));
-            app.draw();
-            // app.drawAnimate();
+            app.addFn(x => 1 / x, 'orange');
+            app.addFn(x => x * x, 'cyan');
+            app.addFn(x => Math.log(x), 'pink');
+            app.addFn(x => Math.sin(x), 'green');
+            app.addFn(x => Math.sqrt(x), 'blue');
+            // app.draw();
+            app.drawAnimate();
             window.app = app;
         </script>
     </body>

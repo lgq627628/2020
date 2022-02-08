@@ -89,7 +89,9 @@ export class FnApp {
         this.canvas.height = Math.round(height * dpr);
         this.canvas.style.width = width + 'px';
         this.canvas.style.height = height + 'px';
-        // 到这里我们就已经把画布放大了，所以接下来的绘制操作都需要乘以 dpr，这样一来就会很麻烦；
+        // 方法一：直接用 scale 放大，这样就不用每个 api 都放大了，但是你要知道我们是一直在 scale 这个状态下的，有时候你不小心重置了画布，这个东西就不生效了
+        this.ctx2d?.scale(dpr, dpr);
+        // 方法二：不要用 scale，而是放大每一个 api，也就是说接下来的绘制操作都需要乘以 dpr，这样一来就会很麻烦；
         // 所以我们需要把一些绘制的入口收敛统一成一些工具方法，也就是封装成一个个绘制函数，比如 drawLine、fillText、strokeRect 等方法
     }
     handleMouseDown(e: MouseEvent) {
@@ -248,7 +250,7 @@ export class FnApp {
     }
     /** 绘制函数曲线，就是用一段段直线连起来 */
     drawFn() {
-        const { width, height, leftX, leftY, xLen, yLen, steps, ctx2d, dpr } = this;
+        const { width, height, leftX, leftY, xLen, yLen, steps, ctx2d } = this;
         if (!ctx2d) return;
         ctx2d.save();
         this.fnList.forEach(fn => {
@@ -263,9 +265,9 @@ export class FnApp {
                 y = height - (y - leftY) / yLen * height;
                 // 在画布之外是不用绘制的所以用 moveTo 即可
                 if (i === 0 || y > height || y < 0) {
-                    ctx2d.moveTo(i * dpr, y * dpr);
+                    ctx2d.moveTo(i, y);
                 } else {
-                    ctx2d.lineTo(i * dpr, y * dpr);
+                    ctx2d.lineTo(i, y);
                 }
             }
             ctx2d.stroke();
@@ -273,7 +275,7 @@ export class FnApp {
         ctx2d.restore();
     }
     drawFnAnimate() {
-        const { width, height, leftX, leftY, xLen, yLen, steps, ctx2d, fnList, animateDuration, dpr } = this;
+        const { width, height, leftX, leftY, xLen, yLen, steps, ctx2d, fnList, animateDuration } = this;
         if (this.isAnimate) return;
         if (!ctx2d) return;
         this.isAnimate = true;
@@ -312,11 +314,11 @@ export class FnApp {
                 y = height - (y - leftY) / yLen * height;
                 // 在画布之外是不用绘制的所以用 moveTo 即可
                 if (i === 0 ||  y > height || y < 0) {
-                    ctx2d?.moveTo(i * dpr, y * dpr);
+                    ctx2d?.moveTo(i, y);
                     i += steps;
                     playFn();
                 } else {
-                    ctx2d?.lineTo(i * dpr, y * dpr);
+                    ctx2d?.lineTo(i, y);
                     ctx2d!.strokeStyle = color;
                     ctx2d?.stroke();
                     i += steps;
@@ -362,26 +364,26 @@ export class FnApp {
         });
     }
     drawLine(x1: number, y1: number, x2: number, y2: number, strokeStyle: string | CanvasGradient | CanvasPattern = '#000', isDashLine: boolean = false) {
-        const { ctx2d, dpr } = this;
+        const { ctx2d } = this;
         if (!ctx2d) return;
         ctx2d.strokeStyle = strokeStyle;
-        if (isDashLine) ctx2d.setLineDash([6 * dpr, 6 * dpr]);
-        x1 = x1 * dpr;
-        y1 = y1 * dpr;
-        x2 = x2 * dpr;
-        y2 = y2 * dpr;
+        if (isDashLine) ctx2d.setLineDash([6, 6]);
+        x1 = x1;
+        y1 = y1;
+        x2 = x2;
+        y2 = y2;
         ctx2d.beginPath();
         ctx2d.moveTo(x1, y1);
         ctx2d.lineTo(x2, y2);
         ctx2d.stroke();
     }
     fillText(text: string, x: number, y: number, fontSize: number = 10, textAlign: TextAlign = TextAlign.Left) {
-        const { ctx2d, dpr } = this;
+        const { ctx2d } = this;
         if (!ctx2d) return;
         ctx2d.save();
-        fontSize = fontSize * dpr;
-        x = x * dpr;
-        y = y * dpr;
+        fontSize = fontSize;
+        x = x;
+        y = y;
         ctx2d.font = `${fontSize}px sans-serif`;
         if (textAlign === TextAlign.Center) {
             const w = ctx2d.measureText(text).width;
@@ -394,34 +396,34 @@ export class FnApp {
         ctx2d.restore();
     }
     fillCircle(x: number, y: number, radius: number, fillStyle: string | CanvasGradient | CanvasPattern = '#000') {
-        const { ctx2d, dpr } = this;
+        const { ctx2d } = this;
         if (!ctx2d) return;
         ctx2d.save();
         ctx2d.fillStyle = fillStyle;
-        x = x * dpr;
-        y = y * dpr;
-        radius = radius * dpr;
+        x = x;
+        y = y;
+        radius = radius;
         ctx2d.beginPath();
         ctx2d.arc(x, y, radius, 0, Math.PI * 2);
         ctx2d.fill();
         ctx2d.restore();
     }
     strokeRect(x: number, y: number, w: number, h: number) {
-        const { ctx2d, dpr } = this;
+        const { ctx2d } = this;
         if (!ctx2d) return;
-        x = x * dpr;
-        y = y * dpr;
-        w = w * dpr;
-        h = h * dpr;
+        x = x;
+        y = y;
+        w = w;
+        h = h;
         ctx2d.strokeRect(x, y, w, h);
     }
     clearCanvas(x: number = 0, y: number = 0, w: number = this.width, h: number = this.height) {
-        const { ctx2d, dpr } = this;
+        const { ctx2d } = this;
         if (!ctx2d) return;
-        x = x * dpr;
-        y = y * dpr;
-        w = w * dpr;
-        h = h * dpr;
+        x = x;
+        y = y;
+        w = w;
+        h = h;
         ctx2d.clearRect(x, y, w, h);
     }
     addFn(fn: Function, color: string) {

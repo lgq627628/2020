@@ -109,12 +109,12 @@ export class FnApp {
         document.body.style.cursor = 'move';
         this.state.endPos = canvasPos;
         const { width, height, xLen, yLen, state: { startPos, endPos } } = this;
-        const dx = -(endPos.x - startPos.x) / width * xLen;
-        const dy = -(endPos.y - startPos.y) / height * yLen;
-        this.leftX += dx;
-        this.rightX += dx;
-        this.leftY -= dy;
-        this.rightY -= dy;
+        const dx = (endPos.x - startPos.x) / width * xLen;
+        const dy = (endPos.y - startPos.y) / height * yLen;
+        this.leftX -= dx;
+        this.rightX -= dx;
+        this.leftY += dy;
+        this.rightY += dy;
         this.xLen = this.rightX - this.leftX;
         this.yLen = this.rightY - this.leftY;
         this.draw();
@@ -198,9 +198,9 @@ export class FnApp {
 
         // 注意这里我们并没有将背景网格的宽高大小做成配置项，而是将网格数作为配置项，不然会和 leftX、rightX 冲突，
         // 比如 x 的值从 [-1, 1]，但是网格大小设置成 [50, 50]，那么页面就是近乎空白，所以我们这里设置大概网格数即可
-        const [gridWidth, gridHeight] = this.calcGridSize(xLen, gridCount);
+        const [gridWidth, gridHeight, fixedCount] = this.calcGridSize(xLen, gridCount);
         // 由于计算会产生浮点数偏差，所以要控制下小数点后面的数字个数
-        if (gridWidth < 1) this.fixedCount = gridWidth.toString().split('.')[1].length;
+        this.fixedCount = fixedCount;
         
         // 最左边的竖线下标
         let i = Math.floor(leftX / gridWidth);
@@ -212,7 +212,7 @@ export class FnApp {
             this.drawLine(x, 0, x, height, color)
             this.fillText(String(this.formatNum(i * gridWidth, this.fixedCount)), x, height, this.fontSize, TextAlign.Center);
         }
-        // 绘制横线也是和上面一样的方法，就是要注意画布的 y 轴向下，需要用 height 剪一下，或者用 scale(1, -1);
+        // 绘制横线也是和上面一样的方法，就是要注意画布的 y 轴向下，需要用 height 减一下，或者用 scale(1, -1);
         let j = Math.floor(leftY / gridHeight);
         for (; j * gridHeight < rightY; j++) {
             let y = (j * gridWidth - leftY) / yLen * height;
@@ -231,6 +231,8 @@ export class FnApp {
      */
     calcGridSize(len: number, gridCount: number): number[] {
         let gridWidth = 1;
+        // 保留几位小数
+        let fixedCount = 0;
         // 事实上，要是图方便的话，你也可以直接用 unitX 来当做网格大小，不过记得要取整
         // 而这里呢，我们需要找到离 unitX 最近的（稍微偏整数的）值
         let unitX = len / gridCount;
@@ -239,14 +241,17 @@ export class FnApp {
         }
         while (gridWidth / 10 > unitX) {
             gridWidth /= 10
+            fixedCount++;
         }
         if (gridWidth / 5 > unitX) {
             gridWidth /= 5;
+            fixedCount++;
         } else if (gridWidth / 2 > unitX) {
             gridWidth /= 2;
+            fixedCount++;
         }
         // 因为 x 轴长度和 y 轴的长度是一样的，所以可以这样赋值
-        return [gridWidth, gridWidth];
+        return [gridWidth, gridWidth, fixedCount];
     }
     /** 绘制函数曲线，就是用一段段直线连起来 */
     drawFn() {
@@ -285,7 +290,6 @@ export class FnApp {
         let idx = 0;
         // 第 i 采样点
         let i = 0;
-        let t = 0;
         let self = this;
         function play() {
             if (i < 0 || i >= width || idx < 0 || idx >= fnList.length || !ctx2d) {
@@ -368,10 +372,6 @@ export class FnApp {
         if (!ctx2d) return;
         ctx2d.strokeStyle = strokeStyle;
         if (isDashLine) ctx2d.setLineDash([6, 6]);
-        x1 = x1;
-        y1 = y1;
-        x2 = x2;
-        y2 = y2;
         ctx2d.beginPath();
         ctx2d.moveTo(x1, y1);
         ctx2d.lineTo(x2, y2);
@@ -381,9 +381,6 @@ export class FnApp {
         const { ctx2d } = this;
         if (!ctx2d) return;
         ctx2d.save();
-        fontSize = fontSize;
-        x = x;
-        y = y;
         ctx2d.font = `${fontSize}px sans-serif`;
         if (textAlign === TextAlign.Center) {
             const w = ctx2d.measureText(text).width;
@@ -400,9 +397,6 @@ export class FnApp {
         if (!ctx2d) return;
         ctx2d.save();
         ctx2d.fillStyle = fillStyle;
-        x = x;
-        y = y;
-        radius = radius;
         ctx2d.beginPath();
         ctx2d.arc(x, y, radius, 0, Math.PI * 2);
         ctx2d.fill();
@@ -411,19 +405,11 @@ export class FnApp {
     strokeRect(x: number, y: number, w: number, h: number) {
         const { ctx2d } = this;
         if (!ctx2d) return;
-        x = x;
-        y = y;
-        w = w;
-        h = h;
         ctx2d.strokeRect(x, y, w, h);
     }
     clearCanvas(x: number = 0, y: number = 0, w: number = this.width, h: number = this.height) {
         const { ctx2d } = this;
         if (!ctx2d) return;
-        x = x;
-        y = y;
-        w = w;
-        h = h;
         ctx2d.clearRect(x, y, w, h);
     }
     addFn(fn: Function, color: string) {

@@ -1,8 +1,10 @@
+import { MatrixStack } from "./MatrixStack";
 import { BezierEnumerator, IBezierEnumerator } from "./QuadraticBezierCurve";
 
 const PiBy180: number = 0.017453292519943295; // Math.PI / 180.0
 const EPSILON: number = 0.00001;
 export class Math2D {
+    public static matStack: MatrixStack = new MatrixStack();
     // 将以角度表示的参数转换为弧度表示
     static toRadian(degree: number): number {
         return degree * PiBy180;
@@ -79,7 +81,7 @@ export class Math2D {
      * @param radius 误差半径
      * @returns 点是否在线段上
      */
-    static isPointOnLineSegement(pt: vec2, start: vec2, end: vec2, closePt: vec2 = vec2.create(), radius: number = EPSILON): boolean {
+    static isPointOnLineSegment(pt: vec2, start: vec2, end: vec2, closePt: vec2 = vec2.create(), radius: number = EPSILON): boolean {
         const isIn = Math2D.projectPointOnLineSegment(pt, start, end, closePt);
         if (!isIn) return false;
         return Math2D.isPointInCircle(pt, closePt, radius);
@@ -200,7 +202,7 @@ export class Math2D {
         let t1: number = (1.0 - t);
         let t2: number = t * t;
         let t3: number = t2 * t;
-        return (t1 * t1 * t1 ) * start + 3 * t * (t1 * t1 )  * ctrl0 + (3 * t2 * t1 ) * ctrl1 + t3 * end;
+        return (t1 * t1 * t1) * start + 3 * t * (t1 * t1) * ctrl0 + (3 * t2 * t1) * ctrl1 + t3 * end;
     }
     /**
      * 三次贝塞尔曲线向量版
@@ -220,10 +222,10 @@ export class Math2D {
         return result;
     }
     // 实现创建贝塞尔迭代器接口的工厂方法
-    static createQuadraticBezierEnumerator(start : vec2, ctrl : vec2, end : vec2, steps : number = 30) : IBezierEnumerator {
+    static createQuadraticBezierEnumerator(start: vec2, ctrl: vec2, end: vec2, steps: number = 30): IBezierEnumerator {
         return new BezierEnumerator(start, end, ctrl, null, steps);
     }
-    static createCubicBezierEnumerator(start : vec2, ctrl0 : vec2, ctrl1 : vec2, end : vec2, steps : number = 30) : IBezierEnumerator {
+    static createCubicBezierEnumerator(start: vec2, ctrl0: vec2, ctrl1: vec2, end: vec2, steps: number = 30): IBezierEnumerator {
         return new BezierEnumerator(start, end, ctrl0, ctrl1, steps);
     }
 }
@@ -640,5 +642,36 @@ export class mat2d {
         result.values[4] = 0;
         result.values[5] = 0;
         return result;
+    }
+}
+export class Transform2D {
+    // 位移
+    public position: vec2;
+    //方位（角度表示）
+    public rotation: number;
+    // 缩放
+    public scale: vec2;
+    public constructor(x: number = 0, y: number = 0, rotation: number = 0, scaleX: number = 1, scaleY: number = 1) {
+        this.position = new vec2(x, y);
+        this.rotation = rotation;
+        this.scale = new vec2(scaleX, scaleY);
+    }
+    public toMatrix(): mat2d {
+        // 设置矩阵栈顶矩阵归一化
+        Math2D.matStack.loadIdentity();
+        // 先平移
+        Math2D.matStack.translate(this.position.x, this.position.y);
+        // 然后旋转，最后一个参数false，表示rotation是角度而不是弧度
+        Math2D.matStack.rotate(this.rotation, false);
+        //最后缩放操作
+        Math2D.matStack.scale(this.scale.x, this.scale.y);
+        // 返回TRS合成后的、表示从局部到世界的变换矩阵
+        return Math2D.matStack.matrix;
+    }
+    public toInvMatrix(result: mat2d): boolean {
+        // 获取局部到世界的变换矩阵
+        let mat: mat2d = this.toMatrix();
+        // 对mat矩阵求逆，获得从世界到局部的变换矩阵
+        return mat2d.invert(mat, result);
     }
 }

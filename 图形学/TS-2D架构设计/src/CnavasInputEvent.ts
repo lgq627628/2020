@@ -1,5 +1,5 @@
 import { vec2 } from './math2D';
-enum EInputEventType {
+export enum EInputEventType {
     MOUSEEVENT,
     MOUSEDOWN,
     MOUSEUP,
@@ -27,13 +27,21 @@ export class CnavasInputEvent {
 
 export class CanvasMouseEvent extends CnavasInputEvent {
     public canvas: HTMLCanvasElement;
+	// 基于canvas 坐标系的表示
     public canvasPos: vec2;
+	// [ 0：鼠标左键 1：鼠标中键 2 ：鼠标右键 ]
     public button: number;
+    // 临时坐标系
+    public localPosition: vec2;
+	public hasLocalPosition: boolean;
     constructor(canvas: HTMLCanvasElement, canvasPos: vec2, button: number, altKey: boolean = false, ctrlKey: boolean = false, shiftKey: boolean = false) {
         super(altKey, ctrlKey, shiftKey);
         this.canvas = canvas;
         this.canvasPos = canvasPos;
         this.button = button;
+
+        this.localPosition = vec2.create();
+		this.hasLocalPosition = false;
     }
 }
 

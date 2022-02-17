@@ -34,8 +34,8 @@ export class CanvasMouseEvent extends CnavasInputEvent {
     // 临时坐标系
     public localPosition: vec2;
 	public hasLocalPosition: boolean;
-    constructor(canvas: HTMLCanvasElement, canvasPos: vec2, button: number, altKey: boolean = false, ctrlKey: boolean = false, shiftKey: boolean = false) {
-        super(altKey, ctrlKey, shiftKey);
+    constructor(canvas: HTMLCanvasElement, canvasPos: vec2, button: number, altKey: boolean = false, ctrlKey: boolean = false, shiftKey: boolean = false, type: EInputEventType) {
+        super(altKey, ctrlKey, shiftKey, type);
         this.canvas = canvas;
         this.canvasPos = canvasPos;
         this.button = button;
@@ -53,7 +53,7 @@ export class CanvasKeyboardEvent extends CnavasInputEvent {
     // 是否不停触发
     public repeat: boolean;
     constructor(key: string, code: string, repeat: boolean , altKey: boolean = false, ctrlKey: boolean = false, shiftKey: boolean = false, type: EInputEventType = EInputEventType.KEYBORADEVENT) {
-        super(altKey, ctrlKey, shiftKey);
+        super(altKey, ctrlKey, shiftKey, type);
         this.key = key;
         this.code = code;
         this.repeat = repeat;

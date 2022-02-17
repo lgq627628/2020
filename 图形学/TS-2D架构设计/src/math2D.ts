@@ -1,234 +1,7 @@
-import { MatrixStack } from "./MatrixStack";
 import { BezierEnumerator, IBezierEnumerator } from "./QuadraticBezierCurve";
 
 const PiBy180: number = 0.017453292519943295; // Math.PI / 180.0
 const EPSILON: number = 0.00001;
-export class Math2D {
-    public static matStack: MatrixStack = new MatrixStack();
-    // 将以角度表示的参数转换为弧度表示
-    static toRadian(degree: number): number {
-        return degree * PiBy180;
-    }
-    // 将以弧度表示的参数转换为角度表示
-    static toDegree(radian: number): number {
-        return radian / PiBy180;
-    }
-    static isEquals(value1: number, value2: number) {
-        return value1 === value2;
-    }
-    /**
-     * 计算三角形两条边向量的叉积，用于判断三角形的顶点顺序
-     * @param v0 三角形的顶点
-     * @param v1 三角形的顶点
-     * @param v2 三角形的顶点
-     */
-    static sign(v0: vec2, v1: vec2, v2: vec2): number {
-        const e1: vec2 = vec2.difference(v0, v2);
-        const e2: vec2 = vec2.difference(v1, v2);
-        return vec2.crossProduct(e1, e2);
-    }
-    // 将一个点pt投影到start和end形成的线段上：先把原向量转换成单位向量，这样向量的点积就是投影长度
-    // 返回值：true表示pt在线段起点和终点之间，此时closePoint输出参数返回线段上的投影点坐标
-    //      false表示在线段起点或终点之外，此时closePoint输出参数返回线段的起点或终点
-    // 本方法使用了向量的difference、normalize、dotProduct、scaleAdd（scale和sum）方法
-    static projectPointOnLineSegment(pt: vec2, start: vec2, end: vec2, closePoint: vec2): boolean {
-        // 向量的create方法
-        let v0: vec2 = vec2.create();
-        let v1: vec2 = vec2.create();
-        let d: number = 0;
-        // 向量减法，形成方向向量
-        vec2.difference(pt, start, v0);
-        // 线段的起点到某个点（例如鼠标位置点）的方向向量
-        vec2.difference(end, start, v1);
-        // 获取线段
-        // 使用向量的normalize方法，原向量变成单位向量，并返回原向量的长度
-        // 需要注意的是，normalize起点到终点线段形成的向量
-        // 要投影到哪个向量，就要将这个向量normalize成单位向量
-        d = v1.normalize();
-        // 将v0投影在v1上，获取投影长度t；这是根据 cosθ = a·b / ( || a || || b || ) 公式来计算的，此时 b 向量为单位向量，长度为 1，所以 a·b = || a ||cosθ = 几何意义就是投影长度
-        let t: number = vec2.dotProduct(v0, v1);
-        // 如果投影长度t < 0，说明鼠标位置点在线段的起点范围之外
-        // 处理的方式是：
-        // closePt输出线段起点并且返回false
-        if (t < 0) {
-            closePoint.x = start.x;
-            closePoint.y = start.y;
-            return false;
-        } else if (t > d) {// 如果投影长度 > 线段的长度，说明鼠标位置点超过线段终点范围
-            // closePt输出线段起点并且返回false
-            closePoint.x = end.x;
-            closePoint.y = end.y;
-            return false;
-        } else {
-            // 说明鼠标位置点位于线段起点和终点之间
-            // 使用scaleAdd方法计算出相对全局坐标（左上角）的坐标偏移信息
-            // 只有此时才返回true
-            vec2.scaleAdd(start, v1, t, closePoint);
-            return true;
-        }
-    }
-    static isPointInCircle(pt: vec2, center: vec2, radius: number): boolean {
-        const diff: vec2 = vec2.difference(pt, center);
-        // 避免使用 Math.sqrt 方法
-        return diff.squaredLength <= radius ** 2;
-    }
-    /**
-     * 判断点是否在线段上：先判断点的投影是否在线上 + 再判断点和投影点之间的距离是否在一定范围内
-     * @param pt 点
-     * @param start 线段起点
-     * @param end 线段终点
-     * @param closePt 投影点
-     * @param radius 误差半径
-     * @returns 点是否在线段上
-     */
-    static isPointOnLineSegment(pt: vec2, start: vec2, end: vec2, closePt: vec2 = vec2.create(), radius: number = EPSILON): boolean {
-        const isIn = Math2D.projectPointOnLineSegment(pt, start, end, closePt);
-        if (!isIn) return false;
-        return Math2D.isPointInCircle(pt, closePt, radius);
-    }
-    static isPointInRect(ptX: number, ptY: number, x: number, y: number, width: number, height: number): boolean {
-        return ptX >= x && ptX <= x + width && ptY >= y && ptY <= y + height;
-    }
-    static isPointInEllipse(ptX: number, ptY: number, centerX: number, centerY: number, radiusX: number, radiusY: number): boolean {
-        const diffX = ptX - centerX;
-        const diffY = ptY - centerY;
-        return diffX ** 2 / radiusX ** 2 + diffY ** 2 / radiusY ** 2 <= 1.0;
-    }
-    /**
-     * 点是否在三角形内部
-     * 方法一：如果 pt 与三角形的三个顶点连线形成的三个三角形的顶点方向一致，则 pt 在三角形内部
-     * 方法二：面积法，如果点 pt 在三角形内部，则 pt 与三角形顶点分割成的三个三角形的面积之和等于三角形的面积。三角形的面积就等于叉乘模长的一半
-     * 方法三：内角和为 180°，效率低不管它
-     * @param pt 点
-     * @param v0 三角形顶点
-     * @param v1 三角形顶点
-     * @param v2 三角形顶点
-     * @returns 
-     */
-    static isPointInTriangle(pt: vec2, v0: vec2, v1: vec2, v2: vec2): boolean {
-        // 三角形三条边的方向都一致就说明点在三角形内部
-        const b1: boolean = Math2D.sign(v0, v1, pt) < 0.0;
-        const b2: boolean = Math2D.sign(v1, v2, pt) < 0.0;
-        const b3: boolean = Math2D.sign(v2, v0, pt) < 0.0;
-        return (b1 === b2) && (b2 === b3);
-    }
-    static isPointInPolygon(pt: vec2, points: vec2[]): boolean {
-        // 凸多边形至少三条边
-        if (points.length < 3) return false;
-        // 以 points[0] 为共享点遍历凸多边形顶点
-        for (let i = 2; i < points.length; i++) {
-            if (Math2D.isPointInTriangle(pt, points[0], points[i - 1], points[i])) return true;
-        }
-        return false;
-    }
-    /**
-     * 判断是否为凸多边形：分割成三角形，每个三角形顶点顺序一致
-     * @param points 顶点数组，全部顺时针或全部逆时针
-     * @returns 
-     */
-    static isConvex(points: vec2[]): boolean {
-        const firstSign = Math2D.sign(points[0], points[1], points[2]) < 0;
-        let j: number;
-        let k: number;
-        for (let i = 1; i < points.length; i++) {
-            j = (i + 1) % points.length;
-            k = (i + 2) % points.length;
-            if (firstSign !== Math2D.sign(points[i], points[j], points[k]) < 0) return false;
-        }
-        return true;
-    }
-    /**
-     * 矩阵和向量相乘
-     * @param mat 
-     * @param pt 
-     * @param result 
-     * @returns 
-     */
-    static transform(mat: mat2d, pt: vec2, result: vec2 | null = null): vec2 {
-        if (!result) result = vec2.create();
-        result.values[0] = mat.values[0] * pt.values[0] + mat.values[2] * pt.values[1] + mat.values[4];
-        result.values[1] = mat.values[1] * pt.values[0] + mat.values[3] * pt.values[1] + mat.values[5];
-        return result;
-    }
-    /**
-     * 二次贝塞尔曲线标量版
-     * B(t) = (1 - t)^2 * P0 + 2t * (1 - t) * P1 + t^2 * P2, t ∈ [0,1]
-     * @param start 
-     * @param ctrl 
-     * @param end 
-     * @param t 
-     * @returns 
-     */
-    static getQuadraticBezierPosition(start: number, ctrl: number, end: number, t: number): number {
-        if (t < 0.0 || t > 1.0) {
-            alert(" t的取值范围必须为[ 0 , 1 ] ");
-            throw new Error(" t的取值范围必须为[ 0 , 1 ] ");
-        }
-        let t1: number = 1.0 - t;
-        let t2: number = t1 * t1;
-        return t2 * start + 2.0 * t * t1 * ctrl + t * t * end;
-    }
-    /**
-     * 二次贝塞尔曲线向量版
-     * B(t) = (1 - t)^2 * P0 + 2t * (1 - t) * P1 + t^2 * P2, t ∈ [0,1]
-     * @param start 
-     * @param ctrl 
-     * @param end 
-     * @param t 
-     * @param result 
-     * @returns 
-     */
-    static getQuadraticBezierVector(start: vec2, ctrl: vec2, end: vec2, t: number, result: vec2 | null = null): vec2 {
-        if (result === null) result = vec2.create();
-        result.x = Math2D.getQuadraticBezierPosition(start.x, ctrl.x, end.x, t);
-        result.y = Math2D.getQuadraticBezierPosition(start.y, ctrl.y, end.y, t);
-        return result;
-    }
-    /**
-     * 三次贝塞尔曲线标量版
-     * B(t) = P0 * (1-t)^3 + 3 * P1 * t * (1-t)^2 + 3 * P2 * t^2 * (1-t) + P3 * t^3, t ∈ [0,1]
-     * @param start 
-     * @param ctrl0 
-     * @param ctrl1 
-     * @param end 
-     * @param t 
-     * @returns 
-     */
-    static getCubicBezierPosition(start: number, ctrl0: number, ctrl1: number, end: number, t: number): number {
-        if (t < 0.0 || t > 1.0) {
-            alert(" t的取值范围必须为[ 0 , 1 ] ");
-            throw new Error(" t的取值范围必须为[ 0 , 1 ] ");
-        }
-        let t1: number = (1.0 - t);
-        let t2: number = t * t;
-        let t3: number = t2 * t;
-        return (t1 * t1 * t1) * start + 3 * t * (t1 * t1) * ctrl0 + (3 * t2 * t1) * ctrl1 + t3 * end;
-    }
-    /**
-     * 三次贝塞尔曲线向量版
-     * B(t) = P0 * (1-t)^3 + 3 * P1 * t * (1-t)^2 + 3 * P2 * t^2 * (1-t) + P3 * t^3, t ∈ [0,1]
-     * @param start 
-     * @param ctrl0 
-     * @param ctrl1 
-     * @param end 
-     * @param t 
-     * @param result 
-     * @returns 
-     */
-    static getCubicBezierVector(start: vec2, ctrl0: vec2, ctrl1: vec2, end: vec2, t: number, result: vec2 | null = null): vec2 {
-        if (result === null) result = vec2.create();
-        result.x = Math2D.getCubicBezierPosition(start.x, ctrl0.x, ctrl1.x, end.x, t);
-        result.y = Math2D.getCubicBezierPosition(start.y, ctrl0.y, ctrl1.y, end.y, t);
-        return result;
-    }
-    // 实现创建贝塞尔迭代器接口的工厂方法
-    static createQuadraticBezierEnumerator(start: vec2, ctrl: vec2, end: vec2, steps: number = 30): IBezierEnumerator {
-        return new BezierEnumerator(start, end, ctrl, null, steps);
-    }
-    static createCubicBezierEnumerator(start: vec2, ctrl0: vec2, ctrl1: vec2, end: vec2, steps: number = 30): IBezierEnumerator {
-        return new BezierEnumerator(start, end, ctrl0, ctrl1, steps);
-    }
-}
 export class v2 {
     public x: number;
     public y: number;
@@ -642,6 +415,312 @@ export class mat2d {
         result.values[4] = 0;
         result.values[5] = 0;
         return result;
+    }
+}
+
+export class MatrixStack {
+    // 持有一个矩阵堆栈
+    private _mats: mat2d[];
+    // 构造函数
+    constructor() {
+        // 初始化矩阵堆栈后push一个单位矩阵
+        this._mats = [];
+        this._mats.push(new mat2d());
+    }
+    // 获取栈顶的矩阵（也就是当前操作矩阵）
+    // 矩阵堆栈操作的都是当前堆栈顶部的矩阵
+    get matrix(): mat2d {
+        if (this._mats.length === 0) {
+            alert(" 矩阵堆栈为空 ");
+            throw new Error(" 矩阵堆栈为空 ");
+        }
+        return this._mats[this._mats.length - 1];
+    }
+    // 复制栈顶的矩阵，将其push到堆栈中成为当前操作矩阵
+    pushMatrix(): void {
+        let mat: mat2d = mat2d.copy(this.matrix);
+        this._mats.push(mat);
+    }
+    // 删除栈顶的矩阵
+    popMatrix(): void {
+        if (this._mats.length === 0) {
+            alert(" 矩阵堆栈为空 ");
+            return;
+        }
+        this._mats.pop();
+    }
+    // 将堆栈顶部的矩阵设置为单位矩阵
+    loadIdentity(): void {
+        this.matrix.identity();
+    }
+    // 将参数mat矩阵替换堆栈顶部的矩阵
+    loadMatrix(mat: mat2d): void {
+        mat2d.copy(mat, this.matrix);
+    }
+    // 将栈顶（当前矩阵）矩阵与参数矩阵相乘
+    // 其作用是更新栈顶元素，累积变换效果
+    // 是一个关键操作
+    multMatrix(mat: mat2d): void {
+        mat2d.multiply(this.matrix, mat, this.matrix);
+    }
+    translate(x: number = 0, y: number = 0): void {
+        let mat: mat2d = mat2d.makeTranslation(x, y);
+        // 看到translate、rotate和scale都会调用multMatrix方法
+        this.multMatrix(mat);
+    }
+    rotate(angle: number = 0, isRadian: boolean = true): void {
+        if (isRadian === false) {
+            angle = Math2D.toRadian(angle);
+        }
+        let mat: mat2d = mat2d.makeRotation(angle);
+        this.multMatrix(mat);
+    }
+    // 从两个向量构建旋转矩阵
+    rotateFrom(v1: vec2, v2: vec2, norm: boolean = false): void {
+        let mat: mat2d = mat2d.makeRotationFromVectors(v1, v2, norm);
+        this.multMatrix(mat);
+    }
+    scale(x: number = 1.0, y: number = 1.0): void {
+        let mat: mat2d = mat2d.makeScale(x, y);
+        this.multMatrix(mat);
+    }
+    invert(): mat2d {
+        let ret: mat2d = new mat2d();
+        if (mat2d.invert(this.matrix, ret) === false) {
+            alert(" 堆栈顶部矩阵为奇异矩阵，无法求逆 ");
+            throw new Error(" 堆栈顶部矩阵为奇异矩阵，无法求逆 ");
+        }
+        return ret;
+    }
+}
+
+export class Math2D {
+    public static matStack: MatrixStack = new MatrixStack();
+    static random(from: number, to: number): number {
+		return Math.random() * to + from;
+	}
+    // 将以角度表示的参数转换为弧度表示
+    static toRadian(degree: number): number {
+        return degree * PiBy180;
+    }
+    // 将以弧度表示的参数转换为角度表示
+    static toDegree(radian: number): number {
+        return radian / PiBy180;
+    }
+    static isEquals(value1: number, value2: number) {
+        return value1 === value2;
+    }
+    /**
+     * 计算三角形两条边向量的叉积，用于判断三角形的顶点顺序
+     * @param v0 三角形的顶点
+     * @param v1 三角形的顶点
+     * @param v2 三角形的顶点
+     */
+    static sign(v0: vec2, v1: vec2, v2: vec2): number {
+        const e1: vec2 = vec2.difference(v0, v2);
+        const e2: vec2 = vec2.difference(v1, v2);
+        return vec2.crossProduct(e1, e2);
+    }
+    // 将一个点pt投影到start和end形成的线段上：先把原向量转换成单位向量，这样向量的点积就是投影长度
+    // 返回值：true表示pt在线段起点和终点之间，此时closePoint输出参数返回线段上的投影点坐标
+    //      false表示在线段起点或终点之外，此时closePoint输出参数返回线段的起点或终点
+    // 本方法使用了向量的difference、normalize、dotProduct、scaleAdd（scale和sum）方法
+    static projectPointOnLineSegment(pt: vec2, start: vec2, end: vec2, closePoint: vec2): boolean {
+        // 向量的create方法
+        let v0: vec2 = vec2.create();
+        let v1: vec2 = vec2.create();
+        let d: number = 0;
+        // 向量减法，形成方向向量
+        vec2.difference(pt, start, v0);
+        // 线段的起点到某个点（例如鼠标位置点）的方向向量
+        vec2.difference(end, start, v1);
+        // 获取线段
+        // 使用向量的normalize方法，原向量变成单位向量，并返回原向量的长度
+        // 需要注意的是，normalize起点到终点线段形成的向量
+        // 要投影到哪个向量，就要将这个向量normalize成单位向量
+        d = v1.normalize();
+        // 将v0投影在v1上，获取投影长度t；这是根据 cosθ = a·b / ( || a || || b || ) 公式来计算的，此时 b 向量为单位向量，长度为 1，所以 a·b = || a ||cosθ = 几何意义就是投影长度
+        let t: number = vec2.dotProduct(v0, v1);
+        // 如果投影长度t < 0，说明鼠标位置点在线段的起点范围之外
+        // 处理的方式是：
+        // closePt输出线段起点并且返回false
+        if (t < 0) {
+            closePoint.x = start.x;
+            closePoint.y = start.y;
+            return false;
+        } else if (t > d) {// 如果投影长度 > 线段的长度，说明鼠标位置点超过线段终点范围
+            // closePt输出线段起点并且返回false
+            closePoint.x = end.x;
+            closePoint.y = end.y;
+            return false;
+        } else {
+            // 说明鼠标位置点位于线段起点和终点之间
+            // 使用scaleAdd方法计算出相对全局坐标（左上角）的坐标偏移信息
+            // 只有此时才返回true
+            vec2.scaleAdd(start, v1, t, closePoint);
+            return true;
+        }
+    }
+    static isPointInCircle(pt: vec2, center: vec2, radius: number): boolean {
+        const diff: vec2 = vec2.difference(pt, center);
+        // 避免使用 Math.sqrt 方法
+        return diff.squaredLength <= radius ** 2;
+    }
+    /**
+     * 判断点是否在线段上：先判断点的投影是否在线上 + 再判断点和投影点之间的距离是否在一定范围内
+     * @param pt 点
+     * @param start 线段起点
+     * @param end 线段终点
+     * @param closePt 投影点
+     * @param radius 误差半径
+     * @returns 点是否在线段上
+     */
+    static isPointOnLineSegment(pt: vec2, start: vec2, end: vec2, closePt: vec2 = vec2.create(), radius: number = EPSILON): boolean {
+        const isIn = Math2D.projectPointOnLineSegment(pt, start, end, closePt);
+        if (!isIn) return false;
+        return Math2D.isPointInCircle(pt, closePt, radius);
+    }
+    static isPointInRect(ptX: number, ptY: number, x: number, y: number, width: number, height: number): boolean {
+        return ptX >= x && ptX <= x + width && ptY >= y && ptY <= y + height;
+    }
+    static isPointInEllipse(ptX: number, ptY: number, centerX: number, centerY: number, radiusX: number, radiusY: number): boolean {
+        const diffX = ptX - centerX;
+        const diffY = ptY - centerY;
+        return diffX ** 2 / radiusX ** 2 + diffY ** 2 / radiusY ** 2 <= 1.0;
+    }
+    /**
+     * 点是否在三角形内部
+     * 方法一：如果 pt 与三角形的三个顶点连线形成的三个三角形的顶点方向一致，则 pt 在三角形内部
+     * 方法二：面积法，如果点 pt 在三角形内部，则 pt 与三角形顶点分割成的三个三角形的面积之和等于三角形的面积。三角形的面积就等于叉乘模长的一半
+     * 方法三：内角和为 180°，效率低不管它
+     * @param pt 点
+     * @param v0 三角形顶点
+     * @param v1 三角形顶点
+     * @param v2 三角形顶点
+     * @returns 
+     */
+    static isPointInTriangle(pt: vec2, v0: vec2, v1: vec2, v2: vec2): boolean {
+        // 三角形三条边的方向都一致就说明点在三角形内部
+        const b1: boolean = Math2D.sign(v0, v1, pt) < 0.0;
+        const b2: boolean = Math2D.sign(v1, v2, pt) < 0.0;
+        const b3: boolean = Math2D.sign(v2, v0, pt) < 0.0;
+        return (b1 === b2) && (b2 === b3);
+    }
+    static isPointInPolygon(pt: vec2, points: vec2[]): boolean {
+        // 凸多边形至少三条边
+        if (points.length < 3) return false;
+        // 以 points[0] 为共享点遍历凸多边形顶点
+        for (let i = 2; i < points.length; i++) {
+            if (Math2D.isPointInTriangle(pt, points[0], points[i - 1], points[i])) return true;
+        }
+        return false;
+    }
+    /**
+     * 判断是否为凸多边形：分割成三角形，每个三角形顶点顺序一致
+     * @param points 顶点数组，全部顺时针或全部逆时针
+     * @returns 
+     */
+    static isConvex(points: vec2[]): boolean {
+        const firstSign = Math2D.sign(points[0], points[1], points[2]) < 0;
+        let j: number;
+        let k: number;
+        for (let i = 1; i < points.length; i++) {
+            j = (i + 1) % points.length;
+            k = (i + 2) % points.length;
+            if (firstSign !== Math2D.sign(points[i], points[j], points[k]) < 0) return false;
+        }
+        return true;
+    }
+    /**
+     * 矩阵和向量相乘
+     * @param mat 
+     * @param pt 
+     * @param result 
+     * @returns 
+     */
+    static transform(mat: mat2d, pt: vec2, result: vec2 | null = null): vec2 {
+        if (!result) result = vec2.create();
+        result.values[0] = mat.values[0] * pt.values[0] + mat.values[2] * pt.values[1] + mat.values[4];
+        result.values[1] = mat.values[1] * pt.values[0] + mat.values[3] * pt.values[1] + mat.values[5];
+        return result;
+    }
+    /**
+     * 二次贝塞尔曲线标量版
+     * B(t) = (1 - t)^2 * P0 + 2t * (1 - t) * P1 + t^2 * P2, t ∈ [0,1]
+     * @param start 
+     * @param ctrl 
+     * @param end 
+     * @param t 
+     * @returns 
+     */
+    static getQuadraticBezierPosition(start: number, ctrl: number, end: number, t: number): number {
+        if (t < 0.0 || t > 1.0) {
+            alert(" t的取值范围必须为[ 0 , 1 ] ");
+            throw new Error(" t的取值范围必须为[ 0 , 1 ] ");
+        }
+        let t1: number = 1.0 - t;
+        let t2: number = t1 * t1;
+        return t2 * start + 2.0 * t * t1 * ctrl + t * t * end;
+    }
+    /**
+     * 二次贝塞尔曲线向量版
+     * B(t) = (1 - t)^2 * P0 + 2t * (1 - t) * P1 + t^2 * P2, t ∈ [0,1]
+     * @param start 
+     * @param ctrl 
+     * @param end 
+     * @param t 
+     * @param result 
+     * @returns 
+     */
+    static getQuadraticBezierVector(start: vec2, ctrl: vec2, end: vec2, t: number, result: vec2 | null = null): vec2 {
+        if (result === null) result = vec2.create();
+        result.x = Math2D.getQuadraticBezierPosition(start.x, ctrl.x, end.x, t);
+        result.y = Math2D.getQuadraticBezierPosition(start.y, ctrl.y, end.y, t);
+        return result;
+    }
+    /**
+     * 三次贝塞尔曲线标量版
+     * B(t) = P0 * (1-t)^3 + 3 * P1 * t * (1-t)^2 + 3 * P2 * t^2 * (1-t) + P3 * t^3, t ∈ [0,1]
+     * @param start 
+     * @param ctrl0 
+     * @param ctrl1 
+     * @param end 
+     * @param t 
+     * @returns 
+     */
+    static getCubicBezierPosition(start: number, ctrl0: number, ctrl1: number, end: number, t: number): number {
+        if (t < 0.0 || t > 1.0) {
+            alert(" t的取值范围必须为[ 0 , 1 ] ");
+            throw new Error(" t的取值范围必须为[ 0 , 1 ] ");
+        }
+        let t1: number = (1.0 - t);
+        let t2: number = t * t;
+        let t3: number = t2 * t;
+        return (t1 * t1 * t1) * start + 3 * t * (t1 * t1) * ctrl0 + (3 * t2 * t1) * ctrl1 + t3 * end;
+    }
+    /**
+     * 三次贝塞尔曲线向量版
+     * B(t) = P0 * (1-t)^3 + 3 * P1 * t * (1-t)^2 + 3 * P2 * t^2 * (1-t) + P3 * t^3, t ∈ [0,1]
+     * @param start 
+     * @param ctrl0 
+     * @param ctrl1 
+     * @param end 
+     * @param t 
+     * @param result 
+     * @returns 
+     */
+    static getCubicBezierVector(start: vec2, ctrl0: vec2, ctrl1: vec2, end: vec2, t: number, result: vec2 | null = null): vec2 {
+        if (result === null) result = vec2.create();
+        result.x = Math2D.getCubicBezierPosition(start.x, ctrl0.x, ctrl1.x, end.x, t);
+        result.y = Math2D.getCubicBezierPosition(start.y, ctrl0.y, ctrl1.y, end.y, t);
+        return result;
+    }
+    // 实现创建贝塞尔迭代器接口的工厂方法
+    static createQuadraticBezierEnumerator(start: vec2, ctrl: vec2, end: vec2, steps: number = 30): IBezierEnumerator {
+        return new BezierEnumerator(start, end, ctrl, null, steps);
+    }
+    static createCubicBezierEnumerator(start: vec2, ctrl0: vec2, ctrl1: vec2, end: vec2, steps: number = 30): IBezierEnumerator {
+        return new BezierEnumerator(start, end, ctrl0, ctrl1, steps);
     }
 }
 export class Transform2D {

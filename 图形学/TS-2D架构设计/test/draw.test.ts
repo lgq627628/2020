@@ -1076,7 +1076,7 @@ export class TestApplication extends Canvas2DApplication {
         this._tank.onMouseMove(e);
 
         // this._isHit = Math2D.projectPointOnLineSegment(vec2.create(this._mouseX, this._mouseY), this.lineStart, this.lineEnd, this.closePt);
-        this._isHit = Math2D.isPointOnLineSegement(vec2.create(this._mouseX, this._mouseY), this.lineStart, this.lineEnd, this.closePt, 1);
+        this._isHit = Math2D.isPointOnLineSegment(vec2.create(this._mouseX, this._mouseY), this.lineStart, this.lineEnd, this.closePt, 1);
 
         this._quadCurve.onMouseMove(e);
         this._cubeCurve.onMouseMove(e);

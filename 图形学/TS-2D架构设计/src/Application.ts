@@ -1,4 +1,4 @@
-import { CanvasKeyboardEvent, CanvasMouseEvent } from './CnavasInputEvent';
+import { CanvasKeyboardEvent, CanvasMouseEvent, EInputEventType } from './CnavasInputEvent';
 import { vec2 } from './math2D';
 import { Timer, TimerCallback } from './Timer';
 /**
@@ -15,7 +15,7 @@ export class Application implements EventListenerObject {
     // raf 返回的 id 都是大于 0 的
     protected rafId: number = -1;
     // 基于时间的物理更新，! 表示可以延迟赋值
-    protected startTIme!: number;
+    protected startTime!: number;
     protected lastTime!: number;
     // 当前帧率，这个其实和屏幕刷新频率一致
     protected _fps !: number;
@@ -42,7 +42,7 @@ export class Application implements EventListenerObject {
         if (this.isStart) return;
         this.isStart = true;
         this.rafId = -1;
-        this.startTIme = -1;
+        this.startTime = -1;
         this.lastTime = -1;
         this.rafId = requestAnimationFrame(this.step.bind(this));
     }
@@ -51,7 +51,7 @@ export class Application implements EventListenerObject {
         cancelAnimationFrame(this.rafId);
         this.rafId = -1;
         this.lastTime = -1;
-        this.startTIme = -1;
+        this.startTime = -1;
         this.isStart = false;
     }
     // 子类在这里写更新逻辑，注意单位是 ms
@@ -69,10 +69,10 @@ export class Application implements EventListenerObject {
     }
     // 基于时间的更新和重绘
     step(timestamp: number) {
-        if (this.startTIme < 0) this.startTIme = timestamp;
+        if (this.startTime < 0) this.startTime = timestamp;
         if (this.lastTime < 0) this.lastTime = timestamp;
         // 流逝的时间
-        const passingTime: number = timestamp - this.startTIme;
+        const passingTime: number = timestamp - this.startTime;
         // 两帧间隔时间差
         const dt: number = timestamp - this.lastTime;
         this.lastTime = timestamp;
@@ -111,14 +111,14 @@ export class Application implements EventListenerObject {
         return vec2.create(x, y);
     }
     // 将 dom 事件转换为自定义的 canvas 事件
-    private toCanvasMouseEvent(e: Event): CanvasMouseEvent {
+    private toCanvasMouseEvent(e: Event, type: EInputEventType): CanvasMouseEvent {
         // 向下转型
         const event: MouseEvent = e as MouseEvent;
         const mousePos = this.viewportToCanvasCoords(event);
-        const canvasMouseEvent: CanvasMouseEvent = new CanvasMouseEvent(this.canvas, mousePos, event.button, event.altKey, event.ctrlKey, event.shiftKey);
+        const canvasMouseEvent: CanvasMouseEvent = new CanvasMouseEvent(this.canvas, mousePos, event.button, event.altKey, event.ctrlKey, event.shiftKey, type);
         return canvasMouseEvent;
     }
-    private toCanvasKeyBoardEvent(e: Event): CanvasKeyboardEvent {
+    private toCanvasKeyBoardEvent(e: Event, type: EInputEventType): CanvasKeyboardEvent {
         // 向下转型
         const event: KeyboardEvent = e as KeyboardEvent;
         const canvasKeyboardEvent: CanvasKeyboardEvent = new CanvasKeyboardEvent(event.key, event.code, event.repeat, event.altKey, event.ctrlKey, event.shiftKey);
@@ -128,24 +128,24 @@ export class Application implements EventListenerObject {
         switch (e.type) {
             case 'mousedown':
                 this.isMouseDown = true;
-                this.dispatchMouseDown(this.toCanvasMouseEvent(e));
+                this.dispatchMouseDown(this.toCanvasMouseEvent(e, EInputEventType.MOUSEDOWN));
                 break;
             case 'mouseup':
                 this.isMouseDown = false;
-                this.dispatchMouseUp(this.toCanvasMouseEvent(e));
+                this.dispatchMouseUp(this.toCanvasMouseEvent(e, EInputEventType.MOUSEUP));
                 break;
             case 'mousemove':
-                if (this.isSupportMouseMove) this.dispatchMouseMove(this.toCanvasMouseEvent(e));
-                if (this.isMouseDown) this.dispatchMouseDrag(this.toCanvasMouseEvent(e));
+                if (this.isSupportMouseMove) this.dispatchMouseMove(this.toCanvasMouseEvent(e, EInputEventType.MOUSEMOVE));
+                if (this.isMouseDown) this.dispatchMouseDrag(this.toCanvasMouseEvent(e, EInputEventType.MOUSEDOWN));
                 break;
             case 'keypress':
-                this.dispatchKeyPress(this.toCanvasKeyBoardEvent(e));
+                this.dispatchKeyPress(this.toCanvasKeyBoardEvent(e, EInputEventType.KEYPRESS));
                 break;
             case 'keyup':
-                this.dispatchKeyUp(this.toCanvasKeyBoardEvent(e));
+                this.dispatchKeyUp(this.toCanvasKeyBoardEvent(e, EInputEventType.KEYUP));
                 break;
             case 'keydown':
-                this.dispatchKeyDown(this.toCanvasKeyBoardEvent(e));
+                this.dispatchKeyDown(this.toCanvasKeyBoardEvent(e, EInputEventType.KEYDOWN));
                 break;
         }
     }

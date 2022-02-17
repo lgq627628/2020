@@ -27,7 +27,9 @@ export class Sprite2D implements ISprite {
         this.name = name;
         this.shape = shape;
     }
-
+    public set x(x: number) {
+        this.transform.position.x = x;
+    }
     public get x(): number {
         return this.transform.position.x;
     }

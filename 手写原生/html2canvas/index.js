@@ -1,163 +1,185 @@
-const FLAG_MAP = {
-    NORMAL: 0,
-    TEXT: 1,
-    IMG: 2,
-    INPUT: 3
-};
 class html2canvas {
     constructor(el) {
         this.el = el;
-        const { left, top } = this.el.getBoundingClientRect();
-        this.globalOffset = { x: left, y: top };
-        this.vdom = this.parseTree(this.el);
-        this.canvas = this.createCanvas(this.el);
-        this.ctx2d = this.canvas.getContext('2d');
-        this.parseZIndex(this.vdom, this.vdom);
-        this.render(this.vdom);
-        console.log(this.vdom);
+        this.global = this.formatGlobal(this.el);
+        this.root = this.parseTree(this.global, this.el); // 返回的是新对象
+        const stack = this.parseStackingContext(this.root); // 返回的是新对象
+        this.createCanvas(this.el);
+        this.render(stack);
         document.body.appendChild(this.canvas);
     }
     /**
-     * 把 dom 元素变成一棵树结构有父子关系， 然后有bounds信息，列出坐标位置，还有样式和虚拟 dom 有点类似
+     * 处理一些全局信息，目前就只处理了整体偏移，也可以在这边合并传进来的一些参数
+     * 为什么要处理整体偏移量，因为当页面滚动的时候，假如绘制的时候不加上这个偏移量，top 就会变成负值，导致绘制的时候产生空白
      */
-    parseTree(el) {
-        // 里面包含了每一层节点的：
-        // bounds - 位置信息（宽/高、横/纵坐标）
-        // elements - 子元素信息
-        // flags - 用来决定如何渲染的标志
-        // styles - 样式描述信息
-        // textNodes - 文本节点信息
-        const styles = window.getComputedStyle(el);
-        const bound = el.getBoundingClientRect();
-        const { x, y } = this.globalOffset;
-        const bounds = new Bounds(bound.top - y, bound.left - x, bound.width, bound.height);
-        const obj = {
-            bounds,
-            styles: styles,
-            elements: [],
-            flags: FLAG_MAP.NORMAL,
-            textNodes: [],
-            tag: el.tagName,
-            className: el.className,
-            el,
+    formatGlobal(el) {
+        const { left, top } = el.getBoundingClientRect();
+        return {
+            offset: { x: left, y: top },
         };
-        if (el.tagName === 'IMG') {
-            obj.url = el.src;
-            obj.flags = FLAG_MAP.IMG;
-            console.log(el.src);
-        }
-        [...el.childNodes].map((child) => {
-            if (child.nodeType === 3) {
-                if (child.textContent.trim().length > 0) {
-                    // 如果是文本节点
-                    const textObj = {
-                        text: el.textContent,
-                        bounds: bounds,
-                    };
-                    obj.textNodes.push(textObj);
-                    obj.flags = FLAG_MAP.TEXT;
-                }
-            } else {
-                obj.elements.push(this.parseTree(child));
-            }
-        });
-        return obj;
     }
     /**
-     * 把刚才解析的 dom 树节点变成按照层级（如 zIndex）划分的数组
+     * 按照原有的树结构遍历整个 dom，变成我们自己需要的新对象 ElContainer，和构建虚拟 dom 有点类似
+     * ElContainer 的属性主要包括坐标位置和大小、样式、子元素等
      */
-    parseZIndex(vdom) {
-        // inlineLevel - 内联元素
-        // negativeZIndex - zIndex为负的元素
-        // nonInlineLevel - 非内联元素
-        // nonPositionedFloats - 未定位的浮动元素
-        // nonPositionedInlineLevel - 内联的非定位元素，包含内联表和内联块
-        // positiveZIndex - z-index大于等于1的元素
-        // zeroOrAutoZIndexOrTransformedOrOpacity
-        const zIndexObj = {
-            negativeZIndex: [],
-            normalZIndex: [],
-            positiveZIndex: [],
-        };
-        Object.assign(vdom, zIndexObj);
-        vdom.elements.map((child) => {
-            const zIndex = child.styles.zIndex;
-            if (zIndex > 0) {
-                // zIndex 可能是 1、10、100，所以其实不是直接 push，而是要比较之后插入
-                vdom.positiveZIndex.push(child);
-            } else if (zIndex < 0) {
-                vdom.negativeZIndex.push(child);
+    parseTree(global, el) {
+        const container = this.createContainer(global, el);
+        this.parseNodeTree(global, el, container, container);
+        return container;
+    }
+    parseNodeTree(global, el, parent, root) {
+        [...el.childNodes].map((child) => {
+            if (child.nodeType === 3) {
+                // 如果是文本节点
+                if (child.textContent.trim().length > 0) {
+                    // 文本节点不为空
+                    const textElContainer = new TextElContainer(child.textContent, parent);
+                    parent.textNodes.push(textElContainer);
+                }
             } else {
-                vdom.normalZIndex.push(child);
+                const container = this.createContainer(global, child);
+
+                const { position, zIndex, opacity, transform } = container.styles;
+                if ((position !== 'static' && !isNaN(zIndex)) || opacity < 1 || transform !== 'none') {
+                    container.flags = 1;
+                }
+                parent.elements.push(container);
+                container.parent = parent;
+                this.parseNodeTree(global, child, container, root);
             }
-            this.parseZIndex(child);
+        });
+    }
+    createContainer(global, el) {
+        if (el.tagName === 'IMG') {
+            return new ImageElContainer(global, el);
+        } else {
+            return new ElContainer(global, el);
+        }
+    }
+    /**
+     * 把刚才解析的 root 对象变成按照层级（这里就拿 zIndex 举例）划分的数组
+     */
+    parseStackingContext(container) {
+        const root = new StackingContext(container);
+        this.parseStackTree(container, root);
+        return root;
+    }
+    parseStackTree(parent, stackingContext) {
+        parent.elements.map((child) => {
+            if (child.flags) {
+                const stack = new StackingContext(child);
+                const zIndex = child.styles.zIndex;
+                if (zIndex > 0) {
+                    // zIndex 可能是 1、10、100，所以其实不是直接 push，而是要比较之后插入
+                    stackingContext.positiveZIndex.push(stack);
+                } else if (zIndex < 0) {
+                    stackingContext.negativeZIndex.push(stack);
+                } else {
+                    stackingContext.zeroOrAutoZIndexOrTransformedOrOpacity.push(stack);
+                }
+                this.parseStackTree(child, stack);
+            } else {
+                if (child.styles.display.indexOf('inline') >= 0) {
+                    stackingContext.inlineLevel.push(child);
+                } else {
+                    stackingContext.nonInlineLevel.push(child);
+                }
+                this.parseStackTree(child, stackingContext);
+            }
         });
     }
     /**
      * 根据划分的层级数组，一层一层从下往上绘制，并且转换成相对应的 canvas 绘图语句
      */
-    render(level) {
-        // 图片就 this.ctx.drawImage
-        // 文案就 this.ctx.fillText
-        // 输入框
-        const { negativeZIndex = [], normalZIndex = [], positiveZIndex = [] } = level;
+    render(stack) {
+        const { negativeZIndex = [], nonInlineLevel = [], inlineLevel = [], positiveZIndex = [], zeroOrAutoZIndexOrTransformedOrOpacity = [] } = stack;
         this.ctx2d.save();
-        this.setTransformAndOpacity(level);
-        this.renderBgAndBorder(level);
+        // 1、先设置会影响全局的属性，比如 transform 和 opacity
+        this.setTransformAndOpacity(stack.container);
+        // 2、绘制背景和边框
+        this.renderNodeBackgroundAndBorders(stack.container);
+        // 3、绘制 zIndex < 0 的元素
         negativeZIndex.map((el) => this.render(el));
-        normalZIndex.map((el) => this.render(el));
-        this.renderContent(level);
+        // 4、绘制自身内容
+        this.renderNodeContent(stack.container);
+        // 5、绘制块状元素
+        nonInlineLevel.map((el) => this.renderNode(el));
+        // 6、绘制行内元素
+        inlineLevel.map((el) => this.renderNode(el));
+        // 7、绘制 z-index: auto || 0、transform: none、opacity小于1 的元素
+        zeroOrAutoZIndexOrTransformedOrOpacity.map((el) => this.render(el));
+        // 8、绘制 zIndex > 0 的元素
         positiveZIndex.map((el) => this.render(el));
         this.ctx2d.restore();
     }
-    setTransformAndOpacity (level) {
-        const { bounds, styles } = level;
-        const { transform, opacity, transformOrigin } = styles;
-        if (transform !== 'none') {
-            level.hasTransform = true;
-            const centerPos = [ bounds.left + bounds.width / 2, bounds.top + bounds.height / 2]
-            const matrix = transform.slice(7, -1).split(', ').map(Number);
-            const origin = transformOrigin.split(' ').map(_ => parseInt(_, 10));
-            level.centerPos = centerPos;
-            level.origin = origin;
-            this.ctx2d.translate(centerPos[0], centerPos[1]);
-            this.ctx2d.transform(
-                matrix[0],
-                matrix[1],
-                matrix[2],
-                matrix[3],
-                matrix[4],
-                matrix[5]
-            );
-            this.ctx2d.translate(-centerPos[0], -centerPos[1]);
-        }
-        if (opacity < 1.0) {
-            this.ctx2d.globalAlpha = opacity;
+    renderNodeContent(container) {
+        if (container.textNodes.length) {
+            container.textNodes.map((text) => this.renderText(text, container.styles));
+        } else if (container instanceof ImageElContainer) {
+            this.renderImg(container);
         }
     }
-    renderBgAndBorder(level) {
-        const { bounds, styles } = level;
+    renderNode(container) {
+        this.renderNodeBackgroundAndBorders(container);
+        this.renderNodeContent(container);
+    }
+    /**
+     * 由于 transform 和 opacity 等属性会影响元素自身及其子元素，所以要先处理
+     */
+    setTransformAndOpacity(container) {
+        const { bounds, styles } = container;
+        const { ctx2d } = this;
+        const { transform, opacity, transformOrigin } = styles;
+        if (opacity < 1.0) {
+            // 处理透明度
+            ctx2d.globalAlpha = opacity;
+        }
+        if (transform !== 'none') {
+            // 处理 transform
+            container.hasTransform = true;
+
+            const origin = transformOrigin.split(' ').map((_) => parseInt(_, 10));
+            const offsetX = bounds.left + origin[0];
+            const offsetY = bounds.top + origin[1];
+            const matrix = transform.slice(7, -1).split(', ').map(Number);
+            ctx2d.translate(offsetX, offsetY);
+            ctx2d.transform(matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]);
+            ctx2d.translate(-offsetX, -offsetY);
+            container.transform = {
+                offsetX,
+                offsetY,
+                matrix,
+            };
+        }
+    }
+    renderNodeBackgroundAndBorders(container) {
+        const { bounds, styles } = container;
         const { ctx2d } = this;
         const bg = styles.backgroundColor;
         const borderWidth = parseInt(styles.borderWidth);
         const { top, left, width, height } = bounds;
-        let points = [[left, top], [left + width, top], [left + width, top + height], [left, top + height]]
-        
-        if (level.hasTransform) {
-            const centerPos = level.centerPos;
+        let points = [
+            [left, top],
+            [left + width, top],
+            [left + width, top + height],
+            [left, top + height],
+        ];
+
+        if (container.transform) {
+            const { offsetX, offsetY } = container.transform;
             const width = parseInt(styles.width);
             const height = parseInt(styles.height);
             points = [
-                [centerPos[0] - width / 2, centerPos[1] - height / 2],
-                [centerPos[0] + width / 2, centerPos[1] - height / 2],
-                [centerPos[0] + width / 2, centerPos[1] + height / 2],
-                [centerPos[0] - width / 2, centerPos[1] + height / 2]
-            ]
+                [offsetX - width / 2, offsetY - height / 2],
+                [offsetX + width / 2, offsetY - height / 2],
+                [offsetX + width / 2, offsetY + height / 2],
+                [offsetX - width / 2, offsetY + height / 2],
+            ];
         }
         // 画背景
         const bgArr = bg.slice(5, -1).split(', ');
-        if (bgArr[bgArr.length - 1] !== 0) {
-            console.log('画背景', level.className);
+        if (bgArr[bgArr.length - 1]) {
+            // 如果背景颜色不透明
             ctx2d.save();
             ctx2d.beginPath();
             this.drawPathByPoints(points);
@@ -178,34 +200,18 @@ class html2canvas {
             ctx2d.restore();
         }
     }
-    async renderContent(level) {
+    renderText(text, styles) {
         const { ctx2d } = this;
-        const { flags, textNodes, styles, bounds } = level;
-        if (flags === FLAG_MAP.TEXT) {
-            console.log('画文本', level.className);
-            textNodes.map(text => {
-                ctx2d.save();
-                ctx2d.font = styles.fontWeight + ' ' + styles.fontSize + ' ' + styles.fontFamily;
-                ctx2d.fillStyle = styles.color;
-                ctx2d.fillText(text.text, text.bounds.left, text.bounds.top + parseInt(styles.fontSize));
-                ctx2d.restore();
-            })
-        } else if (flags === FLAG_MAP.IMG) {
-            // const imgEle = await new Promise((resolve, reject) => {
-            //     const img = new Image();
-            //     img.onload = () => {
-            //         console.log('画图片', level.className);
-            //         resolve(img);
-            //     }
-            //     img.onerror = (e) => {
-            //         reject(e)
-            //     }
-            //     img.src = level.url;
-            // });
-            this.ctx2d.drawImage(level.el, 0, 0, parseInt(styles.width), parseInt(styles.height), bounds.left, bounds.top, bounds.width, bounds.height);
-        } else if (flags === FLAG_MAP.INPUT) {
-
-        }
+        ctx2d.save();
+        ctx2d.font = styles.fontWeight + ' ' + styles.fontSize + ' ' + styles.fontFamily;
+        ctx2d.fillStyle = styles.color;
+        ctx2d.fillText(text.text, text.bounds.left, text.bounds.top);
+        ctx2d.restore();
+    }
+    renderImg(container) {
+        const { ctx2d } = this;
+        const { el, bounds, styles } = container;
+        ctx2d.drawImage(el, 0, 0, parseInt(styles.width), parseInt(styles.height), bounds.left, bounds.top, bounds.width, bounds.height);
     }
     drawPathByPoints(points) {
         points.map((point, i) => {
@@ -214,10 +220,13 @@ class html2canvas {
             } else {
                 this.ctx2d.lineTo(point[0], point[1]);
             }
-        })
+        });
     }
-    createCanvas(el) {
-        const { width, height } = el.getBoundingClientRect();
+    /**
+     * 创建画布，注意 dpr 的影响
+     */
+    createCanvas(root) {
+        const { width, height } = root.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
 
         const canvas = document.createElement('canvas');
@@ -226,17 +235,92 @@ class html2canvas {
         canvas.height = Math.round(height * dpr);
         canvas.style.width = width + 'px';
         canvas.style.height = height + 'px';
-
         ctx2d.scale(dpr, dpr);
+
+        this.canvas = canvas;
+        this.ctx2d = ctx2d;
         return canvas;
     }
 }
 
 class Bounds {
-    constructor(top, left, width, height) {
-        this.top = top;
-        this.left = left;
+    constructor(global, el) {
+        const { x = 0, y = 0 } = global.offset;
+        const { top, left, width, height } = el.getBoundingClientRect();
+        this.top = top - y;
+        this.left = left - x;
         this.width = width;
         this.height = height;
+    }
+}
+
+class ElContainer {
+    constructor(global, el) {
+        // 这里为了方便直接把所有的样式拿过来，其实可以按需过滤一下
+        this.styles = window.getComputedStyle(el);
+        // 获取位置和大小，这里要注意如果元素用了 transform，我们需要将其先还原，再获取样式，因为我们没有克隆整个 html，所以这里就这样处理
+        const transform = this.styles.transform;
+        if (transform !== 'none') {
+            el.style.transform = 'none';
+        }
+        this.bounds = new Bounds(global, el);
+        if (transform !== 'none') el.style.transform = transform;
+        // 子元素
+        this.elements = [];
+        // 文本节点比较特殊，单独处理
+        this.textNodes = [];
+        // falgs 标志是否要创建层叠上下文
+        this.flags = 0;
+        // 元素的引用
+        this.el = el;
+    }
+}
+
+class ImageElContainer extends ElContainer {
+    constructor(global, el) {
+        super(global, el);
+        this.src = el.src;
+    }
+}
+
+class TextElContainer {
+    constructor(text, parent) {
+        this.bounds = this.getTrueBounds(parent);
+        this.text = text;
+        this.parent = parent;
+    }
+    getTrueBounds(parent) {
+        let { top, left, width, height } = parent.bounds;
+        const { paddingLeft, paddingTop, borderWidth, fontSize } = parent.styles;
+        top = top + parseInt(paddingTop) + parseInt(borderWidth) + parseInt(fontSize);
+        left = left + parseInt(paddingLeft) + parseInt(borderWidth);
+        return {
+            top,
+            left,
+            width,
+            height,
+        };
+    }
+}
+
+/**
+ * 层叠上下文，按照以下顺序分配
+ * 1、backgroundAndBorder - 背景和边框
+ * 2、negativeZIndex - zIndex为负的元素
+ * 3、nonInlineLevel - 块级元素
+ * 4、nonPositionedFloats - 未定位的浮动元素
+ * 5、nonPositionedInlineLevel - 内联的非定位元素
+ * 6、positiveZIndex - z-index大于等于1的元素
+ * 7、zeroOrAutoZIndexOrTransformedOrOpacity - 具有 transform、opacity、zIndex 为 auto 或 0 的元素
+ */
+class StackingContext {
+    constructor(container) {
+        this.container = container;
+        this.negativeZIndex = [];
+        this.nonInlineLevel = [];
+        this.nonPositionedFloats = [];
+        this.inlineLevel = [];
+        this.positiveZIndex = [];
+        this.zeroOrAutoZIndexOrTransformedOrOpacity = [];
     }
 }

@@ -18,19 +18,21 @@
         }
         #app {
             position: relative;
+            padding-top: 10px;
+            padding-left: 20px;
             width: 360px;
             height: 640px;
             border: 1px solid #000;
         }
         .name {
-            color: purple;
             font-size: 50px;
             font-weight: bold;
+            color: purple;
         }
         .avatar {
-            border: 5px solid red;
             margin-right: 10px;
             background: lightcyan;
+            border: 5px solid green;
         }
         .row {
             display: flex;
@@ -39,41 +41,44 @@
         }
         input {
             padding: 5px;
-            border: 1px solid green;
+            border: 2px solid green;
         }
         .box {
             margin-top: 20px;
             margin-left: 50px;
             width: 100px;
             height: 100px;
-            border: 4px solid green;
-            background: yellow;
+            font-size: 20px;
+            color: #fff;
+            background: green;
             transform: rotate(45deg);
         }
         .box2 {
-            margin-top: 20px;
-            margin-left: 50px;
-            width: 100px;
-            height: 100px;
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            font-size: 26px;
             background: red;
-            font-size: 30px;
-            opacity: 0.1;
-            /* transform: translateX(-50px); */
+            opacity: 0.3;
         }
         .zIndex1 {
             position: absolute;
+            padding: 0 15px;
             top: 50px;
             right: 0;
             font-size: 30px;
-            border: 1px solid #000;
+            border: 1px solid red;
             z-index: 1;
         }
         .zIndex-1 {
             position: absolute;
-            top: 360px;
+            padding: 0 15px;
+            bottom: 230px;
             right: 0;
             font-size: 30px;
-            border: 1px solid #000;
+            border: 1px solid red;
             z-index: -1;
         }
     </style>
@@ -82,8 +87,10 @@
             <div class="name">尤水就下</div>
             <img class="avatar" src="https://p26-passport.byteacctimg.com/img/user-avatar/7470b65342454dd6699a6cf772652260~300x300.image" />
             <div class="row">
-                <div class="box"></div>
-                <div class="box2">透明的</div>
+                <div class="box">呵呵</div>
+                <div>
+                    <div class="box2"></div>
+                </div>
             </div>
             <div class="row">
                 <span>写点什么吧：</span>
@@ -93,17 +100,16 @@
             <div class="zIndex-1">zIndex: -1</div>
         </div>
         <div>
-            <button onclick="xxx()">html2Canvas</button>
-            <!-- <button onclick="dom2base64(document.getElementById('app'))">html2Canvas</button> -->
+            <button onclick="handleClick()">html2Canvas</button>
         </div>
         <script src="./index.js"></script>
         <script>
-            function xxx() {
-                console.log('xxx');
-                new html2canvas(document.getElementById('app'))
+            function handleClick() {
+                new html2canvas(document.getElementById('app'));
             }
-            // new html2canvas(document.getElementById('app'))
+            setTimeout(() => {
+                handleClick();
+            }, 1000);
         </script>
-        <!-- <script src="./index2.js"></script> -->
     </body>
 </html>

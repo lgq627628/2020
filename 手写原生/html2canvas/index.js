@@ -7,6 +7,10 @@ class html2canvas {
         this.createCanvas(this.el);
         this.render(stack);
         document.body.appendChild(this.canvas);
+        console.log('====== 解析 html 之后的结果 ======');
+        console.log(this.root);
+        console.log('====== 层叠上下文分组后的结果 ======');
+        console.log(stack);
     }
     /**
      * 处理一些全局信息，目前就只处理了整体偏移，也可以在这边合并传进来的一些参数
@@ -27,7 +31,7 @@ class html2canvas {
         this.parseNodeTree(global, el, container, container);
         return container;
     }
-    parseNodeTree(global, el, parent, root) {
+    parseNodeTree(global, el, parent) {
         [...el.childNodes].map((child) => {
             if (child.nodeType === 3) {
                 // 如果是文本节点
@@ -37,21 +41,23 @@ class html2canvas {
                     parent.textNodes.push(textElContainer);
                 }
             } else {
+                // 如果是普通节点
                 const container = this.createContainer(global, child);
 
                 const { position, zIndex, opacity, transform } = container.styles;
-                if ((position !== 'static' && !isNaN(zIndex)) || opacity < 1 || transform !== 'none') {
+                if ((position !== 'static' && !isNaN(zIndex)) || opacity < 1 || transform !== 'none') { // 需不需要创建层叠上下文的标志，后续会用到
                     container.flags = 1;
                 }
                 parent.elements.push(container);
-                container.parent = parent;
-                this.parseNodeTree(global, child, container, root);
+                this.parseNodeTree(global, child, container);
             }
         });
     }
     createContainer(global, el) {
         if (el.tagName === 'IMG') {
             return new ImageElContainer(global, el);
+        } else if (el.tagName === 'INPUT') {
+            return new InputElContainer(global, el);
         } else {
             return new ElContainer(global, el);
         }
@@ -66,7 +72,7 @@ class html2canvas {
     }
     parseStackTree(parent, stackingContext) {
         parent.elements.map((child) => {
-            if (child.flags) {
+            if (child.flags) { // 创建新的层叠上下文的标识
                 const stack = new StackingContext(child);
                 const zIndex = child.styles.zIndex;
                 if (zIndex > 0) {
@@ -117,6 +123,8 @@ class html2canvas {
             container.textNodes.map((text) => this.renderText(text, container.styles));
         } else if (container instanceof ImageElContainer) {
             this.renderImg(container);
+        } else if (container instanceof InputElContainer) {
+            this.renderInput(container);
         }
     }
     renderNode(container) {
@@ -136,8 +144,6 @@ class html2canvas {
         }
         if (transform !== 'none') {
             // 处理 transform
-            container.hasTransform = true;
-
             const origin = transformOrigin.split(' ').map((_) => parseInt(_, 10));
             const offsetX = bounds.left + origin[0];
             const offsetY = bounds.top + origin[1];
@@ -200,18 +206,32 @@ class html2canvas {
             ctx2d.restore();
         }
     }
-    renderText(text, styles) {
+    renderText(text, styles) { // 这里只考虑影响字体的几个因素，并不全面
         const { ctx2d } = this;
         ctx2d.save();
-        ctx2d.font = styles.fontWeight + ' ' + styles.fontSize + ' ' + styles.fontFamily;
+        ctx2d.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
         ctx2d.fillStyle = styles.color;
         ctx2d.fillText(text.text, text.bounds.left, text.bounds.top);
         ctx2d.restore();
     }
-    renderImg(container) {
+    renderImg(container) { // 这里直接用页面中的 img 元素进行绘制，所以得等到图片加载完成，不然就看不见图片。正常写法应该是在 img.onload 的回调中进行绘制
         const { ctx2d } = this;
         const { el, bounds, styles } = container;
         ctx2d.drawImage(el, 0, 0, parseInt(styles.width), parseInt(styles.height), bounds.left, bounds.top, bounds.width, bounds.height);
+    }
+    renderInput(container) {
+        // 渲染输入框其实就是渲染文本
+        const { value, bounds, styles } = container;
+        const { paddingLeft, paddingTop, fontSize } = styles;
+        const text = {
+            text: value,
+            bounds: {
+                ...bounds,
+                top: bounds.top + parseInt(paddingTop) + parseInt(fontSize),
+                left: bounds.left + parseInt(paddingLeft),
+            },
+        };
+        this.renderText(text, styles);
     }
     drawPathByPoints(points) {
         points.map((point, i) => {
@@ -225,8 +245,8 @@ class html2canvas {
     /**
      * 创建画布，注意 dpr 的影响
      */
-    createCanvas(root) {
-        const { width, height } = root.getBoundingClientRect();
+    createCanvas(el) {
+        const { width, height } = el.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
 
         const canvas = document.createElement('canvas');
@@ -242,7 +262,9 @@ class html2canvas {
         return canvas;
     }
 }
-
+/**
+ * 计算元素的位置和大小信息
+ */
 class Bounds {
     constructor(global, el) {
         const { x = 0, y = 0 } = global.offset;
@@ -256,7 +278,7 @@ class Bounds {
 
 class ElContainer {
     constructor(global, el) {
-        // 这里为了方便直接把所有的样式拿过来，其实可以按需过滤一下
+        // 这里为了方便直接把所有的样式拿过来，其实可以按需过滤一下。这个要写在 bounds 前面，因为 bounds 中会修改样式
         this.styles = window.getComputedStyle(el);
         // 获取位置和大小，这里要注意如果元素用了 transform，我们需要将其先还原，再获取样式，因为我们没有克隆整个 html，所以这里就这样处理
         const transform = this.styles.transform;
@@ -280,6 +302,14 @@ class ImageElContainer extends ElContainer {
     constructor(global, el) {
         super(global, el);
         this.src = el.src;
+    }
+}
+
+class InputElContainer extends ElContainer {
+    constructor(global, el) {
+        super(global, el);
+        this.type = el.type.toLowerCase();
+        this.value = el.value;
     }
 }
 

@@ -28,7 +28,7 @@ class html2canvas {
      */
     parseTree(global, el) {
         const container = this.createContainer(global, el);
-        this.parseNodeTree(global, el, container, container);
+        this.parseNodeTree(global, el, container);
         return container;
     }
     parseNodeTree(global, el, parent) {

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一笔画手势识别</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        #app {
+            display: block;
+            margin: 30px auto;
+            width: 800px;
+            height: 800px;
+            border: 1px solid #000;
+            background: #efefef;
+        }
+        .op {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 5px 15px;
+            border: 1px solid #000;
+            background: #fff;
+        }
+        .op div {
+            margin: 10px 0;
+            padding: 5px;
+            border: 2px solid green;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="app" width="800" height="800"></canvas>
+
+    <div class="op">
+        <div onclick="resample()">重新采样</div>
+        <div onclick="translateCenter()">平移中心</div>
+        <div onclick="rotateGesture()">旋转</div>
+        <div onclick="scaleGesture()">缩放</div>
+        <div onclick="compareGesture()">相似度比较</div>
+        <div onclick="addGesture()">添加手势</div>
+        <div>删除手势</div>
+        <div onclick="handleClear()">清除画布</div>
+    </div>
+
+    <script type="module">
+        import { Gesture } from './index.ts';
+
+        const g = new Gesture(document.getElementById('app'));
+        window.handleClear = () => g.clear();
+        window.resample = () => g.resample();
+        window.translateCenter = () => g.translateCenter();
+        window.rotateGesture = () => g.rotateGesture();
+        window.scaleGesture = () => g.scaleGesture();
+        window.addGesture = () => g.addGesture();
+        window.compareGesture = () => g.compareGesture();
+    </script>
+    
+</body>
+</html>

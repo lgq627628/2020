@@ -9,10 +9,7 @@ export interface Bounds {
     height: number;
 }
 export interface Cache {
-    [name: string]: number[];
-}
-export interface canvasCache {
-    [id: string]: HTMLCanvasElement;
+    [name: string]: Gesture;
 }
 export const TWO_PI = 2 * Math.PI;
 
@@ -21,16 +18,18 @@ export class Gesture {
     public unitSize = 300; // 归一化的大小
     public demoSize = 100; // 归一化的大小
 
-    public id: string = null;
     /** 原始数据点 */
     public inputPoints: Point[];
     /** 采样点 */
     public points: Point[];
     public center: Point; // 所有点的中心
     public sublineCount: number = 8; // 几等分辅助线
-
+    /** 缩略图 */
+    public canvas: HTMLCanvasElement;
     public aabb: Bounds;
     public vector: number[]; // 特征向量
+    /** 是否匹配 */
+    public isMatch: boolean = false;
 
     constructor(inputPoints: Point[]) {
         this.inputPoints = inputPoints;
@@ -79,13 +78,13 @@ export class Gesture {
         const targetRadian = Math.round(radian / unitRadian) * unitRadian;
         return targetRadian - radian;
     }
-    createGestureImg(points = this.inputPoints, center = this.center, size = this.demoSize): HTMLCanvasElement {
+    createGestureImg(points = this.inputPoints, center = this.center, size = this.demoSize, isMatch = this.isMatch): HTMLCanvasElement {
+        if (this.canvas) return this.canvas;
         const aabb = Utils.computeAABB(points);
 
         const maxSize = Math.max(aabb.width, aabb.height);
         const scale = Math.min(size / maxSize, 1) * 0.7;
 
-        console.log('sssss', scale);
         const cx = size / 2;
         const cy = size / 2;
 
@@ -93,10 +92,18 @@ export class Gesture {
         const ctx2d = canvas.getContext('2d');
         canvas.width = canvas.height = size;
 
-        ctx2d.save();
-        ctx2d.rect(0, 0, size, size);
-        ctx2d.strokeStyle = '#000';
-        ctx2d.stroke();
+        if (isMatch) {
+            ctx2d.save();
+            ctx2d.rect(0, 0, size, size);
+            ctx2d.strokeStyle = 'red';
+            ctx2d.lineWidth = 3;
+            ctx2d.stroke();
+        } else {
+            ctx2d.save();
+            ctx2d.rect(0, 0, size, size);
+            ctx2d.strokeStyle = '#000';
+            ctx2d.stroke();
+        }
 
         const newPoints: Point[] = points.map((point) => {
             let [x, y] = point;
@@ -106,6 +113,7 @@ export class Gesture {
         });
         this.drawPoly(ctx2d, newPoints);
         ctx2d.restore();
+        this.canvas = canvas;
         return canvas;
     }
      /**

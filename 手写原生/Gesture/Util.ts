@@ -101,7 +101,7 @@ export class Utils {
             sum += (x * x + y * y)
         }
         sum = Math.sqrt(sum);
-        for (let i = 0; i < sampleCount; i++) {
+        for (let i = 0; i < 2 * sampleCount; i++) {
             vector[i] /= sum
         }
         return vector;
@@ -144,7 +144,6 @@ export class Utils {
             const v2 = vector2[i];
             sum += v1 * v2;
         });
-        console.log(Math.acos(sum));
         return Math.acos(sum);
     }
     /**
@@ -185,5 +184,69 @@ export class Utils {
         array[1][0] /= count;
         array[1][1] /= count;
         return array;
+    }
+
+    /**
+     * 连接多个点
+     * @param points 坐标点集
+     */
+    static drawPoly(ctx2d: CanvasRenderingContext2D, points: Point[]) {
+        ctx2d.save();
+        ctx2d.beginPath();
+        points.forEach((point, i) => {
+            if (i === 0) {
+                ctx2d.moveTo(point[0], point[1]);
+            } else {
+                ctx2d.lineTo(point[0], point[1]);
+            }
+        });
+        ctx2d.lineWidth = 3;
+        ctx2d.strokeStyle = 'blue';
+        ctx2d.stroke();
+        ctx2d.restore();
+    }
+    /**
+     * 创建缩略图
+     * @param points 点集
+     * @param center 
+     * @param size 
+     * @param isMatch 
+     * @returns 
+     */
+    static createGestureImg(points: Point[], center: Point, size: number, isMatch: boolean): HTMLCanvasElement {
+        const aabb = Utils.computeAABB(points);
+
+        const maxSize = Math.max(aabb.width, aabb.height);
+        const scale = Math.min(size / maxSize, 1) * 0.7;
+
+        const cx = size / 2;
+        const cy = size / 2;
+
+        const canvas = document.createElement('canvas');
+        const ctx2d = canvas.getContext('2d');
+        canvas.width = canvas.height = size;
+
+        if (isMatch) {
+            ctx2d.save();
+            ctx2d.rect(0, 0, size, size);
+            ctx2d.strokeStyle = 'red';
+            ctx2d.lineWidth = 3;
+            ctx2d.stroke();
+        } else {
+            ctx2d.save();
+            ctx2d.rect(0, 0, size, size);
+            ctx2d.strokeStyle = '#000';
+            ctx2d.stroke();
+        }
+
+        const newPoints: Point[] = points.map((point) => {
+            let [x, y] = point;
+            x -= center[0];
+            y -= center[1];
+            return [x * scale + cx, y * scale + cy];
+        });
+        Utils.drawPoly(ctx2d, newPoints);
+        ctx2d.restore();
+        return canvas;
     }
 }

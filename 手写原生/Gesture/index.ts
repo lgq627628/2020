@@ -30,8 +30,10 @@ export class App {
         this.ctx2d = canvas.getContext('2d');
         this.bounds = canvas.getBoundingClientRect();
         this.pool = Pool.getInstance();
+        this.id = this.pool.getGestureCount() + 1;
         this.clearRect();
         this.addEvent();
+        this.drawGestureLib();
     }
     async auto() {
         if (!this.metaPoints.length) return;
@@ -42,8 +44,6 @@ export class App {
         this.rotateGesture();
         await this.sleep();
         this.scaleGesture();
-        await this.sleep();
-        this.addGesture();
     }
     resample() {
         if (!this.metaPoints.length) return;
@@ -52,7 +52,7 @@ export class App {
     }
     translateGesture() {
         if (!this.metaPoints.length) return;
-        const { width, height } =  this.canvas;
+        const { width, height } = this.canvas;
         this.curGesture.translaste([width / 2, height / 2]);
         this.redraw();
     }
@@ -64,22 +64,32 @@ export class App {
     scaleGesture() {
         if (!this.metaPoints.length) return;
         this.curGesture.scale();
+        this.curGesture.vectorize();
         this.redraw();
     }
     addGesture() {
         this.clear();
-        this.curGesture.vectorize();
-        const canvas = this.curGesture.createGestureImg();
-        this.pool.addGesture(String(this.id++), this.curGesture.vector);
-        this.drawImg(canvas, (this.id - 1) * canvas.width + 10, 10);
+        this.pool.addGesture(String(this.id), this.curGesture);
+        this.pool.saveGesture();
+        this.drawGestureLib();
+        this.id++;
     }
-    deleteGesture() {}
-    compareGesture() {}
+    deleteGesture() {
+        this.pool.removeAllGesture();
+        this.clear();
+    }
+    compareGesture() {
+        const rs = this.pool.compare(this.curGesture);
+        console.log(rs ? `命中第${rs}个` : '暂无匹配');
+        this.clear();
+        this.drawGestureLib();
+    }
     clear() {
         this.clearRect();
     }
     redraw() {
         this.clearRect();
+        this.drawGestureLib();
         const { points, inputPoints, center } = this.curGesture;
         // 绘制原来线条
         this.drawPoly(inputPoints);
@@ -89,6 +99,12 @@ export class App {
         });
         // 绘制中心点与起始点连线
         if (center) this.drawCenter(center, points[0]);
+    }
+    drawGestureLib() {
+        Object.entries(this.pool.cache).forEach(([name, gesture]) => {
+            const canvas = Utils.createGestureImg(gesture.inputPoints, gesture.center, gesture.demoSize, gesture.isMatch);
+            this.drawImg(canvas, (Number(name) - 1) * canvas.width + 10, 10);
+        });
     }
     /**
      * 重新绘制形状
@@ -114,18 +130,7 @@ export class App {
         this.drawCircle(centerPoint[0], centerPoint[1], 10, 'green');
         this.drawLine(centerPoint[0], centerPoint[1], startPoint[0], startPoint[1], 'green', 3);
     }
-    // addGesture() {
-    //     this.cache[this.id] = Utils.vectorize(this.points);
-
-    //     localStorage.setItem('xx', JSON.stringify(this.cache));
-    //     this.clearRect();
-    //     const canvas = this.createGestureImg(this.points);
-    //     this.gestureLib[this.id] = canvas;
-    //     this.drawImg(canvas, (this.id - 1) * canvas.width + 10, 10);
-
-    //     this.id++;
-    // }
-    createGestureImg(points: Point[] = [], size = 100): HTMLCanvasElement {
+    createGestureImg(points: Point[], center: Point, size: number, isMatch): HTMLCanvasElement {
         const aabb = Utils.computeAABB(points);
 
         const maxSize = Math.max(aabb.width, aabb.height);
@@ -144,27 +149,18 @@ export class App {
         ctx2d.stroke();
 
         const newPoints: Point[] = points.map((point) => {
-            const [x, y] = point;
-            return [x * scale - cx, y * scale - cy];
+            let [x, y] = point;
+            x -= center[0];
+            y -= center[1];
+            return [x * scale + cx, y * scale + cy];
         });
-        this.drawPoly(newPoints);
+        Utils.drawPoly(ctx2d, newPoints);
         ctx2d.restore();
         return canvas;
     }
     drawImg(canvas: HTMLCanvasElement, x: number, y: number) {
         this.ctx2d.drawImage(canvas, x, y);
     }
-    // compareGesture() {
-    //     // const newPoints = this.transform(this.points);
-    //     const vectors = Utils.vectorize(this.points);
-    //     const cache: cache = JSON.parse(localStorage.getItem('xx'));
-    //     const error = 0.4;
-    //     Object.entries(cache).forEach(([id, v]) => {
-    //         const rs = Utils.cosDistance(v, vectors);
-    //         console.log(id, rs);
-    //         if (rs <= error) console.log('匹配成功', id);
-    //     });
-    // }
     /**
      * 监听画布事件
      */
@@ -175,6 +171,8 @@ export class App {
     }
     handleMousedown(e: MouseEvent) {
         this.clearRect();
+        this.pool.cancelMatch();
+        this.drawGestureLib();
         this.isMove = true;
         this.metaPoints = [];
         const startPoint = this.getCanvasPos(e);
@@ -185,6 +183,7 @@ export class App {
         const curPoint = this.getCanvasPos(e);
         // 超出边界
         if (curPoint[0] < 0 || curPoint[0] > this.canvas.width || curPoint[1] < 0 || curPoint[1] > this.canvas.height) {
+            if (this.isMove) this.curGesture = new Gesture(this.metaPoints);
             this.isMove = false;
             return;
         }
@@ -249,15 +248,12 @@ export class App {
     clearRect() {
         this.ctx2d.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.drawBg();
-        // Object.values(this.gestureLib).forEach((canvas, i) => {
-        //     this.drawImg(canvas, i * canvas.width + 10, 10);
-        // });
     }
     sleep() {
         return new Promise((resolve) => {
             setTimeout(() => {
                 resolve('');
             }, 500);
-        })
+        });
     }
 }

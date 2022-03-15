@@ -1,10 +1,10 @@
-import { Cache } from './Gesture';
+import { Cache, Gesture } from './Gesture';
 import { Utils } from './Util';
 
 export class Pool {
     static _instance = null;
     private localKey: string = 'local-gesture-cache';
-    private error = 0.5;
+    private error = 0.15;
 
     static getInstance() {
         if (!this._instance) {
@@ -16,27 +16,27 @@ export class Pool {
     public cache: Cache;
     constructor() {
         this.reset();
+        this.loadGesture();
     }
 
     reset() {
         this.cache = {};
     }
-    // createGesture(points: Point[]) {
-    //     const stroke = new Gesture();
-    //     stroke.init(points);
-    //     return stroke;
-    // }
-    addGesture(name: string, vector: number[]) {
-        this.cache[name] = vector;
+    addGesture(name: string, gesture: Gesture) {
+        this.cache[name] = gesture;
     }
     removeGesture(name: string) {
         delete this.cache[name];
     }
     removeAllGesture() {
         this.reset();
+        this.saveGesture();
     }
     getGesture(name: string) {
         return this.cache[name];
+    }
+    getGestureCount(): number {
+        return Object.keys(this.cache).length;
     }
     saveGesture() {
         if (this.cache) localStorage.setItem(this.localKey, JSON.stringify(this.cache));
@@ -45,16 +45,23 @@ export class Pool {
         const cacheStr = localStorage.getItem(this.localKey);
         if (cacheStr) this.cache = JSON.parse(cacheStr);
     }
-    compare(gesture: number[]) {
+    cancelMatch() {
+        Object.values(this.cache).forEach(gesture => gesture.isMatch = false)
+    }
+    compare(curGesture: Gesture) {
         let rs = '';
         let min = Infinity;
-        Object.entries(this.cache).forEach(([name, vector]) => {
-            const cos = Utils.calcCosDistance(gesture, vector);
+        Object.entries(this.cache).forEach(([name, gesture]) => {
+            const cos = Utils.calcCosDistance(curGesture.vector, gesture.vector);
             if (cos < min) {
                 min = cos;
                 rs = name;
             }
         });
-        if (rs && min <= this.error) return rs;
+        console.log('误差', min);
+        if (rs && min <= this.error) {
+            this.cache[rs].isMatch = true;
+            return rs;
+        }
     }
 }

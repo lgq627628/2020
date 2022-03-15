@@ -1,28 +1,19 @@
-import { Utils } from './Util';
+import { CanvasUtils, GeoUtils } from './Util';
 import { Pool } from './Pool';
 import { Point, Gesture } from './Gesture';
-
-interface Iconfig {
-    /** 采样数量 */
-    sampleCount: number;
-    /** 归一化单元格大小 */
-    unitSize: number;
-}
 export class App {
     public canvas: HTMLCanvasElement;
     public ctx2d: CanvasRenderingContext2D;
     public bounds: DOMRect;
     public isMove: boolean = false;
 
+    /** 原始数据点 */
     public metaPoints: Point[] = [];
-
-    public config: Iconfig = {
-        sampleCount: 32,
-        unitSize: 300,
-    };
+    /** 当前手势 */
     public curGesture: Gesture;
-
+    /** 手势库 */
     public pool: Pool;
+    /** 手势唯一标识 */
     public id: number = 0;
 
     constructor(canvas: HTMLCanvasElement) {
@@ -31,7 +22,7 @@ export class App {
         this.bounds = canvas.getBoundingClientRect();
         this.pool = Pool.getInstance();
         this.id = this.pool.getGestureCount() + 1;
-        this.clearRect();
+        this.clear();
         this.addEvent();
         this.drawGestureLib();
     }
@@ -88,78 +79,24 @@ export class App {
         this.clearRect();
     }
     redraw() {
-        this.clearRect();
+        this.clear();
         this.drawGestureLib();
         const { points, inputPoints, center } = this.curGesture;
         // 绘制原来线条
-        this.drawPoly(inputPoints);
+        CanvasUtils.drawPoly(this.ctx2d, inputPoints);
         // 绘制采样点
         points.forEach((point) => {
-            this.drawCircle(point[0], point[1], 6, '#000');
+            CanvasUtils.drawCircle(this.ctx2d, point[0], point[1], 6, '#000');
         });
         // 绘制中心点与起始点连线
         if (center) this.drawCenter(center, points[0]);
     }
+    /** 绘制手势库，也就是手势缩略图 */
     drawGestureLib() {
         Object.entries(this.pool.cache).forEach(([name, gesture]) => {
-            const canvas = Utils.createGestureImg(gesture.inputPoints, gesture.center, gesture.demoSize, gesture.isMatch);
-            this.drawImg(canvas, (Number(name) - 1) * canvas.width + 10, 10);
+            const canvas = CanvasUtils.createGestureImg(gesture.inputPoints, gesture.center, Gesture.demoSize, gesture.isMatch);
+            CanvasUtils.drawCanvasImg(this.ctx2d, canvas, (Number(name) - 1) * canvas.width + 10, 10);
         });
-    }
-    /**
-     * 重新绘制形状
-     * @param points 坐标点集
-     */
-    drawPoly(points: Point[]) {
-        const { ctx2d } = this;
-        ctx2d.save();
-        ctx2d.beginPath();
-        points.forEach((point, i) => {
-            if (i === 0) {
-                ctx2d.moveTo(point[0], point[1]);
-            } else {
-                ctx2d.lineTo(point[0], point[1]);
-            }
-        });
-        ctx2d.lineWidth = 3;
-        ctx2d.strokeStyle = 'blue';
-        ctx2d.stroke();
-        ctx2d.restore();
-    }
-    drawCenter(centerPoint: Point, startPoint: Point) {
-        this.drawCircle(centerPoint[0], centerPoint[1], 10, 'green');
-        this.drawLine(centerPoint[0], centerPoint[1], startPoint[0], startPoint[1], 'green', 3);
-    }
-    createGestureImg(points: Point[], center: Point, size: number, isMatch): HTMLCanvasElement {
-        const aabb = Utils.computeAABB(points);
-
-        const maxSize = Math.max(aabb.width, aabb.height);
-        const scale = Math.min(size / maxSize, 1) * 0.7;
-
-        const cx = size / 2;
-        const cy = size / 2;
-
-        const canvas = document.createElement('canvas');
-        const ctx2d = canvas.getContext('2d');
-        canvas.width = canvas.height = size;
-
-        ctx2d.save();
-        ctx2d.rect(0, 0, size, size);
-        ctx2d.strokeStyle = '#000';
-        ctx2d.stroke();
-
-        const newPoints: Point[] = points.map((point) => {
-            let [x, y] = point;
-            x -= center[0];
-            y -= center[1];
-            return [x * scale + cx, y * scale + cy];
-        });
-        Utils.drawPoly(ctx2d, newPoints);
-        ctx2d.restore();
-        return canvas;
-    }
-    drawImg(canvas: HTMLCanvasElement, x: number, y: number) {
-        this.ctx2d.drawImage(canvas, x, y);
     }
     /**
      * 监听画布事件
@@ -170,7 +107,7 @@ export class App {
         document.addEventListener('mouseup', (e) => this.handleMouseup(e));
     }
     handleMousedown(e: MouseEvent) {
-        this.clearRect();
+        this.clear();
         this.pool.cancelMatch();
         this.drawGestureLib();
         this.isMove = true;
@@ -183,66 +120,53 @@ export class App {
         const curPoint = this.getCanvasPos(e);
         // 超出边界
         if (curPoint[0] < 0 || curPoint[0] > this.canvas.width || curPoint[1] < 0 || curPoint[1] > this.canvas.height) {
-            if (this.isMove) this.curGesture = new Gesture(this.metaPoints);
-            this.isMove = false;
+            this.afterMouseEvent();
             return;
         }
         const lastPoint = this.metaPoints[this.metaPoints.length - 1];
-        this.drawLine(lastPoint[0], lastPoint[1], curPoint[0], curPoint[1], 'blue', 2);
-        this.drawCircle(curPoint[0], curPoint[1], 5);
+        CanvasUtils.drawLine(this.ctx2d, lastPoint[0], lastPoint[1], curPoint[0], curPoint[1], 'blue', 2);
+        CanvasUtils.drawCircle(this.ctx2d, curPoint[0], curPoint[1], 5);
         this.metaPoints.push(curPoint);
     }
     handleMouseup(e: MouseEvent) {
+        this.afterMouseEvent()
+    }
+    afterMouseEvent() {
         if (this.isMove) this.curGesture = new Gesture(this.metaPoints);
         this.isMove = false;
     }
     getCanvasPos(e: MouseEvent): Point {
         return [e.clientX - this.bounds.left, e.clientY - this.bounds.top];
     }
+    /** 绘制手势中心点与起始点的连线 */
+    drawCenter(centerPoint: Point, startPoint: Point) {
+        CanvasUtils.drawCircle(this.ctx2d, centerPoint[0], centerPoint[1], 10, 'green');
+        CanvasUtils.drawLine(this.ctx2d, centerPoint[0], centerPoint[1], startPoint[0], startPoint[1], 'green', 3);
+    }
     /**
      * 绘制辅助线
      */
     drawBg() {
         const { width, height } = this.canvas;
-        const { ctx2d, config } = this;
+        const { ctx2d } = this;
+        const unitSize = Gesture.unitSize
 
-        this.drawLine(0, height / 2, width, height / 2);
-        this.drawLine(width / 2, 0, width / 2, height);
+        CanvasUtils.drawLine(this.ctx2d, 0, height / 2, width, height / 2);
+        CanvasUtils.drawLine(this.ctx2d, width / 2, 0, width / 2, height);
 
         if (width > height) {
-            this.drawLine(width / 2 + height / 2, 0, width / 2 - height / 2, height);
-            this.drawLine(width / 2 - height / 2, 0, width / 2 + height / 2, height);
+            CanvasUtils.drawLine(this.ctx2d, width / 2 + height / 2, 0, width / 2 - height / 2, height);
+            CanvasUtils.drawLine(this.ctx2d, width / 2 - height / 2, 0, width / 2 + height / 2, height);
         } else {
-            this.drawLine(0, height / 2 - width / 2, width, height / 2 + width / 2);
-            this.drawLine(0, height / 2 + width / 2, width, height / 2 - width / 2);
+            CanvasUtils.drawLine(this.ctx2d, 0, height / 2 - width / 2, width, height / 2 + width / 2);
+            CanvasUtils.drawLine(this.ctx2d, 0, height / 2 + width / 2, width, height / 2 - width / 2);
         }
 
         ctx2d.save();
         ctx2d.beginPath();
         ctx2d.setLineDash([8, 8]);
-        ctx2d.rect(width / 2 - config.unitSize / 2, height / 2 - config.unitSize / 2, config.unitSize, config.unitSize);
+        ctx2d.rect(width / 2 - unitSize / 2, height / 2 - unitSize / 2, unitSize, unitSize);
         ctx2d.stroke();
-        ctx2d.restore();
-    }
-    drawLine(x1: number, y1: number, x2: number, y2: number, color = '#000', lineWidth = 1) {
-        const { ctx2d } = this;
-        ctx2d.save();
-        ctx2d.beginPath();
-        ctx2d.moveTo(x1, y1);
-        ctx2d.lineTo(x2, y2);
-        ctx2d.lineWidth = lineWidth;
-        ctx2d.strokeStyle = color;
-        ctx2d.stroke();
-        ctx2d.restore();
-    }
-    drawCircle(x: number, y: number, r: number, color = 'red') {
-        const { ctx2d } = this;
-        ctx2d.save();
-        ctx2d.beginPath();
-        ctx2d.fillStyle = color;
-        ctx2d.arc(x, y, r, 0, 2 * Math.PI);
-        ctx2d.fill();
-        ctx2d.closePath();
         ctx2d.restore();
     }
     clearRect() {

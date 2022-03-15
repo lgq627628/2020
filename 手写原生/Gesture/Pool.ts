@@ -1,5 +1,5 @@
 import { Cache, Gesture } from './Gesture';
-import { Utils } from './Util';
+import { GeoUtils } from './Util';
 
 export class Pool {
     static _instance = null;
@@ -52,7 +52,7 @@ export class Pool {
         let rs = '';
         let min = Infinity;
         Object.entries(this.cache).forEach(([name, gesture]) => {
-            const cos = Utils.calcCosDistance(curGesture.vector, gesture.vector);
+            const cos = GeoUtils.calcCosDistance(curGesture.vector, gesture.vector);
             if (cos < min) {
                 min = cos;
                 rs = name;

@@ -1,16 +1,10 @@
 import { Point, Bounds } from './Gesture';
-export class Utils {
-    static translate(points: Point[], dx: number, dy: number, outputPoints?: Point[]) {
-        if (outputPoints) {
-            points.forEach((p, i) => {
-                outputPoints[i] = [p[0] + dx, p[1] + dy];
-            });
-        } else {
-            points.forEach((p) => {
-                p[0] += dx;
-                p[1] += dy;
-            });
-        }
+export class GeoUtils {
+    static translate(points: Point[], dx: number, dy: number) {
+        points.forEach((p) => {
+            p[0] += dx;
+            p[1] += dy;
+        });
     }
     static rotate(points: Point[], radian: number, center: Point) {
         const sin = Math.sin(radian);
@@ -59,7 +53,7 @@ export class Utils {
         return [x, y];
     }
     static resample(inputPoints: Point[], sampleCount: number): Point[] {
-        const len = Utils.getLength(inputPoints);
+        const len = GeoUtils.getLength(inputPoints);
         const unit = len / (sampleCount - 1);
         const outputPoints: Point[] = [[...inputPoints[0]]];
 
@@ -70,7 +64,7 @@ export class Utils {
             const curPoint = inputPoints[i];
             let dx = curPoint[0] - prevPoint[0];
             let dy = curPoint[1] - prevPoint[1];
-            let tempLen = Utils.getLength([prevPoint, curPoint]);
+            let tempLen = GeoUtils.getLength([prevPoint, curPoint]);
 
             while (curLen + tempLen >= unit) {
                 const ds = unit - curLen;
@@ -82,7 +76,7 @@ export class Utils {
                 prevPoint = newPoint;
                 dx = curPoint[0] - prevPoint[0];
                 dy = curPoint[1] - prevPoint[1];
-                tempLen = Utils.getLength([prevPoint, curPoint]);
+                tempLen = GeoUtils.getLength([prevPoint, curPoint]);
             }
             prevPoint = curPoint;
             curLen += tempLen;
@@ -185,12 +179,33 @@ export class Utils {
         array[1][1] /= count;
         return array;
     }
+}
 
+export class CanvasUtils {
+    static drawLine(ctx2d: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, color = '#000', lineWidth = 1) {
+        ctx2d.save();
+        ctx2d.beginPath();
+        ctx2d.moveTo(x1, y1);
+        ctx2d.lineTo(x2, y2);
+        ctx2d.lineWidth = lineWidth;
+        ctx2d.strokeStyle = color;
+        ctx2d.stroke();
+        ctx2d.restore();
+    }
+    static drawCircle(ctx2d: CanvasRenderingContext2D, x: number, y: number, r: number, color = 'red') {
+        ctx2d.save();
+        ctx2d.beginPath();
+        ctx2d.fillStyle = color;
+        ctx2d.arc(x, y, r, 0, 2 * Math.PI);
+        ctx2d.fill();
+        ctx2d.closePath();
+        ctx2d.restore();
+    }
     /**
-     * 连接多个点
+     * 连接多个点成一条线
      * @param points 坐标点集
      */
-    static drawPoly(ctx2d: CanvasRenderingContext2D, points: Point[]) {
+     static drawPoly(ctx2d: CanvasRenderingContext2D, points: Point[]) {
         ctx2d.save();
         ctx2d.beginPath();
         points.forEach((point, i) => {
@@ -205,16 +220,19 @@ export class Utils {
         ctx2d.stroke();
         ctx2d.restore();
     }
+    static drawCanvasImg(ctx2d: CanvasRenderingContext2D, canvas: HTMLCanvasElement, x: number, y: number) {
+        ctx2d.drawImage(canvas, x, y);
+    }
     /**
      * 创建缩略图
      * @param points 点集
-     * @param center 
-     * @param size 
-     * @param isMatch 
+     * @param center 原画布中心
+     * @param size 缩略图画布中心
+     * @param isMatch 图形是否匹配
      * @returns 
      */
     static createGestureImg(points: Point[], center: Point, size: number, isMatch: boolean): HTMLCanvasElement {
-        const aabb = Utils.computeAABB(points);
+        const aabb = GeoUtils.computeAABB(points);
 
         const maxSize = Math.max(aabb.width, aabb.height);
         const scale = Math.min(size / maxSize, 1) * 0.7;
@@ -226,18 +244,16 @@ export class Utils {
         const ctx2d = canvas.getContext('2d');
         canvas.width = canvas.height = size;
 
+        // 绘制缩略图边框
+        ctx2d.save();
+        ctx2d.rect(0, 0, size, size);
         if (isMatch) {
-            ctx2d.save();
-            ctx2d.rect(0, 0, size, size);
             ctx2d.strokeStyle = 'red';
-            ctx2d.lineWidth = 3;
-            ctx2d.stroke();
+            ctx2d.lineWidth = 15;
         } else {
-            ctx2d.save();
-            ctx2d.rect(0, 0, size, size);
             ctx2d.strokeStyle = '#000';
-            ctx2d.stroke();
         }
+        ctx2d.stroke();
 
         const newPoints: Point[] = points.map((point) => {
             let [x, y] = point;
@@ -245,7 +261,7 @@ export class Utils {
             y -= center[1];
             return [x * scale + cx, y * scale + cy];
         });
-        Utils.drawPoly(ctx2d, newPoints);
+        CanvasUtils.drawPoly(ctx2d, newPoints);
         ctx2d.restore();
         return canvas;
     }

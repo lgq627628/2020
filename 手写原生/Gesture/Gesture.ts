@@ -47,23 +47,21 @@ export class Gesture {
         this.points = GeoUtils.resample(inputPoints, this.sampleCount);
         this.center = GeoUtils.calcCenter(this.points);
     }
-    translaste(target: Point) {
-        const dx = target[0] - this.center[0];
-        const dy = target[1] - this.center[1];
-        GeoUtils.translate(this.inputPoints, dx, dy);
-        GeoUtils.translate(this.points, dx, dy);
-        this.center = [...target];
+    translaste() {
+        const [dx, dy] = this.center;
+        GeoUtils.translate(this.inputPoints, -dx, -dy);
+        GeoUtils.translate(this.points, -dx, -dy);
     }
     rotate() {
-        const radian = this.computeRadianToSubline(this.center, this.points[0], Gesture.sublineCount);
-        GeoUtils.rotate(this.inputPoints, radian, this.center);
-        GeoUtils.rotate(this.points, radian, this.center);
+        const radian = this.computeRadianToSubline([0, 0], this.points[0], Gesture.sublineCount);
+        GeoUtils.rotate(this.inputPoints, -radian);
+        GeoUtils.rotate(this.points, -radian);
     }
     scale() {
         this.aabb = GeoUtils.computeAABB(this.points);
         const [scaleX, scaleY] = GeoUtils.computeScale(this.aabb, Gesture.unitSize, Gesture.unitSize);
-        GeoUtils.scale(this.inputPoints, scaleX, scaleY, this.center);
-        GeoUtils.scale(this.points, scaleX, scaleY, this.center);
+        GeoUtils.scale(this.inputPoints, scaleX, scaleY);
+        GeoUtils.scale(this.points, scaleX, scaleY);
     }
     vectorize() {
         this.vector = GeoUtils.vectorize(this.points, this.sampleCount);
@@ -84,6 +82,7 @@ export class Gesture {
 
         const unitRadian = TWO_PI / sublineCount;
         const targetRadian = Math.round(radian / unitRadian) * unitRadian;
-        return targetRadian - radian;
+        radian -= targetRadian;
+        return radian;
     }
 }

@@ -6,7 +6,7 @@ export class GeoUtils {
             p[1] += dy;
         });
     }
-    static rotate(points: Point[], radian: number, center: Point) {
+    static rotate(points: Point[], radian: number, center: Point = [0, 0]) {
         const sin = Math.sin(radian);
         const cos = Math.cos(radian);
         points.forEach((p) => {
@@ -17,13 +17,13 @@ export class GeoUtils {
             p[1] = sin * x + cos * y + center[1];
         });
     }
-    static scale(points: Point[], scaleX: number, scaleY: number, center: Point) {
+    static scale(points: Point[], scaleX: number, scaleY: number, center: Point = [0, 0]) {
         points.forEach((p) => {
             let [x, y] = p;
             x -= center[0];
             y -= center[1];
             p[0] = x * scaleX + center[0];
-            p[1] = y *scaleY + center[1];
+            p[1] = y * scaleY + center[1];
         });
     }
     static getLength(points: Point[]): number {
@@ -88,15 +88,15 @@ export class GeoUtils {
     }
     static vectorize(points: Point[], sampleCount: number): number[] {
         let vector: number[] = [];
-        let sum = 0;
+        let len = 0;
         for (let i = 0; i < sampleCount; i++) {
-            const [x, y] = points[i]
-            vector.push(x, y)
-            sum += (x * x + y * y)
+            const [x, y] = points[i];
+            vector.push(x, y);
+            len += x * x + y * y;
         }
-        sum = Math.sqrt(sum);
+        len = Math.sqrt(len);
         for (let i = 0; i < 2 * sampleCount; i++) {
-            vector[i] /= sum
+            vector[i] /= len;
         }
         return vector;
     }
@@ -130,7 +130,7 @@ export class GeoUtils {
      * 计算余弦相似度
      * @param vector1 向量一
      * @param vector2 向量二
-     * @returns 
+     * @returns
      */
     static calcCosDistance(vector1: number[], vector2: number[]): number {
         let sum = 0;
@@ -138,13 +138,15 @@ export class GeoUtils {
             const v2 = vector2[i];
             sum += v1 * v2;
         });
-        return Math.acos(sum);
+        // console.log('相似度', sum); // -1~1
+        return sum;
+        // return Math.acos(sum); // 也可用 acos，则判断就变成 ≤ 0.2
     }
     /**
      * 计算欧氏距离
      * @param points1 点集1
      * @param points2 点集2
-     * @returns 
+     * @returns
      */
     static calcSquareDistance(points1: Point[], points2: Point[]) {
         let sum = 0;
@@ -182,7 +184,7 @@ export class GeoUtils {
 }
 
 export class CanvasUtils {
-    static drawLine(ctx2d: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, color = '#000', lineWidth = 1) {
+    static drawLine(ctx2d: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, color = '#aaa', lineWidth = 1) {
         ctx2d.save();
         ctx2d.beginPath();
         ctx2d.moveTo(x1, y1);
@@ -205,7 +207,7 @@ export class CanvasUtils {
      * 连接多个点成一条线
      * @param points 坐标点集
      */
-     static drawPoly(ctx2d: CanvasRenderingContext2D, points: Point[]) {
+    static drawPoly(ctx2d: CanvasRenderingContext2D, points: Point[]) {
         ctx2d.save();
         ctx2d.beginPath();
         points.forEach((point, i) => {
@@ -215,7 +217,7 @@ export class CanvasUtils {
                 ctx2d.lineTo(point[0], point[1]);
             }
         });
-        ctx2d.lineWidth = 3;
+        ctx2d.lineWidth = 4;
         ctx2d.strokeStyle = 'blue';
         ctx2d.stroke();
         ctx2d.restore();
@@ -229,9 +231,9 @@ export class CanvasUtils {
      * @param center 原画布中心
      * @param size 缩略图画布中心
      * @param isMatch 图形是否匹配
-     * @returns 
+     * @returns
      */
-    static createGestureImg(points: Point[], center: Point, size: number, isMatch: boolean): HTMLCanvasElement {
+    static createGestureImg(points: Point[], size: number, isMatch: boolean): HTMLCanvasElement {
         const aabb = GeoUtils.computeAABB(points);
 
         const maxSize = Math.max(aabb.width, aabb.height);
@@ -245,8 +247,9 @@ export class CanvasUtils {
         canvas.width = canvas.height = size;
 
         // 绘制缩略图边框
-        ctx2d.save();
         ctx2d.rect(0, 0, size, size);
+        ctx2d.save();
+        ctx2d.translate(cx, cy);
         if (isMatch) {
             ctx2d.strokeStyle = 'red';
             ctx2d.lineWidth = 15;
@@ -255,11 +258,8 @@ export class CanvasUtils {
         }
         ctx2d.stroke();
 
-        const newPoints: Point[] = points.map((point) => {
-            let [x, y] = point;
-            x -= center[0];
-            y -= center[1];
-            return [x * scale + cx, y * scale + cy];
+        const newPoints: Point[] = points.map((p) => {
+            return [p[0] * scale, p[1] * scale];
         });
         CanvasUtils.drawPoly(ctx2d, newPoints);
         ctx2d.restore();

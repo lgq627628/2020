@@ -1,4 +1,4 @@
-import { CanvasUtils, GeoUtils } from './Util';
+import { CanvasUtils } from './Util';
 import { Pool } from './Pool';
 import { Point, Gesture } from './Gesture';
 export class App {
@@ -15,6 +15,8 @@ export class App {
     public pool: Pool;
     /** 手势唯一标识 */
     public id: number = 0;
+    /** 当前手势是否平移过，如果平移过，需要平移坐标系到画布中心 */
+    public hasTranslate: boolean = false;
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
@@ -43,8 +45,8 @@ export class App {
     }
     translateGesture() {
         if (!this.metaPoints.length) return;
-        const { width, height } = this.canvas;
-        this.curGesture.translaste([width / 2, height / 2]);
+        this.curGesture.translaste();
+        this.hasTranslate = true;
         this.redraw();
     }
     rotateGesture() {
@@ -81,20 +83,29 @@ export class App {
     redraw() {
         this.clear();
         this.drawGestureLib();
-        const { points, inputPoints, center } = this.curGesture;
+        this.ctx2d.save();
+        if (this.hasTranslate) { // 当前手势如果平移过需要变换坐标系
+            this.ctx2d.translate(this.canvas.width / 2, this.canvas.height / 2);
+        }
+        const { points, inputPoints } = this.curGesture;
         // 绘制原来线条
         CanvasUtils.drawPoly(this.ctx2d, inputPoints);
         // 绘制采样点
         points.forEach((point) => {
-            CanvasUtils.drawCircle(this.ctx2d, point[0], point[1], 6, '#000');
+            CanvasUtils.drawCircle(this.ctx2d, point[0], point[1], 5, 'red');
         });
         // 绘制中心点与起始点连线
-        if (center) this.drawCenter(center, points[0]);
+        if (this.hasTranslate) {
+            this.drawCenter([0, 0], points[0]);
+        } else if (this.curGesture.center) {
+            this.drawCenter(this.curGesture.center, points[0]);
+        }
+        this.ctx2d.restore();
     }
     /** 绘制手势库，也就是手势缩略图 */
     drawGestureLib() {
         Object.entries(this.pool.cache).forEach(([name, gesture]) => {
-            const canvas = CanvasUtils.createGestureImg(gesture.inputPoints, gesture.center, Gesture.demoSize, gesture.isMatch);
+            const canvas = CanvasUtils.createGestureImg(gesture.points, Gesture.demoSize, gesture.isMatch);
             CanvasUtils.drawCanvasImg(this.ctx2d, canvas, (Number(name) - 1) * canvas.width + 10, 10);
         });
     }
@@ -107,11 +118,12 @@ export class App {
         document.addEventListener('mouseup', (e) => this.handleMouseup(e));
     }
     handleMousedown(e: MouseEvent) {
-        this.clear();
-        this.pool.cancelMatch();
-        this.drawGestureLib();
+        this.hasTranslate = false;
         this.isMove = true;
         this.metaPoints = [];
+        this.pool.cancelMatch();
+        this.clear();
+        this.drawGestureLib();
         const startPoint = this.getCanvasPos(e);
         this.metaPoints.push(startPoint);
     }
@@ -124,12 +136,13 @@ export class App {
             return;
         }
         const lastPoint = this.metaPoints[this.metaPoints.length - 1];
-        CanvasUtils.drawLine(this.ctx2d, lastPoint[0], lastPoint[1], curPoint[0], curPoint[1], 'blue', 2);
+        CanvasUtils.drawLine(this.ctx2d, lastPoint[0], lastPoint[1], curPoint[0], curPoint[1], 'blue', 3);
         CanvasUtils.drawCircle(this.ctx2d, curPoint[0], curPoint[1], 5);
         this.metaPoints.push(curPoint);
+        // 如果觉得原始点的数量太多，可以节流，或者两点之间距离超过摸个阈值再添加
     }
     handleMouseup(e: MouseEvent) {
-        this.afterMouseEvent()
+        this.afterMouseEvent();
     }
     afterMouseEvent() {
         if (this.isMove) this.curGesture = new Gesture(this.metaPoints);
@@ -149,7 +162,7 @@ export class App {
     drawBg() {
         const { width, height } = this.canvas;
         const { ctx2d } = this;
-        const unitSize = Gesture.unitSize
+        const unitSize = Gesture.unitSize;
 
         CanvasUtils.drawLine(this.ctx2d, 0, height / 2, width, height / 2);
         CanvasUtils.drawLine(this.ctx2d, width / 2, 0, width / 2, height);
@@ -162,6 +175,7 @@ export class App {
             CanvasUtils.drawLine(this.ctx2d, 0, height / 2 + width / 2, width, height / 2 - width / 2);
         }
 
+        // 绘制中间的虚线矩形框
         ctx2d.save();
         ctx2d.beginPath();
         ctx2d.setLineDash([8, 8]);

@@ -2,9 +2,12 @@ import { Cache, Gesture } from './Gesture';
 import { GeoUtils } from './Util';
 
 export class Pool {
+    /** 资源池，单例模式 */
     static _instance = null;
+    /** 本地保存的 key 值 */
     private localKey: string = 'local-gesture-cache';
-    private error = 0.15;
+    /** 准确度 */
+    private accuracy = 0.85;
 
     static getInstance() {
         if (!this._instance) {
@@ -46,20 +49,21 @@ export class Pool {
         if (cacheStr) this.cache = JSON.parse(cacheStr);
     }
     cancelMatch() {
-        Object.values(this.cache).forEach(gesture => gesture.isMatch = false)
+        Object.values(this.cache).forEach((gesture) => (gesture.isMatch = false));
     }
+    /** 手势比较 */
     compare(curGesture: Gesture) {
         let rs = '';
-        let min = Infinity;
+        let max = -Infinity;
         Object.entries(this.cache).forEach(([name, gesture]) => {
             const cos = GeoUtils.calcCosDistance(curGesture.vector, gesture.vector);
-            if (cos < min) {
-                min = cos;
+            if (cos > max) {
+                max = cos;
                 rs = name;
             }
         });
-        console.log('误差', min);
-        if (rs && min <= this.error) {
+        // 当手势存在并且精度值高于某个阈值才算匹配
+        if (rs && max >= this.accuracy) {
             this.cache[rs].isMatch = true;
             return rs;
         }

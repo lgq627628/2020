@@ -237,6 +237,7 @@ export class CanvasUtils {
         const aabb = GeoUtils.computeAABB(points);
 
         const maxSize = Math.max(aabb.width, aabb.height);
+        // 这个 scale 简单理解就是把缩略图里面的手势再缩小一点
         const scale = Math.min(size / maxSize, 1) * 0.7;
 
         const cx = size / 2;

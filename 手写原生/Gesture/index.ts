@@ -69,6 +69,7 @@ export class App {
     }
     deleteGesture() {
         this.pool.removeAllGesture();
+        this.id = 0;
         this.clear();
     }
     compareGesture() {
@@ -84,7 +85,8 @@ export class App {
         this.clear();
         this.drawGestureLib();
         this.ctx2d.save();
-        if (this.hasTranslate) { // 当前手势如果平移过需要变换坐标系
+        if (this.hasTranslate) {
+            // 当前手势如果平移过需要变换坐标系
             this.ctx2d.translate(this.canvas.width / 2, this.canvas.height / 2);
         }
         const { points, inputPoints } = this.curGesture;
@@ -116,6 +118,9 @@ export class App {
         this.canvas.addEventListener('mousedown', (e) => this.handleMousedown(e));
         document.addEventListener('mousemove', (e) => this.handleMousemove(e));
         document.addEventListener('mouseup', (e) => this.handleMouseup(e));
+        window.addEventListener('resize', (e) => {
+            this.bounds = this.canvas.getBoundingClientRect();
+        });
     }
     handleMousedown(e: MouseEvent) {
         this.hasTranslate = false;

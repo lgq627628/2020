@@ -28,3 +28,21 @@ function binary(num) {
   }
   return rs.reverse().join('');
 }
+
+
+// dom 树的序列化和反序列化、序列化 dom、把字符串转为 dom 对象
+// dom str to dom obj
+function domstr2obj(domString) {
+  var oParser = new DOMParser();
+  var oDOM = oParser.parseFromString(domString, "application/xml");
+  return oDOM.documentElement.nodeName == "parsererror" ? null : oDOM.documentElement;
+}
+var sMyString = '<a id="a"><b id="b">hey!</b></a>';
+domstr2obj(sMyString);
+
+function domobj2str(domObject) {
+  var oSerializer = new XMLSerializer();
+  var sXML = oSerializer.serializeToString(domObject);
+  return sXML;
+  // 或者更简单点可以用 var docHTML = document.documentElement.innerHTML; || var docHTML = document.documentElement.outerHTML;
+}

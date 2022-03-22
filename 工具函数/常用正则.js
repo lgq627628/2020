@@ -1,3 +1,4 @@
+// 常用正则表达式，不错的网站 https://ihateregex.io/
 // 以下是一些正则实操
 
 // reg.test(str) // 返回布尔值

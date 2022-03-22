@@ -21,5 +21,6 @@ selenium-debug.log
 *.sln
 *.cache
 
+.vite
 .parcel-cache
 package-lock.json

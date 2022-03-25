@@ -1,16 +1,15 @@
-如何做canvas的dpr适配？
-假设我们需要在css上展示的大小是400*260，我们在js中可以这么写
+## canvas 能做什么
+- 画线段、矩形、圆、圆弧、椭圆、贝塞尔曲线、文本，其余图形要么是多边形（只能由多条线段来画）要么贴图，这是一切绘制的基础
+- canvas 没有状态，相当于 n 幅画快速切换，所以绘制的图形得自己保存起来，任何点选事件都得遍历我们保存的数据，通过各种计算判断选择了哪一个对象
+- canvas 操作的是图形吗？不是，操作的是数据和坐标系
 
-var canvas = document.getElementById("timePie")
-canvas.height = 260 * dpr
-canvas.width = 400 * dpr
-css中这么写
-
-#timePie{
-  height: 260px;
-  width: 400px;
-}
-其中canvas.height,canvas.width就好比需要加载图片的高和宽，而css中的height,width则是实际显示图片的高和宽。这样的好处自然就显而易见了，canvas的大小随着dpr变化，然而最后呈现出来的图片的css像素大小是不变的。这样就避免了canvas在高dpr屏幕下的模糊不清。
+## canvas 中的技巧
+- 坐标系变化（简化了计算又方便了绘制）
+- 向量化（计算方便）
+- 裁剪
+- 局部渲染
+- 离屏 canvas
+- 像素计算（web worker、gpu.js、webassembly）
 
 ## 贝塞尔曲线
 讲的的不错
@@ -74,7 +73,7 @@ https://app.diagrams.net/
 https://excalidraw.com/?from=thosefree.com
 
 ## 以图搜图
-
+均值哈希（像素域） || 感知哈希（频率域） || 颜色分布直方图 || 灰度二值化（RGB权重不同）
 ### 方法一（适合缩略图搜原图）：
 1. 第一步，缩小尺寸。
 将图片缩小到8x8的尺寸，总共64个像素。这一步的作用是去除图片的细节，只保留结构、明暗等基本信息，摒弃不同尺寸、比例带来的图片差异。
@@ -98,7 +97,7 @@ https://excalidraw.com/?from=thosefree.com
 ### 参考文章
 - https://www.ruanyifeng.com/blog/2011/07/principle_of_similar_image_search.html
 - https://www.ruanyifeng.com/blog/2013/03/similar_image_search_part_ii.html
-
+- https://juejin.cn/post/6844904018830065671#heading-1
 
 
 ## 子图布局的实现方式、力导向图、紧凑树布局

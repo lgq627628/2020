@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>物理动画</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+            }
+            #canvas {
+                display: block;
+                margin: 80px auto;
+                width: 400px;
+                height: 400px;
+                border: 1px solid;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="canvas" width="400" height="400"></canvas>
+        <!-- 物理动画 -->
+        <script type="module" src="./index.ts"></script>
+        <!-- 分形图 -->
+        <!-- <script type="module" src="./fenxing.ts"></script> -->
+
+        <script src="./node_modules/stats.js"></script>
+        <script>
+            var stats = new Stats();
+            stats.showPanel(1); // 0: fps, 1: ms, 2: mb, 3+: custom
+            document.body.appendChild(stats.dom);
+
+            function animate() {
+                stats.begin();
+                // monitored code goes here
+                stats.end();
+                requestAnimationFrame(animate);
+            }
+
+            requestAnimationFrame(animate);
+        </script>
+    </body>
+</html>

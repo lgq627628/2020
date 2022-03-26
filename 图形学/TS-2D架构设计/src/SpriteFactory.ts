@@ -6,6 +6,7 @@ import { Ellipse } from './Shape/Ellipse';
 import { Grid } from './Shape/Grid';
 import { Line } from './Shape/Line';
 import { Rect } from './Shape/Rect';
+import { Bone } from './Shape/Bone';
 import { Scale9Data, Scale9Grid } from './Shape/Scale9Grid';
 import { Sprite2D } from './Sprite2D';
 
@@ -26,6 +27,10 @@ export class SpriteFactory {
 	//  通过线段长度和[ 0 , 1 ] 之间的 t 获得一条与 x 轴方向平行的、原点在该线段任意一点的直线
 	public static createXLine(len: number = 10, t: number = 0): IShape {
 		return new Line(len, t);
+	}
+
+	public static createGrid(w: number, h: number, xStep: number = 10, yStep: number = 10): IShape {
+		return new Grid(w, h, xStep, yStep);
 	}
 
 	public static create9Grid(w: number, h: number, xStep: number = 10, yStep: number = 10): IShape {
@@ -53,5 +58,9 @@ export class SpriteFactory {
 
 	public static createScale9Grid(data: Scale9Data, width: number, height: number, u: number = 0, v: number = 0): IShape {
 		return new Scale9Grid(data, width, height, u, v);
+	}
+
+	public static createBone(len: number = 10, t: number = 0): IShape {
+		return new Bone(len, t);
 	}
 }

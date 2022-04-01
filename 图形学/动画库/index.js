@@ -7,6 +7,7 @@ class Animate {
         this.endValue = opts.endValue;
         this.duration = opts.duration || 1000;
         this.timingFn = opts.timingFn || 'linear';
+        this.timeWrap = opts.timeWrap || (() => {}); // 时间扭曲函数
         this.startTime = '';
         this.delay = '';
         this.action = '';

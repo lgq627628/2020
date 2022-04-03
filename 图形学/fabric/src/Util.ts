@@ -1,8 +1,10 @@
 import { Point } from './Point';
 import { AnimateOptions, Offset } from './interface';
-import { PathGroup, Group } from './Path';
+import { Group } from './Path';
+import { PathGroup } from './PathGroup';
 import { Observable } from './Observable';
 import { Ease } from './Ease';
+import { fabric } from '.';
 
 const PiBy180 = Math.PI / 180;
 const emptyFn = () => {};
@@ -141,7 +143,7 @@ export class Util {
     /**
      * 数组的最小值
      */
-    static min(array, byProperty = '') {
+    static min(array: any[], byProperty = '') {
         if (!array || array.length === 0) return undefined;
 
         let i = array.length - 1,
@@ -165,7 +167,7 @@ export class Util {
     /**
      * 数组的最大值
      */
-    static max(array, byProperty = '') {
+    static max(array: any[], byProperty = '') {
         if (!array || array.length === 0) return undefined;
 
         let i = array.length - 1,
@@ -184,6 +186,9 @@ export class Util {
             }
         }
         return result;
+    }
+    static toArray(arrayLike) {
+        return [].slice.call(arrayLike, 0);
     }
     static getRandomInt(min: number, max: number): number {
         return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -446,7 +451,7 @@ export class Util {
         scriptEl.src = url;
         headEl.appendChild(scriptEl);
     }
-    static getById(id) {
+    static getById(id: string | HTMLElement): HTMLElement {
         return typeof id === 'string' ? document.getElementById(id) : id;
     }
     /** 新建元素并添加相应属性 */
@@ -536,3 +541,5 @@ export class Util {
     static ease = Ease;
     static Observable = Observable;
 }
+
+fabric.Util = Util;

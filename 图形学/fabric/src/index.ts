@@ -1,5 +1,1 @@
-import { Canvas } from './Canvas';
-
-export const fabric = {
-    Canvas,
-};
+export const fabric: any = {};

@@ -1,6 +1,7 @@
 import { Util } from './Util';
 import { Point } from './Point';
 import { Bounding, Offset } from './interface';
+import { fabric } from '.';
 
 const CANVAS_INIT_ERROR = new Error('Could not initialize `canvas` element');
 
@@ -220,3 +221,7 @@ export class Canvas extends StaticCanvas {
         this.contextCache = this.cacheCanvasEl.getContext('2d');
     }
 }
+
+fabric.StaticCanvas = StaticCanvas
+fabric.FreeDrawing = FreeDrawing
+fabric.Canvas = Canvas

@@ -10,14 +10,110 @@ export class Point {
         this.y = y;
     }
     addEquals(point: Point): Point {
-        return point;
+        this.x += point.x;
+        this.y += point.y;
+        return this;
     }
     subtractEquals(point: Point): Point {
-        return point;
+        this.x -= point.x;
+        this.y -= point.y;
+        return this;
     }
 }
 const PiBy180 = Math.PI / 180;
 export class Util {
+    /**
+     * 数组的最小值
+     */
+    static min(array: any[], byProperty = '') {
+        if (!array || array.length === 0) return undefined;
+
+        let i = array.length - 1,
+            result = byProperty ? array[i][byProperty] : array[i];
+
+        if (byProperty) {
+            while (i--) {
+                if (array[i][byProperty] < result) {
+                    result = array[i][byProperty];
+                }
+            }
+        } else {
+            while (i--) {
+                if (array[i] < result) {
+                    result = array[i];
+                }
+            }
+        }
+        return result;
+    }
+    /**
+     * 数组的最大值
+     */
+    static max(array: any[], byProperty = '') {
+        if (!array || array.length === 0) return undefined;
+
+        let i = array.length - 1,
+            result = byProperty ? array[i][byProperty] : array[i];
+        if (byProperty) {
+            while (i--) {
+                if (array[i][byProperty] >= result) {
+                    result = array[i][byProperty];
+                }
+            }
+        } else {
+            while (i--) {
+                if (array[i] >= result) {
+                    result = array[i];
+                }
+            }
+        }
+        return result;
+    }
+    /** 和原生的 toFixed 一样，只不过返回的数字 */
+    static toFixed(number: number | string, fractionDigits: number): number {
+        return parseFloat(Number(number).toFixed(fractionDigits));
+    }
+    static getPointer(event: Event, upperCanvasEl: HTMLCanvasElement) {
+        event || (event = window.event);
+
+        let element: HTMLElement | Document = event.target as Document | HTMLElement,
+            body = document.body || { scrollLeft: 0, scrollTop: 0 },
+            docElement = document.documentElement,
+            orgElement = element,
+            scrollLeft = 0,
+            scrollTop = 0,
+            firstFixedAncestor;
+
+        while (element && element.parentNode && !firstFixedAncestor) {
+            element = element.parentNode as Document | HTMLElement;
+            if (element !== document && Util.getElementPosition(element as HTMLElement) === 'fixed') firstFixedAncestor = element;
+
+            if (element !== document && orgElement !== upperCanvasEl && Util.getElementPosition(element as HTMLElement) === 'absolute') {
+                scrollLeft = 0;
+                scrollTop = 0;
+            } else if (element === document && orgElement !== upperCanvasEl) {
+                scrollLeft = body.scrollLeft || docElement.scrollLeft || 0;
+                scrollTop = body.scrollTop || docElement.scrollTop || 0;
+            } else {
+                scrollLeft += (element as HTMLElement).scrollLeft || 0;
+                scrollTop += (element as HTMLElement).scrollTop || 0;
+            }
+        }
+
+        return {
+            x: Util.pointerX(event) + scrollLeft,
+            y: Util.pointerY(event) + scrollTop,
+        };
+    }
+    static pointerX(event) {
+        return event.clientX || 0;
+    }
+    static pointerY(event) {
+        return event.clientY || 0;
+    }
+    static getElementPosition(element: HTMLElement) {
+        return window.getComputedStyle(element, null).position;
+    }
     static degreesToRadians(degrees: number): number {
         return degrees * PiBy180;
     }

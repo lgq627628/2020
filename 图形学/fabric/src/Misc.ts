@@ -22,6 +22,13 @@ export class Point {
 }
 const PiBy180 = Math.PI / 180;
 export class Util {
+    static removeFromArray(array: any[], value: any) {
+        let idx = array.indexOf(value);
+        if (idx !== -1) {
+            array.splice(idx, 1);
+        }
+        return array;
+    }
     /**
      * 数组的最小值
      */

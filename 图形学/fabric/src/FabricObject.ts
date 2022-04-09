@@ -1,6 +1,7 @@
 import { Observable } from './Observable';
 import { Util, Point, Offset } from './Misc';
 
+/** 每个控制点又有自己的小正方形 */
 interface Coord {
     x: number;
     y: number;
@@ -18,14 +19,23 @@ interface Corner {
     bl: Pos;
 }
 interface Coords {
+    /** 左上控制点 */
     tl: Coord;
+    /** 右上控制点 */
     tr: Coord;
+    /** 右下控制点 */
     br: Coord;
+    /** 左下控制点 */
     bl: Coord;
+    /** 左中控制点 */
     ml: Coord;
+    /** 上中控制点 */
     mt: Coord;
+    /** 右中控制点 */
     mr: Coord;
+    /** 下中控制点 */
     mb: Coord;
+    /** 上中旋转控制点 */
     mtr: Coord;
 }
 /** 框选交互类 */
@@ -125,13 +135,17 @@ export class Intersection {
 }
 export class FabricObject extends Observable {
     public type: string = 'object';
+    /** 是否处于激活态，也就是是否被选中 */
     public active: boolean = false;
-    /** Horizontal origin of transformation of an object (one of "left", "right", "center") */
+    /** 是否可见 */
+    public visible: boolean = true;
+    /** 默认水平变换位置 left | right | center */
     public originX: string = 'center';
-    /** Vertical origin of transformation of an object (one of "top", "bottom", "center") */
+    /** 默认垂直变换位置 top | bottom | center */
     public originY: string = 'center';
-    public x: number = 0;
-    public y: number = 0;
+    /** x, y 应该是自身偏移量 */
+    // public x: number = 0;
+    // public y: number = 0;
     /** 物体缩放后的中心点 top 值 */
     public top: number = 0;
     /** 物体缩放后的中心点 left 值 */
@@ -146,39 +160,39 @@ export class FabricObject extends Observable {
     public scaleY: number = 1;
     /** 物体的旋转角度 */
     public angle: number = 0;
-    public opacity: number = 1;
-    public padding: number = 0;
+    /** 选中态物体和边框之间的距离 */
+    public padding: number = 4;
     /** 物体缩放后的宽度 */
     public currentWidth: number = 0;
     /** 物体缩放后的高度 */
     public currentHeight: number = 0;
-    public lockScalingX: boolean = false;
-    public lockScalingY: boolean = false;
+    /** 激活态边框颜色 */
     public borderColor: string = 'rgba(102,153,255,0.75)';
+    /** 激活态控制点颜色 */
     public cornerColor: string = 'rgba(102,153,255,0.5)';
+    /** 物体默认填充颜色 */
     public fill: string = 'rgb(0,0,0)';
-    /** Overlay fill (takes precedence over fill value) */
-    public fillRule: string = 'source-over';
+    /** 混合模式 globalCompositeOperation */
+    // public fillRule: string = 'source-over';
+    /** 物体默认描边颜色，默认无 */
     public stroke: string;
+    /** 物体默认描边宽度 */
     public strokeWidth: number = 1;
     /** 矩阵变换 */
     public transformMatrix: number[];
-    /** 水平翻转 */
-    public flipX: boolean = false;
-    /** 垂直翻转 */
-    public flipY: boolean = false;
     public minScaleLimit: number = 0.01;
-    public selectable: boolean = true;
-    public visible: boolean = true;
+    /** 是否有控制点 */
     public hasControls: boolean = true;
-    public hasBorders: boolean = true;
+    /** 是否有旋转控制点 */
     public hasRotatingPoint: boolean = true;
+    /** 旋转控制点偏移量 */
     public rotatingPointOffset: number = 40;
+    /** 移动的时候边框透明度 */
     public borderOpacityWhenMoving: number = 0.4;
+    /** 物体是否在移动中 */
     public isMoving: boolean = false;
-    public borderScaleFactor: number = 1;
-    public lockRotation: boolean = false;
-    public lockUniScaling: boolean = false;
+    /** 选中态的边框宽度 */
+    public borderScaleFactor: number = 0.5;
     /** 物体控制点用 stroke 还是 fill */
     public transparentCorners: boolean = true;
     /** 物体控制点大小，单位 px */
@@ -187,12 +201,13 @@ export class FabricObject extends Observable {
     public perPixelTargetFind: boolean = false;
     /** 物体缩放之后的控制点位置 */
     public oCoords: Coords;
+    /** 物体所在的 canvas 画布 */
     public canvas;
-    /** 变换执之前的状态 */
+    /** 物体执行变换之前的状态 */
     public originalState;
+    /** 物体所属的组 */
     public group;
-    public stateProperties: string[] = ('top left width height scaleX scaleY flipX flipY ' + 'angle opacity cornerSize fill overlayFill originX originY ' + 'stroke strokeWidth strokeDashArray fillRule ' + 'borderScaleFactor transformMatrix selectable shadow visible').split(' ');
-    private __corner: string;
+    public stateProperties: string[] = ('top left width height scaleX scaleY ' + 'angle cornerSize fill originX originY ' + 'stroke strokeWidth ' + 'borderScaleFactor transformMatrix visible').split(' ');
     constructor(options) {
         super();
         this.initialize(options);
@@ -228,16 +243,12 @@ export class FabricObject extends Observable {
             ctx.fillStyle = this.fill;
         }
 
-        // if (m && this.group) {
-        //     ctx.translate(-this.group.width / 2, -this.group.height / 2);
-        //     ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
-        // }
+        if (m && this.group) {
+            ctx.translate(-this.group.width / 2, -this.group.height / 2);
+            ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
+        }
 
-        // this._setShadow(ctx);
-        // this.clipTo && Util.clipContext(this, ctx);
         this._render(ctx);
-        // this.clipTo && ctx.restore();
-        // this._removeShadow(ctx);
 
         if (this.active && !noTransform) {
             this.drawBorders(ctx);
@@ -248,16 +259,12 @@ export class FabricObject extends Observable {
     /** 由子类实现 */
     _render(ctx: CanvasRenderingContext2D) {}
     transform(ctx: CanvasRenderingContext2D) {
-        ctx.globalAlpha = this.opacity;
-
         let center = this.getCenterPoint();
         ctx.translate(center.x, center.y);
         ctx.rotate(Util.degreesToRadians(this.angle));
-        ctx.scale(this.scaleX * (this.flipX ? -1 : 1), this.scaleY * (this.flipY ? -1 : 1));
+        ctx.scale(this.scaleX, this.scaleY);
     }
     drawBorders(ctx: CanvasRenderingContext2D): FabricObject {
-        if (!this.hasBorders) return;
-
         var padding = this.padding,
             padding2 = padding * 2,
             strokeWidth = this.strokeWidth > 1 ? this.strokeWidth : 0;
@@ -283,12 +290,12 @@ export class FabricObject extends Observable {
             ~~(h + padding2 + strokeWidth * this.scaleY)
         );
 
-        if (this.hasRotatingPoint && !this.lockRotation && this.hasControls) {
-            var rotateHeight = (this.flipY ? h + strokeWidth * this.scaleY + padding * 2 : -h - strokeWidth * this.scaleY - padding * 2) / 2;
+        if (this.hasRotatingPoint && this.hasControls) {
+            var rotateHeight = (-h - strokeWidth * this.scaleY - padding * 2) / 2;
 
             ctx.beginPath();
             ctx.moveTo(0, rotateHeight);
-            ctx.lineTo(0, rotateHeight + (this.flipY ? this.rotatingPointOffset : -this.rotatingPointOffset));
+            ctx.lineTo(0, rotateHeight + -this.rotatingPointOffset);
             ctx.closePath();
             ctx.stroke();
         }
@@ -353,40 +360,38 @@ export class FabricObject extends Observable {
         ctx.clearRect(_left, _top, sizeX, sizeY);
         ctx[methodName](_left, _top, sizeX, sizeY);
 
-        if (!this.lockUniScaling) {
-            // middle-top
-            _left = left + width / 2 - scaleOffsetX;
-            _top = top - scaleOffsetY - strokeWidth2 - paddingY;
+        // middle-top
+        _left = left + width / 2 - scaleOffsetX;
+        _top = top - scaleOffsetY - strokeWidth2 - paddingY;
 
-            ctx.clearRect(_left, _top, sizeX, sizeY);
-            ctx[methodName](_left, _top, sizeX, sizeY);
+        ctx.clearRect(_left, _top, sizeX, sizeY);
+        ctx[methodName](_left, _top, sizeX, sizeY);
 
-            // middle-bottom
-            _left = left + width / 2 - scaleOffsetX;
-            _top = top + height + scaleOffsetSizeY + strokeWidth2 + paddingY;
+        // middle-bottom
+        _left = left + width / 2 - scaleOffsetX;
+        _top = top + height + scaleOffsetSizeY + strokeWidth2 + paddingY;
 
-            ctx.clearRect(_left, _top, sizeX, sizeY);
-            ctx[methodName](_left, _top, sizeX, sizeY);
+        ctx.clearRect(_left, _top, sizeX, sizeY);
+        ctx[methodName](_left, _top, sizeX, sizeY);
 
-            // middle-right
-            _left = left + width + scaleOffsetSizeX + strokeWidth2 + paddingX;
-            _top = top + height / 2 - scaleOffsetY;
+        // middle-right
+        _left = left + width + scaleOffsetSizeX + strokeWidth2 + paddingX;
+        _top = top + height / 2 - scaleOffsetY;
 
-            ctx.clearRect(_left, _top, sizeX, sizeY);
-            ctx[methodName](_left, _top, sizeX, sizeY);
+        ctx.clearRect(_left, _top, sizeX, sizeY);
+        ctx[methodName](_left, _top, sizeX, sizeY);
 
-            // middle-left
-            _left = left - scaleOffsetX - strokeWidth2 - paddingX;
-            _top = top + height / 2 - scaleOffsetY;
+        // middle-left
+        _left = left - scaleOffsetX - strokeWidth2 - paddingX;
+        _top = top + height / 2 - scaleOffsetY;
 
-            ctx.clearRect(_left, _top, sizeX, sizeY);
-            ctx[methodName](_left, _top, sizeX, sizeY);
-        }
+        ctx.clearRect(_left, _top, sizeX, sizeY);
+        ctx[methodName](_left, _top, sizeX, sizeY);
 
         // middle-top-rotate
         if (this.hasRotatingPoint) {
             _left = left + width / 2 - scaleOffsetX;
-            _top = this.flipY ? top + height + this.rotatingPointOffset / this.scaleY - sizeY / 2 + strokeWidth2 + paddingY : top - this.rotatingPointOffset / this.scaleY - sizeY / 2 - strokeWidth2 - paddingY;
+            _top = top - this.rotatingPointOffset / this.scaleY - sizeY / 2 - strokeWidth2 - paddingY;
 
             ctx.clearRect(_left, _top, sizeX, sizeY);
             ctx[methodName](_left, _top, sizeX, sizeY);
@@ -432,8 +437,8 @@ export class FabricObject extends Observable {
     /**
      * 平移坐标系到中心点
      * @param center
-     * @param originX {string} left | center | right
-     * @param originY {string} top | center | bottom
+     * @param {string} originX  left | center | right
+     * @param {string} originY  top | center | bottom
      * @returns
      */
     translateToOriginPoint(center: Point, originX: string, originY: string) {
@@ -484,7 +489,7 @@ export class FabricObject extends Observable {
         return Util.rotatePoint(new Point(point.x, point.y), center, -Util.degreesToRadians(this.angle)).subtractEquals(new Point(x, y));
     }
     /** 检测哪个控制点被点击了 */
-    _findTargetCorner(e: MouseEvent, offset: Offset) {
+    _findTargetCorner(e: MouseEvent, offset: Offset): boolean | string {
         if (!this.hasControls || !this.active) return false;
 
         var pointer = Util.getPointer(e, this.canvas.upperCanvasEl),
@@ -498,29 +503,23 @@ export class FabricObject extends Observable {
                 continue;
             }
 
-            if (this.lockUniScaling && (i === 'mt' || i === 'mr' || i === 'mb' || i === 'ml')) {
-                continue;
-            }
-
             lines = this._getImageLines(this.oCoords[i].corner);
 
-            // debugging
+            // debugger 绘制物体控制点的四个顶点
+            // this.canvas.contextTop.fillRect(lines.bottomline.d.x, lines.bottomline.d.y, 2, 2);
+            // this.canvas.contextTop.fillRect(lines.bottomline.o.x, lines.bottomline.o.y, 2, 2);
 
-            // canvas.contextTop.fillRect(lines.bottomline.d.x, lines.bottomline.d.y, 2, 2);
-            // canvas.contextTop.fillRect(lines.bottomline.o.x, lines.bottomline.o.y, 2, 2);
+            // this.canvas.contextTop.fillRect(lines.leftline.d.x, lines.leftline.d.y, 2, 2);
+            // this.canvas.contextTop.fillRect(lines.leftline.o.x, lines.leftline.o.y, 2, 2);
 
-            // canvas.contextTop.fillRect(lines.leftline.d.x, lines.leftline.d.y, 2, 2);
-            // canvas.contextTop.fillRect(lines.leftline.o.x, lines.leftline.o.y, 2, 2);
+            // this.canvas.contextTop.fillRect(lines.topline.d.x, lines.topline.d.y, 2, 2);
+            // this.canvas.contextTop.fillRect(lines.topline.o.x, lines.topline.o.y, 2, 2);
 
-            // canvas.contextTop.fillRect(lines.topline.d.x, lines.topline.d.y, 2, 2);
-            // canvas.contextTop.fillRect(lines.topline.o.x, lines.topline.o.y, 2, 2);
-
-            // canvas.contextTop.fillRect(lines.rightline.d.x, lines.rightline.d.y, 2, 2);
-            // canvas.contextTop.fillRect(lines.rightline.o.x, lines.rightline.o.y, 2, 2);
+            // this.canvas.contextTop.fillRect(lines.rightline.d.x, lines.rightline.d.y, 2, 2);
+            // this.canvas.contextTop.fillRect(lines.rightline.o.x, lines.rightline.o.y, 2, 2);
 
             xpoints = this._findCrossPoints(ex, ey, lines);
             if (xpoints % 2 === 1 && xpoints !== 0) {
-                this.__corner = i;
                 return i;
             }
         }
@@ -547,7 +546,7 @@ export class FabricObject extends Observable {
         };
     }
     /** Helper method to determine how many cross points are between the 4 image edges and the horizontal line determined by the position of our mouse when clicked on canvas */
-    _findCrossPoints(ex: number, ey: number, oCoords) {
+    _findCrossPoints(ex: number, ey: number, oCoords): number {
         var b1,
             b2,
             a1,
@@ -600,10 +599,9 @@ export class FabricObject extends Observable {
     /**
      * 根据物体的 origin 来设置物体的位置
      * @method setPositionByOrigin
-     * @param {fabric.Point} point The new position of the object
-     * @param {string} enum('left', 'center', 'right') Horizontal origin
-     * @param {string} enum('top', 'center', 'bottom') Vertical origin
-     * @return {void}
+     * @param {Point} pos
+     * @param {string} originX left | center | right
+     * @param {string} originY top | center | bottom
      */
     setPositionByOrigin(pos: Point, originX: string, originY: string) {
         var center = this.translateToCenterPoint(pos, originX, originY);
@@ -945,13 +943,7 @@ export class FabricObject extends Observable {
         if (shouldConstrainValue) {
             value = this._constrainScale(value);
         }
-        if (key === 'scaleX' && value < 0) {
-            this.flipX = !this.flipX;
-            value *= -1;
-        } else if (key === 'scaleY' && value < 0) {
-            this.flipY = !this.flipY;
-            value *= -1;
-        } else if (key === 'width' || key === 'height') {
+        if (key === 'width' || key === 'height') {
             this.minScaleLimit = Util.toFixed(Math.min(0.1, 1 / Math.max(this.width, this.height)), 2);
         }
         this[key] = value;
@@ -963,6 +955,12 @@ export class FabricObject extends Observable {
     getHeight(): number {
         return this.height * this.scaleY;
     }
+    getAngle(): number {
+        return this.angle;
+    }
+    setAngle(angle: number) {
+        this.angle = angle;
+    }
 }
 export class Rect extends FabricObject {
     public type: string = 'rect';
@@ -970,17 +968,15 @@ export class Rect extends FabricObject {
     public ry: number = 0;
     constructor(options) {
         super(options);
-
         this._initStateProperties();
-        this._initRxRy();
-
-        this.x = 0;
-        this.y = 0;
+        this._initRxRy(options);
     }
     _initStateProperties() {
         this.stateProperties = this.stateProperties.concat(['rx', 'ry']);
     }
-    _initRxRy() {
+    _initRxRy(options) {
+        this.rx = options.rx || 0;
+        this.ry = options.ry || 0;
         if (this.rx && !this.ry) {
             this.ry = this.rx;
         } else if (this.ry && !this.rx) {
@@ -996,38 +992,27 @@ export class Rect extends FabricObject {
             h = this.height;
 
         ctx.beginPath();
-        ctx.globalAlpha = this.group ? ctx.globalAlpha * this.opacity : this.opacity;
 
-        // if (this.transformMatrix && this.group) {
-        //     ctx.translate(this.width / 2 + this.x, this.height / 2 + this.y);
-        // }
-        // if (!this.transformMatrix && this.group) {
-        //     ctx.translate(-this.group.width / 2 + this.width / 2 + this.x, -this.group.height / 2 + this.height / 2 + this.y);
-        // }
+        if (this.transformMatrix && this.group) {
+            ctx.translate(this.width / 2, this.height / 2);
+        }
+        if (!this.transformMatrix && this.group) {
+            ctx.translate(-this.group.width / 2 + this.width / 2, -this.group.height / 2 + this.height / 2);
+        }
 
         ctx.moveTo(x + rx, y);
         ctx.lineTo(x + w - rx, y);
         ctx.bezierCurveTo(x + w, y, x + w, y + ry, x + w, y + ry);
-        // ctx.quadraticCurveTo(x + w, y, x + w, y + ry, x + w, y + ry);
         ctx.lineTo(x + w, y + h - ry);
         ctx.bezierCurveTo(x + w, y + h, x + w - rx, y + h, x + w - rx, y + h);
-        // ctx.quadraticCurveTo(x + w, y + h, x + w - rx, y + h, x + w - rx, y + h);
         ctx.lineTo(x + rx, y + h);
         ctx.bezierCurveTo(x, y + h, x, y + h - ry, x, y + h - ry);
-        // ctx.quadraticCurveTo(x, y + h, x, y + h - ry, x, y + h - ry);
         ctx.lineTo(x, y + ry);
         ctx.bezierCurveTo(x, y, x + rx, y, x + rx, y);
-        // ctx.quadraticCurveTo(x, y, x + rx, y, x + rx, y);
         ctx.closePath();
 
-        if (this.fill) {
-            ctx.fill();
-        }
+        if (this.fill) ctx.fill();
 
-        // this._removeShadow(ctx);
-
-        if (this.stroke) {
-            ctx.stroke();
-        }
+        if (this.stroke) ctx.stroke();
     }
 }

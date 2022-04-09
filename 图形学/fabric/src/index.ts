@@ -1,6 +1,7 @@
 import { Observable } from './Observable';
 import { Util, Offset, Point } from './Misc';
 import { FabricObject, Rect, Pos } from './FabricObject';
+import { Group } from './Group';
 
 const STROKE_OFFSET = 0.5;
 const cursorMap = {
@@ -59,6 +60,7 @@ class Canvas extends Observable {
     public selectionBorderColor: string = 'rgba(255, 255, 255, 0.3)';
     /** 选择组或者物体的边框大小 */
     public selectionLineWidth: number = 1;
+    public _activeGroup: Group;
     private _objects: FabricObject[];
     private _offset: Offset;
     constructor(el: HTMLCanvasElement, options) {
@@ -93,8 +95,7 @@ class Canvas extends Observable {
     }
     _initInteractive() {
         this._currentTransform = null;
-        // this._groupSelector = null;
-        // this.freeDrawing = fabric.FreeDrawing && new fabric.FreeDrawing(this);
+        this._groupSelector = null;
         this._initWrapperElement();
         this._createUpperCanvas();
         this._initEvents();
@@ -179,13 +180,6 @@ class Canvas extends Observable {
     }
     __onMouseUp(e: MouseEvent) {
         var target;
-
-        // if (this.isDrawingMode && this._isCurrentlyDrawing) {
-        //   this.freeDrawing._finalizeAndAddPath();
-        //   this.fire('mouse:up', { e: e });
-        //   return;
-        // }
-
         if (this._currentTransform) {
             var transform = this._currentTransform;
 
@@ -194,7 +188,7 @@ class Canvas extends Observable {
                 target._scaling = false;
             }
 
-            // determine the new coords everytime the image changes its position
+            // 每次物体更改都要重新确认新的控制点
             var i = this._objects.length;
             while (i--) {
                 this._objects[i].setCoords();
@@ -202,7 +196,7 @@ class Canvas extends Observable {
 
             target.isMoving = false;
 
-            // only fire :modified event if target coordinates were changed during mousedown-mouseup
+            // 在点击之间如果物体状态改变了才派发事件
             if (this.stateful && target.hasStateChanged()) {
                 this.fire('object:modified', { target: target });
                 target.fire('modified');
@@ -267,18 +261,6 @@ class Canvas extends Observable {
         let isLeftClick = 'which' in e ? e.which === 1 : e.button === 1;
         if (!isLeftClick) return;
 
-        // if (this.isDrawingMode) { // 如果是手绘涂鸦模式
-        //     pointer = this.getPointer(e);
-        //     this.freeDrawing._prepareForDrawing(pointer);
-
-        //     // capture coordinates immediately;
-        //     // this allows to draw dots (when movement never occurs)
-        //     this.freeDrawing._captureDrawingPath(pointer);
-
-        //     this.fire('mouse:down', { e: e });
-        //     return;
-        // }
-
         // ignore if some object is being transformed at this moment
         if (this._currentTransform) return;
 
@@ -332,21 +314,6 @@ class Canvas extends Observable {
      * 如果是图片变换，只有 upper-canvas 会被渲染 */
     __onMouseMove(e: MouseEvent) {
         let target, pointer;
-
-        // if (this.isDrawingMode) {
-        //   if (this._isCurrentlyDrawing) {
-        //     pointer = this.getPointer(e);
-        //     this.freeDrawing._captureDrawingPath(pointer);
-
-        //     // redraw curve
-        //     // clear top canvas
-        //     this.clearContext(this.contextTop);
-        //     this.freeDrawing._render(this.contextTop);
-        //   }
-        //   this.upperCanvasEl.style.cursor = this.freeDrawingCursor;
-        //   this.fire('mouse:move', { e: e });
-        //   return;
-        // }
 
         var groupSelector = this._groupSelector;
 
@@ -490,15 +457,9 @@ class Canvas extends Observable {
      * @returns
      */
     _scaleObject(x: number, y: number, by = '') {
-        // debugger;
         var t = this._currentTransform,
             offset = this._offset,
             target: FabricObject = t.target;
-
-        var lockScalingX = target.lockScalingX,
-            lockScalingY = target.lockScalingY;
-
-        if (lockScalingX && lockScalingY) return;
 
         // Get the constraint point
         var constraintPosition = target.translateToOriginPoint(target.getCenterPoint(), t.originX, t.originY);
@@ -527,7 +488,7 @@ class Canvas extends Observable {
         // Actually scale the object
         var newScaleX = target.scaleX,
             newScaleY = target.scaleY;
-        if (by === 'equally' && !lockScalingX && !lockScalingY) {
+        if (by === 'equally') {
             var dist = localMouse.y + localMouse.x;
             var lastDist = target.height * t.original.scaleY + target.width * t.original.scaleX + target.padding * 2 - target.strokeWidth * 2 + 1; /* additional offset needed probably due to subpixel rendering, and avoids jerk when scaling an object */
 
@@ -541,14 +502,14 @@ class Canvas extends Observable {
             newScaleX = localMouse.x / (target.width + target.padding);
             newScaleY = localMouse.y / (target.height + target.padding);
 
-            lockScalingX || target.set('scaleX', newScaleX);
-            lockScalingY || target.set('scaleY', newScaleY);
-        } else if (by === 'x' && !target.get('lockUniScaling')) {
+            target.set('scaleX', newScaleX);
+            target.set('scaleY', newScaleY);
+        } else if (by === 'x') {
             newScaleX = localMouse.x / (target.width + target.padding);
-            lockScalingX || target.set('scaleX', newScaleX);
-        } else if (by === 'y' && !target.get('lockUniScaling')) {
+            target.set('scaleX', newScaleX);
+        } else if (by === 'y') {
             newScaleY = localMouse.y / (target.height + target.padding);
-            lockScalingY || target.set('scaleY', newScaleY);
+            target.set('scaleY', newScaleY);
         }
         // Check if we flipped
         if (newScaleX < 0) {
@@ -567,8 +528,6 @@ class Canvas extends Observable {
     _rotateObject(x: number, y: number) {
         var t = this._currentTransform,
             o = this._offset;
-
-        if (t.target.lockRotation) return;
 
         var lastAngle = Math.atan2(t.ey - t.top - o.top, t.ex - t.left - o.left),
             curAngle = Math.atan2(y - t.top - o.top, x - t.left - o.left);
@@ -591,6 +550,7 @@ class Canvas extends Observable {
             if (!corner) {
                 s.cursor = this.hoverCursor;
             } else {
+                corner = corner as string;
                 if (corner in cursorMap) {
                     s.cursor = cursorMap[corner];
                 } else if (corner === 'mtr' && target.hasRotatingPoint) {
@@ -604,7 +564,7 @@ class Canvas extends Observable {
         return true;
     }
     _findSelectedObjects(e: MouseEvent) {
-        var group = [],
+        let group = [],
             x1 = this._groupSelector.ex,
             y1 = this._groupSelector.ey,
             x2 = x1 + this._groupSelector.left,
@@ -619,24 +579,31 @@ class Canvas extends Observable {
             if (!currentObject) continue;
 
             if (currentObject.intersectsWithRect(selectionX1Y1, selectionX2Y2) || currentObject.isContainedWithinRect(selectionX1Y1, selectionX2Y2)) {
-                if (this.selection && currentObject.selectable) {
+                if (this.selection) {
                     currentObject.setActive(true);
                     group.push(currentObject);
                 }
             }
         }
 
-        // do not create group for 1 element only
         if (group.length === 1) {
             this.setActiveObject(group[0], e);
         } else if (group.length > 1) {
-            // group = new Group(group);
-            // this.setActiveGroup(group);
-            // group.saveCoords();
-            this.fire('selection:created', { target: group });
+            const newGroup = new Group(group);
+            this.setActiveGroup(newGroup);
+            newGroup.saveCoords();
+            this.fire('selection:created', { target: newGroup });
         }
 
         this.renderAll();
+    }
+    setActiveGroup(group: Group): Canvas {
+        this._activeGroup = group;
+        if (group) {
+            group.canvas = this;
+            group.setActive(true);
+        }
+        return this;
     }
     /** 渲染 upper-canvas，还用于渲染组选择框。*/
     renderTop(): Canvas {
@@ -794,7 +761,7 @@ class Canvas extends Observable {
         for (; i < len; i++) {
             allObjects[i].setActive(false);
         }
-        // this.discardActiveGroup();
+        this.discardActiveGroup();
         this.discardActiveObject();
         return this;
     }
@@ -807,47 +774,60 @@ class Canvas extends Observable {
         return this;
     }
     _handleGroupLogic(e, target) {
-        // if (target === this.getActiveGroup()) {
-        //     // if it's a group, find target again, this time skipping group
-        //     target = this.findTarget(e, true);
-        //     // if even object is not found, bail out
-        //     if (!target || target.isType('group')) {
-        //         return;
-        //     }
-        // }
-        // var activeGroup = this.getActiveGroup();
-        // if (activeGroup) {
-        //     if (activeGroup.contains(target)) {
-        //         activeGroup.removeWithUpdate(target);
-        //         this._resetObjectTransform(activeGroup);
-        //         target.setActive(false);
-        //         if (activeGroup.size() === 1) {
-        //             // remove group alltogether if after removal it only contains 1 object
-        //             this.discardActiveGroup();
-        //         }
-        //     } else {
-        //         activeGroup.addWithUpdate(target);
-        //         this._resetObjectTransform(activeGroup);
-        //     }
-        //     this.fire('selection:created', { target: activeGroup, e: e });
-        //     activeGroup.setActive(true);
-        // } else {
-        //     // group does not exist
-        //     if (this._activeObject) {
-        //         // only if there's an active object
-        //         if (target !== this._activeObject) {
-        //             // and that object is not the actual target
-        //             var group = new fabric.Group([this._activeObject, target]);
-        //             this.setActiveGroup(group);
-        //             activeGroup = this.getActiveGroup();
-        //         }
-        //     }
-        //     // activate target object in any case
-        //     target.setActive(true);
-        // }
-        // if (activeGroup) {
-        //     activeGroup.saveCoords();
-        // }
+        if (target === this.getActiveGroup()) {
+            // if it's a group, find target again, this time skipping group
+            target = this.findTarget(e, true);
+            // if even object is not found, bail out
+            if (!target || target.isType('group')) {
+                return;
+            }
+        }
+        var activeGroup = this.getActiveGroup();
+        if (activeGroup) {
+            if (activeGroup.contains(target)) {
+                activeGroup.removeWithUpdate(target);
+                this._resetObjectTransform(activeGroup);
+                target.setActive(false);
+                if (activeGroup.size() === 1) {
+                    // remove group alltogether if after removal it only contains 1 object
+                    this.discardActiveGroup();
+                }
+            } else {
+                activeGroup.addWithUpdate(target);
+                this._resetObjectTransform(activeGroup);
+            }
+            this.fire('selection:created', { target: activeGroup, e: e });
+            activeGroup.setActive(true);
+        } else {
+            // group does not exist
+            if (this._activeObject) {
+                // only if there's an active object
+                if (target !== this._activeObject) {
+                    // and that object is not the actual target
+                    var group = new Group([this._activeObject, target]);
+                    this.setActiveGroup(group);
+                    activeGroup = this.getActiveGroup();
+                }
+            }
+            // activate target object in any case
+            target.setActive(true);
+        }
+        if (activeGroup) {
+            activeGroup.saveCoords();
+        }
+    }
+    _resetObjectTransform(target) {
+        target.scaleX = 1;
+        target.scaleY = 1;
+        target.setAngle(0);
+    }
+    /** 将当前选中组失活 */
+    discardActiveGroup(): Canvas {
+        var g = this.getActiveGroup();
+        if (g) {
+            g.destroy();
+        }
+        return this.setActiveGroup(null);
     }
     _shouldHandleGroupLogic(e, target) {
         var activeObject = this._activeObject;
@@ -906,21 +886,16 @@ class Canvas extends Observable {
                 break;
             }
         }
-        if (target && target.selectable) {
-            return target;
-        }
+        if (target) return target;
     }
     /** 判断物体是否透明 */
     _isTargetTransparent(target, x, y) {
         var cacheContext = this.contextCache;
 
-        var hasBorders = target.hasBorders,
-            transparentCorners = target.transparentCorners;
-        target.hasBorders = target.transparentCorners = false;
+        let transparentCorners = target.transparentCorners;
 
         this._draw(cacheContext, target);
 
-        target.hasBorders = hasBorders;
         target.transparentCorners = transparentCorners;
 
         // If tolerance is > 0 adjust start coords to take into account. If moves off Canvas fix to 0
@@ -1011,21 +986,21 @@ class Canvas extends Observable {
         }
 
         // delegate rendering to group selection (if one exists)
-        // if (activeGroup) {
-        //     //Store objects in group preserving order, then replace
-        //     let sortedObjects = [];
-        //     this.forEachObject((object) => {
-        //         if (activeGroup.contains(object)) {
-        //             sortedObjects.push(object);
-        //         }
-        //     });
-        //     activeGroup._set('objects', sortedObjects);
-        //     this._draw(canvasToDrawOn, activeGroup);
-        // }
+        if (activeGroup) {
+            //Store objects in group preserving order, then replace
+            let sortedObjects = [];
+            this.forEachObject((object) => {
+                if (activeGroup.contains(object)) {
+                    sortedObjects.push(object);
+                }
+            });
+            activeGroup._set('objects', sortedObjects);
+            this._draw(canvasToDrawOn, activeGroup);
+        }
 
-        // if (this.controlsAboveOverlay) {
-        //     this.drawControls(canvasToDrawOn);
-        // }
+        if (this.controlsAboveOverlay) {
+            this.drawControls(canvasToDrawOn);
+        }
 
         this.fire('after:render');
 
@@ -1038,16 +1013,16 @@ class Canvas extends Observable {
             callback.call(this, objects[i], i, objects);
         }
     }
-    getActiveGroup() {
-        return null;
+    getActiveGroup(): Group {
+        return this._activeGroup;
     }
     drawControls(ctx: CanvasRenderingContext2D) {
         let activeGroup = this.getActiveGroup();
         if (activeGroup) {
-            // ctx.save();
-            // Group.prototype.transform.call(activeGroup, ctx);
-            // activeGroup.drawBorders(ctx).drawControls(ctx);
-            // ctx.restore();
+            ctx.save();
+            Group.prototype.transform.call(activeGroup, ctx);
+            activeGroup.drawBorders(ctx).drawControls(ctx);
+            ctx.restore();
         } else {
             for (let i = 0, len = this._objects.length; i < len; ++i) {
                 if (!this._objects[i] || !this._objects[i].active) continue;
@@ -1064,16 +1039,13 @@ class Canvas extends Observable {
     _draw(ctx: CanvasRenderingContext2D, object: FabricObject) {
         if (!object) return;
 
-        // if (this.controlsAboveOverlay) {
-        //     let hasBorders = object.hasBorders,
-        //         hasControls = object.hasControls;
-        //     object.hasBorders = object.hasControls = false;
-        //     object.render(ctx);
-        //     object.hasBorders = hasBorders;
-        //     object.hasControls = hasControls;
-        // } else {
-        //     object.render(ctx);
-        // }
+        if (this.controlsAboveOverlay) {
+            let hasControls = object.hasControls;
+            object.render(ctx);
+            object.hasControls = hasControls;
+        } else {
+            object.render(ctx);
+        }
         object.render(ctx);
     }
     calcOffset(): Canvas {

@@ -1,4 +1,6 @@
-/** 发布订阅，事件中心 */
+/** 发布订阅，事件中心
+ * 应用场景：可以在渲染前后、初始化物体前后、每个物体状态改变时触发一系列事件
+ */
 export class Observable {
     public static __eventListeners;
     public observe = Observable.observe;
@@ -32,9 +34,9 @@ export class Observable {
         if (!this.__eventListeners) {
             this.__eventListeners = {};
         }
-        var listenersForEvent = this.__eventListeners[eventName];
+        let listenersForEvent = this.__eventListeners[eventName];
         if (!listenersForEvent) return;
-        for (var i = 0, len = listenersForEvent.length; i < len; i++) {
+        for (let i = 0, len = listenersForEvent.length; i < len; i++) {
             // avoiding try/catch for perf. reasons
             listenersForEvent[i](options || {});
         }

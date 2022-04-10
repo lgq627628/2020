@@ -1,31 +1,11 @@
 import { FabricObject } from './FabricObject';
-import { Util } from './Misc';
+import { Util } from './Util';
 
-const _lockProperties = {
-    lockMovementX: true,
-    lockMovementY: true,
-    // lockRotation: true,
-    // lockScalingX: true,
-    // lockScalingY: true,
-    // lockUniScaling: true,
-};
+/** 组类，也就是拖蓝框选区域包围的那些物体构成了一个组 */
 export class Group extends FabricObject {
     public type: string = 'group';
     public objects: FabricObject[];
     public originalState;
-    public delegatedProperties = {
-        fill: true,
-        // opacity: true,
-        fontFamily: true,
-        fontWeight: true,
-        fontSize: true,
-        fontStyle: true,
-        lineHeight: true,
-        textDecoration: true,
-        textShadow: true,
-        textAlign: true,
-        backgroundColor: true,
-    };
     public _originalTop;
     public _originalLeft;
     public canvas;
@@ -43,11 +23,11 @@ export class Group extends FabricObject {
     }
     /** 更新所有物体坐标系 */
     _updateObjectsCoords() {
-        var groupDeltaX = this.left,
+        let groupDeltaX = this.left,
             groupDeltaY = this.top;
 
         this.forEachObject((object) => {
-            var objectLeft = object.get('left'),
+            let objectLeft = object.get('left'),
                 objectTop = object.get('top');
 
             object.set('originalLeft', objectLeft);
@@ -106,11 +86,11 @@ export class Group extends FabricObject {
         ctx.save();
         this.transform(ctx);
 
-        var groupScaleFactor = Math.max(this.scaleX, this.scaleY);
+        let groupScaleFactor = Math.max(this.scaleX, this.scaleY);
 
         //The array is now sorted in order of highest first, so start from end.
-        for (var i = this.objects.length; i > 0; i--) {
-            var object = this.objects[i - 1],
+        for (let i = this.objects.length; i > 0; i--) {
+            let object = this.objects[i - 1],
                 originalScaleFactor = object.borderScaleFactor,
                 originalHasRotatingPoint = object.hasRotatingPoint;
 
@@ -148,7 +128,7 @@ export class Group extends FabricObject {
     }
     /** 还原 group 中某个物体的初始状态 */
     _restoreObjectState(object): Group {
-        var groupLeft = this.get('left'),
+        let groupLeft = this.get('left'),
             groupTop = this.get('top'),
             groupAngle = this.getAngle() * (Math.PI / 180),
             rotatedTop = Math.cos(groupAngle) * object.get('top') + Math.sin(groupAngle) * object.get('left'),
@@ -182,7 +162,7 @@ export class Group extends FabricObject {
         return this._originalLeft !== this.get('left') || this._originalTop !== this.get('top');
     }
     setObjectsCoords(): Group {
-        this.forEachObject(object => {
+        this.forEachObject((object) => {
             object.setCoords();
         });
         return this;
@@ -234,7 +214,7 @@ export class Group extends FabricObject {
 
     /** 检查点是都在 group 中 */
     containsPoint(point) {
-        var halfWidth = this.get('width') / 2,
+        let halfWidth = this.get('width') / 2,
             halfHeight = this.get('height') / 2,
             centerX = this.get('left'),
             centerY = this.get('top');
@@ -243,35 +223,13 @@ export class Group extends FabricObject {
     }
 
     get(prop) {
-        if (prop in _lockProperties) {
-            if (this[prop]) {
-                return this[prop];
-            } else {
-                for (var i = 0, len = this.objects.length; i < len; i++) {
-                    if (this.objects[i][prop]) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-        } else {
-            if (prop in this.delegatedProperties) {
-                return this.objects[0] && this.objects[0][prop];
-            }
-            return this[prop];
-        }
+        // 组里面有很多元素，所以虽然继承至 Fabric，但是有很多属性读取是无效的，设置同理
+        return this[prop];
     }
     _set(key: string, value): Group {
-        if (key in this.delegatedProperties) {
-            var i = this.objects.length;
-            this[key] = value;
-            while (i--) {
-                this.objects[i].set(key, value);
-            }
-        } else {
-            this[key] = value;
-        }
+        this[key] = value;
         return this;
     }
+    /** 异步标识，说明这个东西是后面创建的，比如得现有几个物体才能有 Group；类似的还有图片，目前这里没用到 */
     static async = true;
 }

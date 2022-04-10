@@ -1,27 +1,9 @@
-export interface Offset {
-    top: number;
-    left: number;
-}
-export class Point {
-    public x: number;
-    public y: number;
-    constructor(x: number, y: number) {
-        this.x = x;
-        this.y = y;
-    }
-    addEquals(point: Point): Point {
-        this.x += point.x;
-        this.y += point.y;
-        return this;
-    }
-    subtractEquals(point: Point): Point {
-        this.x -= point.x;
-        this.y -= point.y;
-        return this;
-    }
-}
-const PiBy180 = Math.PI / 180;
+import { Point } from './Point';
+import { Offset } from './interface';
+
+const PiBy180 = Math.PI / 180; // 写在这里相当于缓存，因为会频繁调用
 export class Util {
+    /** 从数组中溢出某个元素 */
     static removeFromArray(array: any[], value: any) {
         let idx = array.indexOf(value);
         if (idx !== -1) {
@@ -80,6 +62,7 @@ export class Util {
     static toFixed(number: number | string, fractionDigits: number): number {
         return parseFloat(Number(number).toFixed(fractionDigits));
     }
+    /** 获取鼠标的点击坐标，相对于页面左上角，注意不是画布的左上角，到时候会减掉 oeesft */
     static getPointer(event: Event, upperCanvasEl: HTMLCanvasElement) {
         event || (event = window.event);
 
@@ -118,17 +101,26 @@ export class Util {
     static pointerY(event) {
         return event.clientY || 0;
     }
+    /** 获取元素位置 */
     static getElementPosition(element: HTMLElement) {
         return window.getComputedStyle(element, null).position;
     }
+    /** 角度转弧度，注意 canvas 中用的都是弧度，但是角度对我们来说比较直观 */
     static degreesToRadians(degrees: number): number {
         return degrees * PiBy180;
     }
+    /** 弧度转角度，注意 canvas 中用的都是弧度，但是角度对我们来说比较直观 */
     static radiansToDegrees(radians: number): number {
         return radians / PiBy180;
     }
-    /** 根据原始点坐标来旋转 */
-    static rotatePoint(point: Point, origin: Point, radians): Point {
+    /**
+     * 将 point 绕 origin 旋转 radians 弧度
+     * @param {Point} point 要旋转的点
+     * @param {Point} origin 旋转中心点
+     * @param {number} radians 注意 canvas 中用的都是弧度
+     * @returns
+     */
+    static rotatePoint(point: Point, origin: Point, radians: number): Point {
         const sin = Math.sin(radians),
             cos = Math.cos(radians);
 
@@ -139,15 +131,18 @@ export class Util {
 
         return new Point(rx, ry).addEquals(origin);
     }
+    /** 单纯的创建一个新的 canvas 元素 */
     static createCanvasElement() {
         const canvas = document.createElement('canvas');
         return canvas;
     }
+    /** 给元素添加类名 */
     static addClass(element: HTMLElement, className: string) {
         if ((' ' + element.className + ' ').indexOf(' ' + className + ' ') === -1) {
             element.className += (element.className ? ' ' : '') + className;
         }
     }
+    /** 计算元素偏移值 */
     static getElementOffset(element): Offset {
         let valueT = 0,
             valueL = 0;
@@ -175,19 +170,16 @@ export class Util {
         for (let prop in attributes) {
             if (prop === 'class') {
                 el.className = attributes[prop];
-            } else if (prop === 'for') {
-                (el as HTMLLabelElement).htmlFor = attributes[prop];
             } else {
                 el.setAttribute(prop, attributes[prop]);
             }
         }
         return el;
     }
+    /** 给元素设置样式 */
     static setStyle(element: HTMLElement, styles) {
         let elementStyle = element.style;
-        if (!elementStyle) {
-            return element;
-        }
+
         if (typeof styles === 'string') {
             element.style.cssText += ';' + styles;
             return styles.indexOf('opacity') > -1 ? Util.setOpacity(element, styles.match(/opacity:\s*(\d?\.?\d*)/)[1]) : element;
@@ -201,6 +193,7 @@ export class Util {
         }
         return element;
     }
+    /** 设置元素透明度 */
     static setOpacity(element: HTMLElement, value: string) {
         element.style.opacity = value;
         return element;
@@ -208,10 +201,8 @@ export class Util {
     static falseFunction() {
         return false;
     }
-    static makeElementUnselectable(element: HTMLElement) {
-        if (typeof element.onselectstart !== 'undefined') {
-            element.onselectstart = Util.falseFunction;
-        }
+    /** 设置 css 的 userSelect 样式为 none，也就是不可选中的状态 */
+    static makeElementUnselectable(element: HTMLElement): HTMLElement {
         element.style.userSelect = 'none';
         return element;
     }

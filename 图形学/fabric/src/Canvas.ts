@@ -2,7 +2,7 @@ import { Util } from './Util';
 import { Point } from './Point';
 import { FabricObject } from './FabricObject';
 import { Group } from './Group';
-import { Offset, Pos } from './interface';
+import { Offset, Pos, GroupSelector } from './interface';
 
 const STROKE_OFFSET = 0.5;
 const cursorMap = {
@@ -57,7 +57,7 @@ export class Canvas {
     /** 选择区域的边框大小，拖蓝的线宽 */
     public selectionLineWidth: number = 1;
     /** 左键拖拽的产生的选择区域，拖蓝区域 */
-    private _groupSelector;
+    private _groupSelector: GroupSelector;
     /** 当前选中的组 */
     public _activeGroup: Group;
 
@@ -71,6 +71,7 @@ export class Canvas {
     private _activeObject;
     /** 变换之前的中心点方式 */
     private _previousOriginX;
+    private _previousPointer: Pos;
 
     constructor(el: HTMLCanvasElement, options) {
         // 初始化下层画布 lower-canvas
@@ -177,115 +178,46 @@ export class Canvas {
     _onResize() {
         this.calcOffset();
     }
-    __onMouseUp(e: MouseEvent) {
-        let target;
-        if (this._currentTransform) {
-            let transform = this._currentTransform;
-
-            target = transform.target;
-            if (target._scaling) {
-                target._scaling = false;
-            }
-
-            // 每次物体更改都要重新确认新的控制点
-            let i = this._objects.length;
-            while (i--) {
-                this._objects[i].setCoords();
-            }
-
-            target.isMoving = false;
-
-            // 在点击之间如果物体状态改变了才派发事件
-            if (target.hasStateChanged()) {
-                // this.fire('object:modified', { target: target });
-                // target.fire('modified');
-            }
-
-            if (this._previousOriginX) {
-                this._currentTransform.target.adjustPosition(this._previousOriginX);
-                this._previousOriginX = null;
-            }
-        }
-
-        this._currentTransform = null;
-
-        if (this._groupSelector) {
-            // group selection was completed, determine its bounds
-            this._findSelectedObjects(e);
-        }
-        let activeGroup = this.getActiveGroup();
-        if (activeGroup) {
-            activeGroup.setObjectsCoords();
-            activeGroup.set('isMoving', false);
-            this._setCursor(this.defaultCursor);
-        }
-
-        // clear selection
-        this._groupSelector = null;
-        this.renderAll();
-
-        this._setCursorFromEvent(e, target);
-
-        // fix for FF
-        this._setCursor('');
-
-        let _this = this;
-        setTimeout(function () {
-            _this._setCursorFromEvent(e, target);
-        }, 50);
-
-        if (target) {
-            const { top, left, currentWidth, currentHeight, width, height, angle, scaleX, scaleY, originX, originY } = target;
-            const obj = {
-                top,
-                left,
-                currentWidth,
-                currentHeight,
-                width,
-                height,
-                angle,
-                scaleX,
-                scaleY,
-                originX,
-                originY,
-            };
-            console.log(JSON.stringify(obj, null, 4));
-        }
-        // this.fire('mouse:up', { target, e });
-        // target && target.fire('mouseup', { e });
-    }
     __onMouseDown(e: MouseEvent) {
-        let pointer;
-        // 只处理左键点击
+        // 只处理左键点击，要么是拖蓝事件、要么是点选事件
         let isLeftClick = 'which' in e ? e.which === 1 : e.button === 1;
         if (!isLeftClick) return;
 
-        // ignore if some object is being transformed at this moment
-        if (this._currentTransform) return;
+        // 这个我猜是为了保险起见，ignore if some object is being transformed at this moment
+        // if (this._currentTransform) return;
 
-        let target = this.findTarget(e),
-            corner;
-        pointer = this.getPointer(e);
+        let target = this.findTarget(e);
+        let pointer = this.getPointer(e);
+        let corner;
+        this._previousPointer = pointer;
 
         if (this._shouldClearSelection(e)) {
+            // 如果是拖蓝选区事件
             this._groupSelector = {
+                // 重置选区状态
                 ex: pointer.x,
                 ey: pointer.y,
                 top: 0,
                 left: 0,
             };
+            // 让所有元素失去激活状态
             this.deactivateAllWithDispatch();
+            this.renderAll();
         } else {
-            // 如果是拖拽或旋转
+            // 如果是点选操作，接下来就要为各种变换做准备
             target.saveState();
 
-            if ((corner = target._findTargetCorner(e, this._offset))) {
-                this.onBeforeScaleRotate(target);
-            }
+            // 判断点击的是不是控制点
+            corner = target._findTargetCorner(e, this._offset);
+            // if ((corner = target._findTargetCorner(e, this._offset))) {
+            //     this.onBeforeScaleRotate(target);
+            // }
             if (this._shouldHandleGroupLogic(e, target)) {
+                // 如果是选中组
                 this._handleGroupLogic(e, target);
                 target = this.getActiveGroup();
             } else {
+                // 如果是选中单个物体
                 if (target !== this.getActiveGroup()) {
                     this.deactivateAll();
                 }
@@ -293,9 +225,13 @@ export class Canvas {
             }
 
             this._setupCurrentTransform(e, target);
+
+            if (target) this.renderAll();
         }
-        // 我们必须重新渲染把当前激活的物体置于上层画布
-        this.renderAll();
+        // 不论是拖蓝选区事件还是点选事件，都需要重新绘制
+        // 拖蓝选区：需要把之前激活的物体取消选中态
+        // 点选事件：需要把当前激活的物体置顶
+        // this.renderAll();
 
         // this.fire('mouse:down', { target, e });
         // target && target.fire('mousedown', { e });
@@ -308,38 +244,36 @@ export class Canvas {
             this._currentTransform.top = this._currentTransform.target.top;
         }
     }
-    /** 处理鼠标 hover 事件
+    /** 处理鼠标 hover 事件和物体变换时的拖拽事件
      * 如果是涂鸦模式，只绘制 upper-canvas
-     * 如果是图片变换，只有 upper-canvas 会被渲染 */
+     * 如果是图片变换，只绘制 upper-canvas */
     __onMouseMove(e: MouseEvent) {
         let target, pointer;
 
         let groupSelector = this._groupSelector;
 
         if (groupSelector) {
-            // 如果是拖拽框选
+            // 如果有拖蓝框选区域
             pointer = Util.getPointer(e, this.upperCanvasEl);
 
             groupSelector.left = pointer.x - this._offset.left - groupSelector.ex;
             groupSelector.top = pointer.y - this._offset.top - groupSelector.ey;
             this.renderTop();
         } else if (!this._currentTransform) {
-            // 如果是 hover
-            // 减少不必要的查找
+            // 如果是 hover 事件，这里我们只需要改变鼠标样式，并不会重新渲染
             let style = this.upperCanvasEl.style;
-            // 这里我们只改变鼠标样式并不会重新渲染
             target = this.findTarget(e);
 
-            if (!target) {
-                // image/text was hovered-out from, we remove its borders
-                for (let i = this._objects.length; i--; ) {
-                    if (this._objects[i] && !this._objects[i].active) {
-                        this._objects[i].setActive(false);
-                    }
-                }
-                style.cursor = this.defaultCursor;
-            } else {
+            if (target) {
                 this._setCursorFromEvent(e, target);
+            } else {
+                // image/text was hovered-out from, we remove its borders
+                // for (let i = this._objects.length; i--; ) {
+                //     if (this._objects[i] && !this._objects[i].active) {
+                //         this._objects[i].setActive(false);
+                //     }
+                // }
+                style.cursor = this.defaultCursor;
             }
         } else {
             // 如果是旋转、缩放、平移等操作
@@ -423,6 +357,92 @@ export class Canvas {
         // this.fire('mouse:move', { target, e });
         // target && target.fire('mousemove', { e });
     }
+    /** 主要就是清空拖蓝选区，设置物体激活状态，重新渲染画布 */
+    __onMouseUp(e: MouseEvent) {
+        let target;
+        if (this._currentTransform) {
+            let transform = this._currentTransform;
+
+            target = transform.target;
+            if (target._scaling) {
+                target._scaling = false;
+            }
+
+            // 每次物体更改都要重新确认新的控制点
+            let i = this._objects.length;
+            while (i--) {
+                this._objects[i].setCoords();
+            }
+
+            target.isMoving = false;
+
+            // 在点击之间如果物体状态改变了才派发事件
+            // if (target.hasStateChanged()) {
+            //     this.fire('object:modified', { target: target });
+            //     target.fire('modified');
+            // }
+
+            if (this._previousOriginX) {
+                this._currentTransform.target.adjustPosition(this._previousOriginX);
+                this._previousOriginX = null;
+            }
+        }
+
+        this._currentTransform = null;
+
+        if (this._groupSelector) {
+            // 如果有拖蓝框选区域
+            this._findSelectedObjects(e);
+        }
+        let activeGroup = this.getActiveGroup();
+        if (activeGroup) {
+            //重新设置 激活组 中的物体
+            activeGroup.setObjectsCoords();
+            activeGroup.set('isMoving', false);
+            this._setCursor(this.defaultCursor);
+        }
+
+        // clear selection
+        this._groupSelector = null;
+        this.renderAll();
+
+        this._setCursorFromEvent(e, target);
+
+        // fix for FF
+        // this._setCursor('');
+
+        // let _this = this;
+        // setTimeout(function () {
+        //     _this._setCursorFromEvent(e, target);
+        // }, 50);
+
+        // if (target) {
+        //     const { top, left, currentWidth, currentHeight, width, height, angle, scaleX, scaleY, originX, originY } = target;
+        //     const obj = {
+        //         top,
+        //         left,
+        //         currentWidth,
+        //         currentHeight,
+        //         width,
+        //         height,
+        //         angle,
+        //         scaleX,
+        //         scaleY,
+        //         originX,
+        //         originY,
+        //     };
+        //     console.log(JSON.stringify(obj, null, 4));
+        // }
+
+        // this.fire('mouse:up', { target, e });
+        // target && target.fire('mouseup', { e });
+    }
+    _shouldRender(target: FabricObject, pointer: Pos) {
+        const activeObject = this.getActiveGroup() || this.getActiveObject();
+        // return !!activeObject;
+        return !!((target && (target.isMoving || target !== activeObject)) || (!target && !!activeObject) || (!target && !activeObject && !this._groupSelector) || (pointer && this._previousPointer && (pointer.x !== this._previousPointer.x || pointer.y !== this._previousPointer.y)));
+    }
+
     /** 使所有元素失活，并触发相应事件 */
     deactivateAllWithDispatch(): Canvas {
         // let activeObject = this.getActiveGroup() || this.getActiveObject();
@@ -537,17 +557,11 @@ export class Canvas {
     /** 根据鼠标位置来设置相应的鼠标样式 */
     _setCursorFromEvent(e: MouseEvent, target: FabricObject): boolean {
         let s = this.upperCanvasEl.style;
-        if (!target) {
-            s.cursor = this.defaultCursor;
-            return false;
-        } else {
+        if (target) {
             let activeGroup = this.getActiveGroup();
-            // only show proper corner when group selection is not active
-            let corner = target._findTargetCorner && (!activeGroup || !activeGroup.contains(target)) && target._findTargetCorner(e, this._offset);
+            let corner = (!activeGroup || !activeGroup.contains(target)) && target._findTargetCorner(e, this._offset);
 
-            if (!corner) {
-                s.cursor = this.hoverCursor;
-            } else {
+            if (corner) {
                 corner = corner as string;
                 if (corner in cursorMap) {
                     s.cursor = cursorMap[corner];
@@ -557,34 +571,37 @@ export class Canvas {
                     s.cursor = this.defaultCursor;
                     return false;
                 }
+            } else {
+                s.cursor = this.hoverCursor;
             }
+            return true;
+        } else {
+            s.cursor = this.defaultCursor;
+            return false;
         }
-        return true;
     }
     /** 获取拖蓝框选的元素
      * 可能只有一个元素，那就是普通的点选
      * 如果有多个元素，那就生成一个组
      */
     _findSelectedObjects(e: MouseEvent) {
-        let group = [],
+        let group: FabricObject[] = [], // 存储最终框选的元素
             x1 = this._groupSelector.ex,
             y1 = this._groupSelector.ey,
             x2 = x1 + this._groupSelector.left,
             y2 = y1 + this._groupSelector.top,
-            currentObject,
             selectionX1Y1 = new Point(Math.min(x1, x2), Math.min(y1, y2)),
             selectionX2Y2 = new Point(Math.max(x1, x2), Math.max(y1, y2));
 
         for (let i = 0, len = this._objects.length; i < len; ++i) {
-            currentObject = this._objects[i];
+            let currentObject = this._objects[i];
 
             if (!currentObject) continue;
 
+            // 物体是否与拖蓝选区相交或者被选区包含
             if (currentObject.intersectsWithRect(selectionX1Y1, selectionX2Y2) || currentObject.isContainedWithinRect(selectionX1Y1, selectionX2Y2)) {
-                // if (this.selection) {
                 currentObject.setActive(true);
                 group.push(currentObject);
-                // }
             }
         }
 
@@ -607,25 +624,20 @@ export class Canvas {
         }
         return this;
     }
-    /** 渲染 upper-canvas，还用于渲染组选择框。*/
+    /** 渲染 upper-canvas，一般用于渲染拖蓝多选区域和涂鸦 */
     renderTop(): Canvas {
-        let ctx = this.contextTop || this.contextContainer;
+        let ctx = this.contextTop;
+        // let ctx = this.contextTop || this.contextContainer;
         this.clearContext(ctx);
 
-        // we render the top context - last object
-        if (this._groupSelector) {
-            this._drawSelection();
-        }
+        // 绘制拖蓝选区
+        if (this._groupSelector) this._drawSelection();
 
-        // delegate rendering to group selection if one exists
-        // used for drawing selection borders/controls
-        let activeGroup = this.getActiveGroup();
-        if (activeGroup) {
-            activeGroup.render(ctx);
-        }
+        // 如果有选中物体
+        // let activeGroup = this.getActiveGroup();
+        // if (activeGroup) activeGroup.render(ctx);
 
         // this.fire('after:render');
-
         return this;
     }
     /** 绘制框选区域 */
@@ -659,7 +671,7 @@ export class Canvas {
         // object.fire('selected', { e });
         return this;
     }
-    /** 设置当前物体的变换数值 */
+    /** 记录当前物体的变换状态 */
     _setupCurrentTransform(e: MouseEvent, target: FabricObject) {
         let action = 'drag',
             corner,
@@ -826,16 +838,16 @@ export class Canvas {
     /** 将当前选中组失活 */
     discardActiveGroup(): Canvas {
         let g = this.getActiveGroup();
-        if (g) {
-            g.destroy();
-        }
+        if (g) g.destroy();
         return this.setActiveGroup(null);
     }
-    _shouldHandleGroupLogic(e, target) {
+    /** 是否要处理组的逻辑 */
+    _shouldHandleGroupLogic(e: MouseEvent, target: FabricObject) {
         let activeObject = this._activeObject;
         return e.shiftKey && (this.getActiveGroup() || (activeObject && activeObject !== target));
     }
-    onBeforeScaleRotate(object: FabricObject) {}
+    // onBeforeScaleRotate(object: FabricObject) {}
+    /** 是否是拖蓝事件，也就是没有点选到物体 */
     _shouldClearSelection(e: MouseEvent) {
         let target = this.findTarget(e),
             activeGroup = this.getActiveGroup();
@@ -848,49 +860,56 @@ export class Canvas {
             y: pointer.y - this._offset.top,
         };
     }
-    /** 根据鼠标的位置查找是否有选中的元素 */
+    /** 检测是否有物体在鼠标位置 */
     findTarget(e: MouseEvent, skipGroup: boolean = false): FabricObject {
-        let target,
-            pointer = this.getPointer(e);
+        let target;
+        // let pointer = this.getPointer(e);
 
         // if (this.controlsAboveOverlay && this.lastRenderedObjectWithControlsAboveOverlay && this.containsPoint(e, this.lastRenderedObjectWithControlsAboveOverlay) && this.lastRenderedObjectWithControlsAboveOverlay._findTargetCorner(e, this._offset)) {
         //     target = this.lastRenderedObjectWithControlsAboveOverlay;
         //     return target;
         // }
 
-        // first check current group (if one exists)
+        // 优先考虑当前组中的物体，因为激活的物体被选中的概率大
         let activeGroup = this.getActiveGroup();
         if (activeGroup && !skipGroup && this.containsPoint(e, activeGroup)) {
             target = activeGroup;
             return target;
         }
 
-        // then check all of the objects on canvas
-        // Cache all targets where their bounding box contains point.
-        let possibleTargets = [];
+        // 遍历所有物体，判断鼠标点是否在物体包围盒内
         for (let i = this._objects.length; i--; ) {
             if (this._objects[i] && this.containsPoint(e, this._objects[i])) {
-                // if (this.perPixelTargetFind || this._objects[i].perPixelTargetFind) {
-                //     possibleTargets[possibleTargets.length] = this._objects[i];
-                // } else {
-                //     target = this._objects[i];
-                //     this.relatedTarget = target;
-                //     break;
-                // }
                 target = this._objects[i];
-                // this.relatedTarget = target;
                 break;
             }
         }
-        for (let j = 0, len = possibleTargets.length; j < len; j++) {
-            pointer = this.getPointer(e);
-            let isTransparent = this._isTargetTransparent(possibleTargets[j], pointer.x, pointer.y);
-            if (!isTransparent) {
-                target = possibleTargets[j];
-                // this.relatedTarget = target;
-                break;
-            }
-        }
+
+        // 如果不根据包围盒来判断，而是根据透明度的话，可以用下面的代码
+        // 先通过包围盒找出可能点选的物体，再通过透明度具体判断，具体思路可参考 _isTargetTransparent 方法
+        // let possibleTargets = [];
+        // for (let i = this._objects.length; i--; ) {
+        //     if (this._objects[i] && this.containsPoint(e, this._objects[i])) {
+        //         if (this.perPixelTargetFind || this._objects[i].perPixelTargetFind) {
+        //             possibleTargets[possibleTargets.length] = this._objects[i];
+        //         } else {
+        //             target = this._objects[i];
+        //             this.relatedTarget = target;
+        //             break;
+        //         }
+        //         break;
+        //     }
+        // }
+        // for (let j = 0, len = possibleTargets.length; j < len; j++) {
+        //     pointer = this.getPointer(e);
+        //     let isTransparent = this._isTargetTransparent(possibleTargets[j], pointer.x, pointer.y);
+        //     if (!isTransparent) {
+        //         target = possibleTargets[j];
+        //         this.relatedTarget = target;
+        //         break;
+        //     }
+        // }
+
         if (target) return target;
     }
     /**
@@ -913,6 +932,7 @@ export class Canvas {
             x = xy.x,
             y = xy.y;
 
+        // 下面这是参考文献，不过好像打不开
         // http://www.geog.ubc.ca/courses/klink/gis.notes/ncgia/u32.html
         // http://idav.ucdavis.edu/~okreylos/TAship/Spring2000/PointInPolygon.html
 
@@ -927,6 +947,7 @@ export class Canvas {
         }
         return false;
     }
+    /** 如果当前的物体在当前的组内，则要考虑扣去组的 top、left 值 */
     _normalizePointer(object: FabricObject, pointer: Pos) {
         let activeGroup = this.getActiveGroup(),
             x = pointer.x,
@@ -959,24 +980,10 @@ export class Canvas {
             canvasToDrawOn.fillRect(0, 0, this.width, this.height);
         }
 
-        let activeGroup = this.getActiveGroup();
-        for (let i = 0, length = this._objects.length; i < length; ++i) {
-            if (!activeGroup || (activeGroup && this._objects[i] && !activeGroup.contains(this._objects[i]))) {
-                this._draw(canvasToDrawOn, this._objects[i]);
-            }
-        }
-
-        // delegate rendering to group selection (if one exists)
-        if (activeGroup) {
-            //Store objects in group preserving order, then replace
-            let sortedObjects = [];
-            this.forEachObject((object) => {
-                if (activeGroup.contains(object)) {
-                    sortedObjects.push(object);
-                }
-            });
-            activeGroup._set('objects', sortedObjects);
-            this._draw(canvasToDrawOn, activeGroup);
+        // 先绘制未激活物体，再绘制激活物体
+        const sortedObjects = this._chooseObjectsToRender();
+        for (let i = 0, len = sortedObjects.length; i < len; ++i) {
+            this._draw(canvasToDrawOn, sortedObjects[i]);
         }
 
         // if (this.controlsAboveOverlay) {
@@ -987,36 +994,73 @@ export class Canvas {
 
         return this;
     }
-    forEachObject(callback: Function) {
-        let objects = this._objects,
-            i = objects.length;
-        while (i--) {
-            callback.call(this, objects[i], i, objects);
+    /** 将所有物体分成两个组，一组是未激活态，一组是激活态，然后将激活组放在最后，这样就能够绘制到最上层 */
+    _chooseObjectsToRender() {
+        // 当前有没有激活的物体
+        let activeObject = this.getActiveObject();
+        // 当前有没有激活的组（也就是多个物体）
+        let activeGroup = this.getActiveGroup();
+        // 最终要渲染的物体顺序，也就是把激活的物体放在后面绘制
+        let objsToRender = [];
+
+        if (activeGroup) {
+            // 如果选中多个物体
+            const activeGroupObjects = [];
+            for (let i = 0, length = this._objects.length; i < length; i++) {
+                let object = this._objects[i];
+                if (activeGroup.contains(object)) {
+                    activeGroupObjects.push(object);
+                } else {
+                    objsToRender.push(object);
+                }
+            }
+            activeGroup._set('objects', activeGroupObjects);
+            objsToRender.push(activeGroup);
+        } else if (activeObject) {
+            // 如果只选中一个物体
+            let index = this._objects.indexOf(activeObject);
+            objsToRender = this._objects.slice();
+            if (index > -1) {
+                objsToRender.splice(index, 1);
+                objsToRender.push(activeObject);
+            }
+        } else {
+            // 所有物体都没被选中
+            objsToRender = this._objects;
         }
+
+        return objsToRender;
     }
+    // forEachObject(callback: Function) {
+    //     let objects = this._objects,
+    //         i = objects.length;
+    //     while (i--) {
+    //         callback.call(this, objects[i], i, objects);
+    //     }
+    // }
     getActiveGroup(): Group {
         return this._activeGroup;
     }
-    drawControls(ctx: CanvasRenderingContext2D) {
-        let activeGroup = this.getActiveGroup();
-        if (activeGroup) {
-            ctx.save();
-            Group.prototype.transform.call(activeGroup, ctx);
-            activeGroup.drawBorders(ctx).drawControls(ctx);
-            ctx.restore();
-        } else {
-            for (let i = 0, len = this._objects.length; i < len; ++i) {
-                if (!this._objects[i] || !this._objects[i].active) continue;
+    // drawControls(ctx: CanvasRenderingContext2D) {
+    //     let activeGroup = this.getActiveGroup();
+    //     if (activeGroup) {
+    //         ctx.save();
+    //         Group.prototype.transform.call(activeGroup, ctx);
+    //         activeGroup.drawBorders(ctx).drawControls(ctx);
+    //         ctx.restore();
+    //     } else {
+    //         for (let i = 0, len = this._objects.length; i < len; ++i) {
+    //             if (!this._objects[i] || !this._objects[i].active) continue;
 
-                ctx.save();
-                FabricObject.prototype.transform.call(this._objects[i], ctx);
-                this._objects[i].drawBorders(ctx).drawControls(ctx);
-                ctx.restore();
+    //             ctx.save();
+    //             FabricObject.prototype.transform.call(this._objects[i], ctx);
+    //             this._objects[i].drawBorders(ctx).drawControls(ctx);
+    //             ctx.restore();
 
-                // this.lastRenderedObjectWithControlsAboveOverlay = this._objects[i];
-            }
-        }
-    }
+    //             // this.lastRenderedObjectWithControlsAboveOverlay = this._objects[i];
+    //         }
+    //     }
+    // }
     _draw(ctx: CanvasRenderingContext2D, object: FabricObject) {
         if (!object) return;
 
@@ -1054,22 +1098,22 @@ export class Canvas {
         // obj.fire('added');
     }
     clearContext(ctx: CanvasRenderingContext2D): Canvas {
-        ctx.clearRect(0, 0, this.width, this.height);
+        ctx && ctx.clearRect(0, 0, this.width, this.height);
         return this;
     }
+    /** 删除所有物体和清空画布 */
     clear() {
         this._objects.length = 0;
-        if (this.discardActiveGroup) {
-            this.discardActiveGroup();
-        }
+        this.discardActiveGroup();
+
         this.clearContext(this.contextContainer);
-        if (this.contextTop) {
-            this.clearContext(this.contextTop);
-        }
+        this.clearContext(this.contextTop);
+
         // this.fire('canvas:cleared');
         this.renderAll();
         return this;
     }
+    /** 事件解绑 */
     dispose(): Canvas {
         this.clear();
         Util.removeListener(this.upperCanvasEl, 'mousedown', this._onMouseDown);

@@ -35,7 +35,25 @@
                 fill: 'blue',
                 angle: 45,
             });
-            canvas.add(rect, rect2);
+            const rect3 = new fabric.Rect({
+                top: 100,
+                left: 200,
+                width: 50,
+                height: 50,
+                fill: 'pink',
+            });
+            const rect4 = new fabric.Rect({
+                top: 100,
+                left: 300,
+                width: 50,
+                height: 50,
+                fill: 'pink',
+            });
+            const g = new fabric.Group([rect3, rect4], {
+                top: 200,
+                left: 200,
+            });
+            canvas.add(rect, rect2, g);
 
             window.xx = canvas;
         </script>

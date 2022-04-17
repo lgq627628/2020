@@ -1,9 +1,12 @@
 import { FabricObject } from './FabricObject';
 import { Util } from './Util';
 
-/** 组类，也就是拖蓝框选区域包围的那些物体构成了一个组 */
+/** 组类，也就是拖蓝框选区域包围的那些物体构成了一个组
+ * Group 虽然继承至 FabricObject，但是要注意获取某些属性有时是没有的
+ */
 export class Group extends FabricObject {
     public type: string = 'group';
+    // 组中所有的物体
     public objects: FabricObject[];
     public originalState;
     public _originalTop;
@@ -26,7 +29,7 @@ export class Group extends FabricObject {
         let groupDeltaX = this.left,
             groupDeltaY = this.top;
 
-        this.forEachObject((object) => {
+        this.objects.forEach((object) => {
             let objectLeft = object.get('left'),
                 objectTop = object.get('top');
 
@@ -38,8 +41,8 @@ export class Group extends FabricObject {
 
             object.setCoords();
 
-            // do not display corners of objects enclosed in a group
-            object.__origHasControls = object.hasControls;
+            // 当有选中组的时候，不显示物体的控制点
+            object.orignHasControls = object.hasControls;
             object.hasControls = false;
         });
     }
@@ -64,7 +67,7 @@ export class Group extends FabricObject {
         Util.removeFromArray(this.objects, object);
         return this;
     }
-    /** 将物体从组中溢移除，并重新计算组的大小位置 */
+    /** 将物体从组中移除，并重新计算组的大小位置 */
     removeWithUpdate(object: FabricObject) {
         this._restoreObjectsState();
         Util.removeFromArray(this.objects, object);
@@ -88,9 +91,8 @@ export class Group extends FabricObject {
 
         let groupScaleFactor = Math.max(this.scaleX, this.scaleY);
 
-        //The array is now sorted in order of highest first, so start from end.
-        for (let i = this.objects.length; i > 0; i--) {
-            let object = this.objects[i - 1],
+        for (let i = 0, len = this.objects.length; i < len; i++) {
+            let object = this.objects[i],
                 originalScaleFactor = object.borderScaleFactor,
                 originalHasRotatingPoint = object.hasRotatingPoint;
 
@@ -114,13 +116,13 @@ export class Group extends FabricObject {
     item(index: number): FabricObject {
         return this.getObjects()[index];
     }
-    forEachObject(callback: Function) {
-        let objects = this.objects,
-            i = objects.length;
-        while (i--) {
-            callback.call(this, objects[i], i, objects);
-        }
-    }
+    // forEachObject(callback: (object: FabricObject, i?: number, objects?: FabricObject[]) => {}) {
+    //     let objects = this.objects,
+    //         i = objects.length;
+    //     while (i--) {
+    //         callback.call(this, objects[i], i, objects);
+    //     }
+    // }
     /** 还原创建 group 之前的状态 */
     _restoreObjectsState(): Group {
         this.objects.forEach(this._restoreObjectState, this);
@@ -143,8 +145,8 @@ export class Group extends FabricObject {
         object.set('scaleY', object.get('scaleY') * this.get('scaleY'));
 
         object.setCoords();
-        object.hasControls = object.__origHasControls;
-        delete object.__origHasControls;
+        object.hasControls = object.orignHasControls;
+        // delete object.__origHasControls;
         object.setActive(false);
         object.setCoords();
 
@@ -161,16 +163,17 @@ export class Group extends FabricObject {
     hasMoved() {
         return this._originalLeft !== this.get('left') || this._originalTop !== this.get('top');
     }
+    /** 重新设置当前组中所有的物体的边框、控制点、位置和大小等 */
     setObjectsCoords(): Group {
-        this.forEachObject((object) => {
+        this.objects.forEach((object) => {
             object.setCoords();
         });
         return this;
     }
     /** 激活所有 group 中的物体 */
     activateAllObjects(): Group {
-        this.forEachObject(function (object) {
-            object.setActive();
+        this.objects.forEach((object) => {
+            object.setActive(true);
         });
         return this;
     }
@@ -214,6 +217,8 @@ export class Group extends FabricObject {
 
     /** 检查点是都在 group 中 */
     containsPoint(point) {
+        // halfWidth = this.getWidth() / 2,
+        // halfHeight = this.getHeight() / 2,
         let halfWidth = this.get('width') / 2,
             halfHeight = this.get('height') / 2,
             centerX = this.get('left'),

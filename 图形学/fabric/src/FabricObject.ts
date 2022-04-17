@@ -69,7 +69,7 @@ export class FabricObject {
     public cornerSize: number = 12;
     /** 通过像素来检测物体而不是通过包围盒 */
     // public perPixelTargetFind: boolean = false;
-    /** 物体缩放之后的控制点位置 */
+    /** 物体控制点位置，随时变化 */
     public oCoords: Coords;
     /** 物体所在的 canvas 画布 */
     public canvas;
@@ -77,6 +77,8 @@ export class FabricObject {
     public originalState;
     /** 物体所属的组 */
     public group;
+    /** 物体被拖蓝选区保存的时候需要临时保存下 hasControls 的值 */
+    public orignHasControls: boolean = true;
     public stateProperties: string[] = ('top left width height scaleX scaleY ' + 'angle cornerSize fill originX originY ' + 'stroke strokeWidth ' + 'borderScaleFactor transformMatrix visible').split(' ');
     constructor(options) {
         // super();
@@ -128,6 +130,10 @@ export class FabricObject {
             // 绘制激活物体四周的控制点
             this.drawControls(ctx);
         }
+
+        // 画自身坐标系
+        this.drawAxis(ctx);
+
         ctx.restore();
     }
     /** 由子类实现，就是由具体物体类来实现 */
@@ -190,7 +196,6 @@ export class FabricObject {
     /** 绘制包围盒模型的控制点 */
     drawControls(ctx: CanvasRenderingContext2D): FabricObject {
         if (!this.hasControls) return;
-
         // 因为画布已经经过变换，所以大部分数值需要除以 scale 来抵消变换
         let size = this.cornerSize,
             size2 = size / 2,
@@ -280,10 +285,30 @@ export class FabricObject {
 
         return this;
     }
+    drawAxis(ctx: CanvasRenderingContext2D) {
+        ctx.save();
+        const lengthRatio = 1.5;
+        const w = this.getWidth();
+        const h = this.getHeight();
+        const scaleX = 1 / this.scaleX,
+            scaleY = 1 / this.scaleY;
+        ctx.lineWidth = 1 / this.borderScaleFactor;
+        ctx.setLineDash([4 * lengthRatio, 3 * lengthRatio]);
+        /** 画坐标轴的时候需要把 transform 变换中的 scale 效果抵消，这样才能画出原始大小的线条 */
+        ctx.scale(scaleX, scaleY);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo((w / 2) * lengthRatio, 0);
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, (h / 2) * lengthRatio);
+        ctx.stroke();
+        ctx.restore();
+    }
     setupState() {
         this.originalState = {};
         this.saveState();
     }
+    /** 保存物体当前的状态到 originalState 中 */
     saveState(): FabricObject {
         this.stateProperties.forEach((prop) => {
             this.originalState[prop] = this[prop];
@@ -311,9 +336,12 @@ export class FabricObject {
         } else if (originY === 'bottom') {
             cy = point.y - this.getHeight() / 2;
         }
-
-        // Apply the reverse rotation to the point (it's already scaled properly)
-        return Util.rotatePoint(new Point(cx, cy), point, Util.degreesToRadians(this.angle));
+        const p = new Point(cx, cy);
+        if (this.angle) {
+            return Util.rotatePoint(p, point, Util.degreesToRadians(this.angle));
+        } else {
+            return p;
+        }
     }
     /**
      * 平移坐标系到中心点
@@ -406,6 +434,7 @@ export class FabricObject {
         }
         return false;
     }
+    /** 获取包围盒的四条边 */
     _getImageLines(corner: Corner) {
         return {
             topline: {
@@ -426,54 +455,54 @@ export class FabricObject {
             },
         };
     }
-    /** Helper method to determine how many cross points are between the 4 image edges and the horizontal line determined by the position of our mouse when clicked on canvas */
+    /** 判断鼠标点是否在某个物体的包围盒内
+     * 这里运用的是射线检测法，以鼠标坐标点为参照，水平向右做一条射线，如果和物体相交的个数为偶数点则点在物体外部；如果为奇数点则点在内部，当然只适用于凸多边形
+     */
     _findCrossPoints(ex: number, ey: number, oCoords): number {
         let b1,
             b2,
             a1,
             a2,
-            xi,
-            yi,
+            xi, // 鼠标点与边的交点
+            // yi, // 鼠标点与边的交点
             xcount = 0,
-            iLine;
+            iLine; // 当前边
 
+        // 遍历包围盒的四条边
         for (let lineKey in oCoords) {
             iLine = oCoords[lineKey];
-            // optimisation 1: line below dot. no cross
-            if (iLine.o.y < ey && iLine.d.y < ey) {
-                continue;
-            }
-            // optimisation 2: line above dot. no cross
-            if (iLine.o.y >= ey && iLine.d.y >= ey) {
-                continue;
-            }
-            // optimisation 3: vertical line case
+
+            // 优化1：如果边的两个端点的 y 值都小于鼠标点的 y 值，则跳过
+            if (iLine.o.y < ey && iLine.d.y < ey) continue;
+            // 优化2：如果边的两个端点的 y 值都大于鼠标点的 y 值，则跳过
+            if (iLine.o.y >= ey && iLine.d.y >= ey) continue;
+
+            // 优化3：如果边是一条垂线
             if (iLine.o.x === iLine.d.x && iLine.o.x >= ex) {
                 xi = iLine.o.x;
-                yi = ey;
-            }
-            // calculate the intersection point
-            else {
+                // yi = ey;
+            } else {
+                // 计算交点
                 b1 = 0;
                 b2 = (iLine.d.y - iLine.o.y) / (iLine.d.x - iLine.o.x);
                 a1 = ey - b1 * ex;
                 a2 = iLine.o.y - b2 * iLine.o.x;
 
                 xi = -(a1 - a2) / (b1 - b2);
-                yi = a1 + b1 * xi;
+                // yi = a1 + b1 * xi;
             }
             // dont count xi < ex cases
             if (xi >= ex) {
                 xcount += 1;
             }
-            // optimisation 4: specific for square images
+            // 优化4：方形图像
             if (xcount === 2) {
                 break;
             }
         }
         return xcount;
     }
-    setActive(active: boolean): FabricObject {
+    setActive(active: boolean = false): FabricObject {
         this.active = !!active;
         return this;
     }
@@ -530,8 +559,13 @@ export class FabricObject {
             return this[prop] !== this.originalState[prop];
         }, this);
     }
-    /** 框选区域 */
-    intersectsWithRect(selectionTL, selectionBR) {
+    /**
+     * 物体与框选区域是否相交，用框选区域的四条边分别与物体的四条边求交
+     * @param {Point} selectionTL 拖蓝框选区域左上角的点
+     * @param {Point} selectionBR 拖蓝框选区域右下角的点
+     * @returns {boolean}
+     */
+    intersectsWithRect(selectionTL: Point, selectionBR: Point): boolean {
         let oCoords = this.oCoords,
             tl = new Point(oCoords.tl.x, oCoords.tl.y),
             tr = new Point(oCoords.tr.x, oCoords.tr.y),
@@ -541,10 +575,16 @@ export class FabricObject {
         let intersection = Intersection.intersectPolygonRectangle([tl, tr, br, bl], selectionTL, selectionBR);
         return intersection.status === 'Intersection';
     }
-    isContainedWithinObject(other) {
-        return this.isContainedWithinRect(other.oCoords.tl, other.oCoords.br);
-    }
-    isContainedWithinRect(selectionTL, selectionBR) {
+    // isContainedWithinObject(other) {
+    //     return this.isContainedWithinRect(other.oCoords.tl, other.oCoords.br);
+    // }
+    /**
+     * 物体是否被框选区域包含
+     * @param {Point} selectionTL 拖蓝框选区域左上角的点
+     * @param {Point} selectionBR 拖蓝框选区域右下角的点
+     * @returns {boolean}
+     */
+    isContainedWithinRect(selectionTL: Point, selectionBR: Point): boolean {
         let oCoords = this.oCoords,
             tl = new Point(oCoords.tl.x, oCoords.tl.y),
             tr = new Point(oCoords.tr.x, oCoords.tr.y),
@@ -563,29 +603,29 @@ export class FabricObject {
     //     }
     //     return value;
     // }
-    /** 在缩放、旋转期间设置拖拽盒子的坐标系 */
+    /** 重新设置物体包围盒的边框和各个控制点，包括位置和大小 */
     setCoords() {
         let strokeWidth = this.strokeWidth > 1 ? this.strokeWidth : 0,
             padding = this.padding,
-            theta = Util.degreesToRadians(this.angle);
+            radian = Util.degreesToRadians(this.angle);
 
         this.currentWidth = (this.width + strokeWidth) * this.scaleX + padding * 2;
         this.currentHeight = (this.height + strokeWidth) * this.scaleY + padding * 2;
 
         // If width is negative, make postive. Fixes path selection issue
-        if (this.currentWidth < 0) {
-            this.currentWidth = Math.abs(this.currentWidth);
-        }
+        // if (this.currentWidth < 0) {
+        //     this.currentWidth = Math.abs(this.currentWidth);
+        // }
 
+        // 物体中心点到顶点的斜边长度
         let _hypotenuse = Math.sqrt(Math.pow(this.currentWidth / 2, 2) + Math.pow(this.currentHeight / 2, 2));
-
         let _angle = Math.atan(this.currentHeight / this.currentWidth);
 
         // offset added for rotate and scale actions
-        let offsetX = Math.cos(_angle + theta) * _hypotenuse,
-            offsetY = Math.sin(_angle + theta) * _hypotenuse,
-            sinTh = Math.sin(theta),
-            cosTh = Math.cos(theta);
+        let offsetX = Math.cos(_angle + radian) * _hypotenuse,
+            offsetY = Math.sin(_angle + radian) * _hypotenuse,
+            sinTh = Math.sin(radian),
+            cosTh = Math.cos(radian);
 
         let coords = this.getCenterPoint();
         let tl = {
@@ -633,15 +673,16 @@ export class FabricObject {
 
         return this;
     }
+    /** 重新设置物体的每个控制点，包括位置和大小 */
     _setCornerCoords() {
         let coords = this.oCoords,
-            theta = Util.degreesToRadians(this.angle),
+            radian = Util.degreesToRadians(this.angle),
             newTheta = Util.degreesToRadians(45 - this.angle),
             cornerHypotenuse = Math.sqrt(2 * Math.pow(this.cornerSize, 2)) / 2,
             cosHalfOffset = cornerHypotenuse * Math.cos(newTheta),
             sinHalfOffset = cornerHypotenuse * Math.sin(newTheta),
-            sinTh = Math.sin(theta),
-            cosTh = Math.cos(theta);
+            sinTh = Math.sin(radian),
+            cosTh = Math.cos(radian);
 
         coords.tl.corner = {
             tl: {

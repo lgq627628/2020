@@ -39,3 +39,15 @@ export interface Coords {
     /** 上中旋转控制点 */
     mtr: Coord;
 }
+
+/** 选区的起点和终点，两点构成了一个矩形 */
+export interface GroupSelector {
+    /** 起始点的坐标 x */
+    ex: number
+    /** 起始点的坐标 y */
+    ey: number
+    /** 终点的坐标 x */
+    top: number
+    /** 终点的坐标 y */
+    left: number
+}

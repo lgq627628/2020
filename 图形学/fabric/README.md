@@ -14,6 +14,8 @@
 ## 如何运行
 在根目录下运行 npx vite 即可
 
+## 缓存好文
+https://www.cnblogs.com/axes/p/3567364.html?utm_source=tuicool
 
 ## 小发现
 - 喜欢先校验非空 if(!obj) {} else {}

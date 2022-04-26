@@ -1,8 +1,71 @@
 import { Point } from './Point';
-import { Offset } from './interface';
+import { IAnimationOption, Offset, Transform } from './interface';
 
 const PiBy180 = Math.PI / 180; // 写在这里相当于缓存，因为会频繁调用
 export class Util {
+    static loadImage(url, options: any = {}) {
+        return new Promise(function (resolve, reject) {
+            let img = document.createElement('img');
+            let done = () => {
+                img.onload = img.onerror = null;
+                resolve(img);
+            };
+            if (url) {
+                img.onload = done;
+                img.onerror = () => {
+                    reject(new Error('Error loading ' + img.src));
+                };
+                options && options.crossOrigin && (img.crossOrigin = options.crossOrigin);
+                img.src = url;
+            } else {
+                done();
+            }
+        });
+    }
+    static clone(obj) {
+        if (!obj || typeof obj !== 'object') return obj;
+        let temp = new obj.constructor();
+        for (let key in obj) {
+            if (!obj[key] || typeof obj[key] !== 'object') {
+                temp[key] = obj[key];
+            } else {
+                temp[key] = Util.clone(obj[key]);
+            }
+        }
+        return temp;
+    }
+    static animate(options: IAnimationOption) {
+        window.requestAnimationFrame((timestamp: number) => {
+            let start = timestamp || +new Date(),
+                duration = options.duration || 500,
+                finish = start + duration,
+                time,
+                onChange = options.onChange || (() => {}),
+                abort = options.abort || (() => false),
+                easing = options.easing || ((t, b, c, d) => -c * Math.cos((t / d) * (Math.PI / 2)) + c + b),
+                startValue = options.startValue || 0,
+                endValue = options.endValue || 100,
+                byValue = options.byValue || endValue - startValue;
+
+            function tick(ticktime: number) {
+                time = ticktime || +new Date();
+                let currentTime = time > finish ? duration : time - start;
+                if (abort()) {
+                    options.onComplete && options.onComplete();
+                    return;
+                }
+                onChange(easing(currentTime, startValue, byValue, duration)); // 其实 animate 函数只是根据 easing 函数计算出了某个值，然后传给调用者而已
+                if (time > finish) {
+                    options.onComplete && options.onComplete();
+                    return;
+                }
+                window.requestAnimationFrame(tick);
+            }
+
+            options.onStart && options.onStart(); // 动画开始前的回调
+            tick(start);
+        });
+    }
     /** 从数组中溢出某个元素 */
     static removeFromArray(array: any[], value: any) {
         let idx = array.indexOf(value);
@@ -62,7 +125,7 @@ export class Util {
     static toFixed(number: number | string, fractionDigits: number): number {
         return parseFloat(Number(number).toFixed(fractionDigits));
     }
-    /** 获取鼠标的点击坐标，相对于页面左上角，注意不是画布的左上角，到时候会减掉 oeesft */
+    /** 获取鼠标的点击坐标，相对于页面左上角，注意不是画布的左上角，到时候会减掉 offset */
     static getPointer(event: Event, upperCanvasEl: HTMLCanvasElement) {
         event || (event = window.event);
 
@@ -93,6 +156,58 @@ export class Util {
         return {
             x: Util.pointerX(event) + scrollLeft,
             y: Util.pointerY(event) + scrollTop,
+        };
+    }
+    /** 根据矩阵反推出具体变换数值 */
+    static qrDecompose(m: number[]): Transform {
+        let angle = Math.atan2(m[1], m[0]),
+            denom = Math.pow(m[0], 2) + Math.pow(m[1], 2),
+            scaleX = Math.sqrt(denom),
+            scaleY = (m[0] * m[3] - m[2] * m[1]) / scaleX,
+            skewX = Math.atan2(m[0] * m[2] + m[1] * m[3], denom);
+        return {
+            angle: angle / PiBy180,
+            scaleX: scaleX,
+            scaleY: scaleY,
+            skewX: skewX / PiBy180,
+            skewY: 0,
+            translateX: m[4],
+            translateY: m[5],
+        };
+    }
+    static invertTransform(t) {
+        let a = 1 / (t[0] * t[3] - t[1] * t[2]),
+            r = [a * t[3], -a * t[1], -a * t[2], a * t[0]],
+            o = Util.transformPoint({ x: t[4], y: t[5] }, r, true);
+        r[4] = -o.x;
+        r[5] = -o.y;
+        return r;
+    }
+    static transformPoint(p, t, ignoreOffset: boolean = false) {
+        if (ignoreOffset) {
+            return new Point(t[0] * p.x + t[2] * p.y, t[1] * p.x + t[3] * p.y);
+        }
+        return new Point(t[0] * p.x + t[2] * p.y + t[4], t[1] * p.x + t[3] * p.y + t[5]);
+    }
+    static multiplyTransformMatrices(a, b, is2x2) {
+        // Matrix multiply a * b
+        return [a[0] * b[0] + a[2] * b[1], a[1] * b[0] + a[3] * b[1], a[0] * b[2] + a[2] * b[3], a[1] * b[2] + a[3] * b[3], is2x2 ? 0 : a[0] * b[4] + a[2] * b[5] + a[4], is2x2 ? 0 : a[1] * b[4] + a[3] * b[5] + a[5]];
+    }
+    static makeBoundingBoxFromPoints(points) {
+        let xPoints = [points[0].x, points[1].x, points[2].x, points[3].x],
+            minX = Util.min(xPoints),
+            maxX = Util.max(xPoints),
+            width = Math.abs(minX - maxX),
+            yPoints = [points[0].y, points[1].y, points[2].y, points[3].y],
+            minY = Util.min(yPoints),
+            maxY = Util.max(yPoints),
+            height = Math.abs(minY - maxY);
+
+        return {
+            left: minX,
+            top: minY,
+            width: width,
+            height: height,
         };
     }
     static pointerX(event) {

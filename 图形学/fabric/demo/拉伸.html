@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>拉伸</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+            }
+            #canvas {
+                width: 1000px;
+                height: 800px;
+                border: 1px solid red;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="canvas" width="1000" height="800"></canvas>
+
+        <script>
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+
+            const controlSize = 20;
+            let isMoveControl = false;
+            let curTransform = null;
+
+            function drawRect(ctx, rect) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                rect.controlRect = getControlRect(rect);
+                let { x, y, w, h, scaleX, scaleY } = rect;
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.scale(scaleX, scaleY);
+                // 绘制矩形
+                ctx.beginPath();
+                ctx.fillStyle = 'green';
+                ctx.fillRect(0, 0, w, h);
+                ctx.save();
+                ctx.scale(1 / scaleX, 1 / scaleY);
+                // 绘制矩形原原点
+                ctx.beginPath();
+                ctx.fillStyle = 'black';
+                ctx.arc(0, 0, 10, 0, 2 * Math.PI);
+                ctx.fill();
+                // 绘制左边中间控制点
+                ctx.beginPath();
+                ctx.fillStyle = 'red';
+                ctx.fillRect(w * scaleX - controlSize / 2, h / 2 - controlSize / 2, controlSize, controlSize);
+                // 绘制右边中间控制点
+                ctx.beginPath();
+                ctx.fillStyle = 'blue';
+                ctx.fillRect(-controlSize / 2, h / 2 - controlSize / 2, controlSize, controlSize);
+                ctx.restore();
+                ctx.restore();
+            }
+            function pointInControl(point, rect) {
+                const { x, y, w, h } = rect.controlRect;
+
+                const { x: pointX, y: pointY } = point;
+                if (pointX >= x && pointX <= x + w && pointY >= y && pointY <= y + h) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+
+            function getControlRect(rect) {
+                let { x, y, w, h, scaleX, scaleY } = rect;
+                w = w * scaleX;
+                h = h * scaleY;
+                const controlRect = {
+                    x: x + w - controlSize / 2,
+                    y: y + h / 2 - controlSize / 2,
+                    w: controlSize,
+                    h: controlSize,
+                };
+                return controlRect;
+            }
+
+            function getPoint(e) {
+                return {
+                    x: e.clientX,
+                    y: e.clientY,
+                };
+            }
+
+            const rect = {
+                x: 300,
+                y: 100,
+                w: 200,
+                h: 200,
+                scaleX: 1,
+                scaleY: 1,
+            };
+            drawRect(ctx, rect);
+
+            document.addEventListener('mousemove', (e) => {
+                e.preventDefault();
+                const point = getPoint(e);
+                if (isMoveControl) {
+                    const newScaleX = calcNewScaleX(curTransform, point);
+                    rect.scaleX = newScaleX;
+                    drawRect(ctx, rect);
+                } else {
+                    const isInControl = pointInControl(point, rect);
+                    if (isInControl) {
+                        canvas.style.cursor = 'e-resize';
+                    } else {
+                        canvas.style.cursor = '';
+                    }
+                }
+            });
+
+            canvas.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                const point = getPoint(e);
+                const isInControl = pointInControl(point, rect);
+                if (!isInControl) return;
+                isMoveControl = true;
+                curTransform = {
+                    ex: point.x,
+                    ey: point.y,
+                    x: rect.x,
+                    y: rect.y,
+                    w: rect.w * rect.scaleX,
+                    h: rect.h * rect.scaleY,
+                    scaleX: rect.scaleX,
+                    originX: 'left',
+                    originY: 'center',
+                };
+            });
+            document.addEventListener('mouseup', (e) => {
+                e.preventDefault();
+                isMoveControl = false;
+                curTransform = null;
+            });
+
+            function calcNewScaleX(curTransform, point) {
+                const { ex, ey, x, y } = curTransform;
+                const { w } = rect;
+                const { x: pointX, y: pointY } = point;
+                console.log(curTransform);
+                let scale = 1;
+                if (curTransform.originX === 'left') {
+                    scale = (pointX - x) / w;
+                    rect.x = curTransform.x;
+                    if (scale < 0) curTransform.originX = 'right';
+                } else if (curTransform.originX === 'right') {
+                    scale = (x - pointX) / w;
+                    rect.x = pointX;
+                    if (scale < 0) curTransform.originX = 'left';
+                }
+                console.log(scale);
+                return scale;
+            }
+            window.xx = ctx;
+        </script>
+    </body>
+</html>

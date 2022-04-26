@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+        <title>射线检测简单案例</title>
+        <style>
+            body {
+                margin: 0;
+            }
+            #c {
+                border: 1px solid #000;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="c" width="800" height="600"></canvas>
+        <h3 id="log" style="color: red"></h3>
+        <script>
+            'use strict';
+            // http://idav.ucdavis.edu/~okreylos/TAship/Spring2000/PointInPolygon.html
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = '#f00';
+            // n边形
+            const vertexNum = 5;
+            // 顶点
+            let vertexArr = [];
+            // lines
+            const lineArr = [];
+            for (let i = 0; i < vertexNum; i++) {
+                let vertex = { x: getRandom(), y: getRandom() };
+                vertexArr.push(vertex);
+            }
+            ctx.beginPath();
+            for (let i = 0; i < vertexArr.length; i++) {
+                let v = vertexArr[i];
+                let preV;
+                if (i === 0) {
+                    ctx.moveTo(v.x, v.y);
+                    preV = vertexArr[vertexArr.length - 1];
+                } else {
+                    ctx.lineTo(v.x, v.y);
+                    preV = vertexArr[i - 1];
+                }
+                lineArr.push({ p1: preV, p2: v });
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            c.addEventListener('mousemove', (e) => {
+                const { x, y } = e;
+                // drawLine(x, y);
+                const isOutside = checkPoint({ x, y }, lineArr);
+                log.innerText = `图形${isOutside ? '外' : '内'}`;
+            });
+
+            function checkPoint(point, lines) {
+                let intersectionCount = 0;
+                let { x, y } = point;
+                for (let i = 0; i < lines.length; i++) {
+                    let line = lines[i];
+                    let { p1, p2 } = line;
+                    if ((p1.y < y && p2.y < y) || (p1.y >= y && p2.y >= y)) {
+                        continue;
+                    } else {
+                        // 求焦点Sx
+                        const sx = ((y - p1.y) / (p2.y - p1.y)) * (p2.x - p1.x) + p1.x;
+                        if (sx >= x) {
+                            intersectionCount++;
+                        }
+                    }
+                }
+                return intersectionCount % 2 === 0;
+            }
+
+            // function drawLine(x, y) {
+            //   ctx.beginPath();
+            //   ctx.moveTo(x, y);
+            //   ctx.lineTo(800, y);
+            //   ctx.stroke();
+            // }
+
+            function getRandom(a = 0, b = 600) {
+                return Math.random() * (b - a) + a;
+            }
+        </script>
+    </body>
+</html>

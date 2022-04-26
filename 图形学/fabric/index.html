@@ -19,7 +19,7 @@
             import { fabric } from './src/index.ts';
             const canvas = new fabric.Canvas(document.getElementById('canvas'));
             const rect = new fabric.Rect({
-                top: 100,
+                top: 200,
                 left: 100,
                 width: 100,
                 height: 100,
@@ -36,24 +36,141 @@
                 angle: 45,
             });
             const rect3 = new fabric.Rect({
-                top: 100,
+                top: 200,
                 left: 200,
                 width: 50,
                 height: 50,
                 fill: 'pink',
             });
             const rect4 = new fabric.Rect({
-                top: 100,
+                top: 200,
                 left: 300,
                 width: 50,
                 height: 50,
                 fill: 'pink',
             });
+            fabric.FabricImage.fromURL(
+                'https://p26-passport.byteacctimg.com/img/user-avatar/7470b65342454dd6699a6cf772652260~300x300.image',
+                (img) => {
+                    canvas.add(img);
+                },
+                {
+                    width: 200,
+                    height: 200,
+                    left: 300,
+                    top: 300,
+                }
+            );
+            fabric.FabricImage.fromURL(
+                './src/beidaihe.jpeg',
+                (img) => {
+                    canvas.add(img);
+                },
+                {
+                    width: 200,
+                    height: 200,
+                    left: 600,
+                    top: 400,
+                }
+            );
             const g = new fabric.Group([rect3, rect4], {
                 top: 200,
                 left: 200,
             });
             canvas.add(rect, rect2, g);
+
+            // 这是一个基本的缩放控制，限制在 1% 和 2000% 之间。
+            // canvas.on('mouse:wheel', function (opt) {
+            //     let delta = opt.e.deltaY;
+            //     let zoom = canvas.getZoom();
+            //     zoom *= 0.999 ** delta;
+            //     if (zoom > 20) zoom = 20;
+            //     if (zoom < 0.01) zoom = 0.01;
+            //     canvas.setZoom(zoom);
+            //     opt.e.preventDefault();
+            //     opt.e.stopPropagation();
+            // });
+            // canvas.on('mouse:wheel', function (opt) {
+            //     let delta = opt.e.deltaY;
+            //     let zoom = canvas.getZoom();
+            //     zoom *= 0.999 ** delta;
+            //     if (zoom > 20) zoom = 20;
+            //     if (zoom < 0.01) zoom = 0.01;
+            //     canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
+            //     opt.e.preventDefault();
+            //     opt.e.stopPropagation();
+            // });
+
+            // 画布拖拽
+            // canvas.on('mouse:down', function (opt) {
+            //     let evt = opt.e;
+            //     if (evt.altKey === true) {
+            //         this.isDragging = true;
+            //         this.selection = false;
+            //         this.lastPosX = evt.clientX;
+            //         this.lastPosY = evt.clientY;
+            //     }
+            // });
+            // canvas.on('mouse:move', function (opt) {
+            //     if (this.isDragging) {
+            //         let e = opt.e;
+            //         let vpt = this.viewportTransform;
+            //         vpt[4] += e.clientX - this.lastPosX;
+            //         vpt[5] += e.clientY - this.lastPosY;
+            //         this.renderAll();
+            //         this.lastPosX = e.clientX;
+            //         this.lastPosY = e.clientY;
+            //     }
+            // });
+            // canvas.on('mouse:up', function (opt) {
+            //     // 在鼠标上移时，我们想为所有对象重新计算新的交互
+            //     // 所以我们调用 setViewportTransform
+            //     this.setViewportTransform(this.viewportTransform);
+            //     this.isDragging = false;
+            //     this.selection = true;
+            // });
+
+            // 缩放限制
+            // canvas.on('mouse:wheel', function (opt) {
+            //     let delta = opt.e.deltaY;
+            //     let zoom = canvas.getZoom();
+            //     zoom *= 0.999 ** delta;
+            //     if (zoom > 20) zoom = 20;
+            //     if (zoom < 0.01) zoom = 0.01;
+            //     canvas.zoomToPoint({ x: opt.e.offsetX, y: opt.e.offsetY }, zoom);
+            //     opt.e.preventDefault();
+            //     opt.e.stopPropagation();
+            //     let vpt = this.viewportTransform;
+            //     if (zoom < 400 / 1000) {
+            //         vpt[4] = 200 - (1000 * zoom) / 2;
+            //         vpt[5] = 200 - (1000 * zoom) / 2;
+            //     } else {
+            //         if (vpt[4] >= 0) {
+            //             vpt[4] = 0;
+            //         } else if (vpt[4] < canvas.getWidth() - 1000 * zoom) {
+            //             vpt[4] = canvas.getWidth() - 1000 * zoom;
+            //         }
+            //         if (vpt[5] >= 0) {
+            //             vpt[5] = 0;
+            //         } else if (vpt[5] < canvas.getHeight() - 1000 * zoom) {
+            //             vpt[5] = canvas.getHeight() - 1000 * zoom;
+            //         }
+            //     }
+            // });
+
+            rect.animate(
+                { top: 50, left: 400, scaleX: 2, angle: 45 },
+                {
+                    duration: 1000,
+                    onChange: canvas.renderAll.bind(canvas),
+                }
+            );
+
+            // setInterval(() => {
+            //     rect.set('top', Math.random() * 800);
+            //     rect.set('left', Math.random() * 800);
+            //     canvas.renderAll();
+            // }, 500);
 
             window.xx = canvas;
         </script>

@@ -22,7 +22,7 @@ export class Group extends FabricObject {
         this._updateObjectsCoords();
 
         this.setCoords();
-        this.saveCoords();
+        // this.saveCoords();
     }
     /** 更新所有物体坐标系 */
     _updateObjectsCoords() {
@@ -89,19 +89,19 @@ export class Group extends FabricObject {
         ctx.save();
         this.transform(ctx);
 
-        let groupScaleFactor = Math.max(this.scaleX, this.scaleY);
+        // let groupScaleFactor = Math.max(this.scaleX, this.scaleY);
 
         for (let i = 0, len = this.objects.length; i < len; i++) {
             let object = this.objects[i],
-                originalScaleFactor = object.borderScaleFactor,
+                // originalScaleFactor = object.borderScaleFactor,
                 originalHasRotatingPoint = object.hasRotatingPoint;
 
-            object.borderScaleFactor = groupScaleFactor;
+            // object.borderScaleFactor = groupScaleFactor;
             object.hasRotatingPoint = false;
 
             object.render(ctx);
 
-            object.borderScaleFactor = originalScaleFactor;
+            // object.borderScaleFactor = originalScaleFactor;
             object.hasRotatingPoint = originalHasRotatingPoint;
         }
 
@@ -155,14 +155,14 @@ export class Group extends FabricObject {
     destroy() {
         return this._restoreObjectsState();
     }
-    saveCoords(): Group {
-        this._originalLeft = this.get('left');
-        this._originalTop = this.get('top');
-        return this;
-    }
-    hasMoved() {
-        return this._originalLeft !== this.get('left') || this._originalTop !== this.get('top');
-    }
+    // saveCoords(): Group {
+    //     this._originalLeft = this.get('left');
+    //     this._originalTop = this.get('top');
+    //     return this;
+    // }
+    // hasMoved() {
+    //     return this._originalLeft !== this.get('left') || this._originalTop !== this.get('top');
+    // }
     /** 重新设置当前组中所有的物体的边框、控制点、位置和大小等 */
     setObjectsCoords(): Group {
         this.objects.forEach((object) => {

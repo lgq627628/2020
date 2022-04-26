@@ -34,6 +34,7 @@ export class Rect extends FabricObject {
             w = this.width,
             h = this.height;
 
+        // 绘制一个新的东西，大部分情况下都要开启一个新路径，要养成习惯
         ctx.beginPath();
 
         // if (this.transformMatrix && this.group) {

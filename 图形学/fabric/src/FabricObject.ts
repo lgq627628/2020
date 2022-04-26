@@ -1,7 +1,7 @@
 import { Util } from './Util';
 import { Point } from './Point';
 import { Intersection } from './Intersection';
-import { Offset, Coords, Corner } from './interface';
+import { Offset, Coords, Corner, IAnimationOption } from './interface';
 
 /** 物体基类，有一些共同属性和方法 */
 export class FabricObject {
@@ -11,13 +11,13 @@ export class FabricObject {
     public active: boolean = false;
     /** 是否可见 */
     public visible: boolean = true;
-    /** 默认水平变换位置 left | right | center */
+    /** 默认水平变换中心 left | right | center */
     public originX: string = 'center';
-    /** 默认垂直变换位置 top | bottom | center */
+    /** 默认垂直变换中心 top | bottom | center */
     public originY: string = 'center';
-    /** 物体变换后的中心点 top 值 */
+    /** 物体位置 top 值 */
     public top: number = 0;
-    /** 物体宾欢后的中心点 left 值 */
+    /** 物体位置 left 值 */
     public left: number = 0;
     /** 物体原始宽度 */
     public width: number = 0;
@@ -27,7 +27,7 @@ export class FabricObject {
     public scaleX: number = 1;
     /** 物体当前的缩放倍数 y */
     public scaleY: number = 1;
-    /** 物体的旋转角度 */
+    /** 物体当前的旋转角度 */
     public angle: number = 0;
     /** 选中态物体和边框之间的距离 */
     public padding: number = 4;
@@ -62,7 +62,7 @@ export class FabricObject {
     /** 物体是否在移动中 */
     public isMoving: boolean = false;
     /** 选中态的边框宽度 */
-    public borderScaleFactor: number = 0.5;
+    public borderWidth: number = 1;
     /** 物体控制点用 stroke 还是 fill */
     public transparentCorners: boolean = true;
     /** 物体控制点大小，单位 px */
@@ -79,7 +79,7 @@ export class FabricObject {
     public group;
     /** 物体被拖蓝选区保存的时候需要临时保存下 hasControls 的值 */
     public orignHasControls: boolean = true;
-    public stateProperties: string[] = ('top left width height scaleX scaleY ' + 'angle cornerSize fill originX originY ' + 'stroke strokeWidth ' + 'borderScaleFactor transformMatrix visible').split(' ');
+    public stateProperties: string[] = ('top left width height scaleX scaleY ' + 'angle cornerSize fill originX originY ' + 'stroke strokeWidth ' + 'borderWidth transformMatrix visible').split(' ');
     constructor(options) {
         // super();
         this.initialize(options);
@@ -152,36 +152,30 @@ export class FabricObject {
     drawBorders(ctx: CanvasRenderingContext2D): FabricObject {
         let padding = this.padding,
             padding2 = padding * 2,
-            strokeWidth = this.strokeWidth > 1 ? this.strokeWidth : 0;
+            strokeWidth = this.borderWidth;
 
         ctx.save();
 
         ctx.globalAlpha = this.isMoving ? this.borderOpacityWhenMoving : 1;
         ctx.strokeStyle = this.borderColor;
-
-        let scaleX = 1 / this.scaleX,
-            scaleY = 1 / this.scaleY;
-        // let scaleX = 1 / this._constrainScale(this.scaleX),
-        //     scaleY = 1 / this._constrainScale(this.scaleY);
-
-        ctx.lineWidth = 1 / this.borderScaleFactor;
+        ctx.lineWidth = strokeWidth;
 
         /** 画边框的时候需要把 transform 变换中的 scale 效果抵消，这样才能画出原始大小的线条 */
-        ctx.scale(scaleX, scaleY);
+        ctx.scale(1 / this.scaleX, 1 / this.scaleY);
 
         let w = this.getWidth(),
             h = this.getHeight();
         // 画物体激活时候的边框，也就是包围盒，~~就是取整的意思
         ctx.strokeRect(
-            ~~(-(w / 2) - padding - (strokeWidth / 2) * this.scaleX) + 0.5, // 0.5 的便宜是为了让曲线更加尖锐
-            ~~(-(h / 2) - padding - (strokeWidth / 2) * this.scaleY) + 0.5,
-            ~~(w + padding2 + strokeWidth * this.scaleX),
-            ~~(h + padding2 + strokeWidth * this.scaleY)
+            ~~(-(w / 2) - padding - strokeWidth / 2) + 0.5, // 0.5 的便宜是为了让曲线更加尖锐
+            ~~(-(h / 2) - padding - strokeWidth / 2) + 0.5,
+            ~~(w + padding2 + strokeWidth),
+            ~~(h + padding2 + strokeWidth)
         );
 
         // 画旋转控制点的那条线
         if (this.hasRotatingPoint && this.hasControls) {
-            let rotateHeight = (-h - strokeWidth * this.scaleY - padding * 2) / 2;
+            let rotateHeight = (-h - strokeWidth - padding * 2) / 2;
 
             ctx.beginPath();
             ctx.moveTo(0, rotateHeight);
@@ -219,7 +213,7 @@ export class FabricObject {
 
         ctx.save();
 
-        ctx.lineWidth = 1 / Math.max(this.scaleX, this.scaleY);
+        ctx.lineWidth = this.borderWidth / Math.max(this.scaleX, this.scaleY);
 
         ctx.globalAlpha = this.isMoving ? this.borderOpacityWhenMoving : 1;
         ctx.strokeStyle = ctx.fillStyle = this.cornerColor;
@@ -290,12 +284,10 @@ export class FabricObject {
         const lengthRatio = 1.5;
         const w = this.getWidth();
         const h = this.getHeight();
-        const scaleX = 1 / this.scaleX,
-            scaleY = 1 / this.scaleY;
-        ctx.lineWidth = 1 / this.borderScaleFactor;
+        ctx.lineWidth = this.borderWidth;
         ctx.setLineDash([4 * lengthRatio, 3 * lengthRatio]);
         /** 画坐标轴的时候需要把 transform 变换中的 scale 效果抵消，这样才能画出原始大小的线条 */
-        ctx.scale(scaleX, scaleY);
+        ctx.scale(1 / this.scaleX, 1/this.scaleY);
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.lineTo((w / 2) * lengthRatio, 0);
@@ -350,7 +342,7 @@ export class FabricObject {
      * @param {string} originY  top | center | bottom
      * @returns
      */
-    translateToOriginPoint(center: Point, originX: string, originY: string) {
+    translateToOriginPoint(center: Point, originX: string, originY: string): Point {
         let x = center.x,
             y = center.y;
 
@@ -502,6 +494,77 @@ export class FabricObject {
         }
         return xcount;
     }
+    /** 物体动画 */
+    animate(props, animateOptions: IAnimationOption): FabricObject {
+        let propsToAnimate = [];
+        for (let prop in props) {
+            propsToAnimate.push(prop);
+        }
+        const len = propsToAnimate.length;
+        propsToAnimate.forEach((prop, i) => {
+            const skipCallbacks = i !== len - 1;
+            this._animate(prop, props[prop], animateOptions, skipCallbacks);
+        });
+        // if (arguments[0] && typeof arguments[0] === 'object') {
+        //     let propsToAnimate = [],
+        //         prop,
+        //         skipCallbacks;
+        //     for (prop in arguments[0]) {
+        //         propsToAnimate.push(prop);
+        //     }
+        //     for (let i = 0, len = propsToAnimate.length; i < len; i++) {
+        //         prop = propsToAnimate[i];
+        //         skipCallbacks = i !== len - 1;
+        //         this._animate(prop, arguments[0][prop], arguments[1], skipCallbacks);
+        //     }
+        // } else {
+        //     this._animate.apply(this, arguments);
+        // }
+        return this;
+    }
+    /**
+     * 让物体真正动起来
+     * @param property 物体需要动画的属性
+     * @param to 物体属性的最终值
+     * @param options 一些动画选项
+     * @param skipCallbacks 是否跳过绘制
+     */
+    _animate(property, to, options: IAnimationOption = {}, skipCallbacks) {
+        options = Util.clone(options);
+
+        let currentValue = this.get(property);
+
+        if (!options.from) options.from = currentValue;
+        to = to.toString();
+        if (~to.indexOf('=')) {
+            to = currentValue + parseFloat(to.replace('=', ''));
+        } else {
+            to = parseFloat(to);
+        }
+
+        Util.animate({
+            startValue: options.from,
+            endValue: to,
+            byValue: options.by,
+            easing: options.easing,
+            duration: options.duration,
+            abort: options.abort && (() => options.abort.call(this)),
+            onChange: (value) => {
+                this.set(property, value);
+                if (skipCallbacks) {
+                    return;
+                }
+                options.onChange && options.onChange();
+            },
+            onComplete: () => {
+                if (skipCallbacks) {
+                    return;
+                }
+                this.setCoords();
+                options.onComplete && options.onComplete();
+            },
+        });
+    }
     setActive(active: boolean = false): FabricObject {
         this.active = !!active;
         return this;
@@ -516,6 +579,7 @@ export class FabricObject {
     setPositionByOrigin(pos: Point, originX: string, originY: string) {
         let center = this.translateToCenterPoint(pos, originX, originY);
         let position = this.translateToOriginPoint(center, this.originX, this.originY);
+        console.log(`更新缩放的物体位置:[${position.x}，${position.y}]`);
         this.set('left', position.x);
         this.set('top', position.y);
     }
@@ -603,8 +667,163 @@ export class FabricObject {
     //     }
     //     return value;
     // }
+    getViewportTransform() {
+        if (this.canvas && this.canvas.viewportTransform) {
+            return this.canvas.viewportTransform;
+        }
+        return [1, 0, 0, 1, 0, 0];
+    }
+    _calculateCurrentDimensions() {
+        let vpt = this.getViewportTransform(),
+            dim = this._getTransformedDimensions(),
+            w = dim.x,
+            h = dim.y;
+
+        w += 2 * this.padding;
+        h += 2 * this.padding;
+
+        return Util.transformPoint(new Point(w, h), vpt, true);
+    }
+    _getNonTransformedDimensions() {
+        let strokeWidth = this.strokeWidth,
+            w = this.width,
+            h = this.height,
+            addStrokeToW = true,
+            addStrokeToH = true;
+
+        // if (this.type === 'line' && this.strokeLineCap === 'butt') {
+        //     addStrokeToH = w;
+        //     addStrokeToW = h;
+        // }
+
+        if (addStrokeToH) {
+            h += h < 0 ? -strokeWidth : strokeWidth;
+        }
+
+        if (addStrokeToW) {
+            w += w < 0 ? -strokeWidth : strokeWidth;
+        }
+
+        return { x: w, y: h };
+    }
+    _getTransformedDimensions(skewX = 0, skewY = 0) {
+        // if (typeof skewX === 'undefined') {
+        //     skewX = this.skewX;
+        // }
+        // if (typeof skewY === 'undefined') {
+        //     skewY = this.skewY;
+        // }
+        let dimensions = this._getNonTransformedDimensions(),
+            dimX = dimensions.x / 2,
+            dimY = dimensions.y / 2,
+            points = [
+                {
+                    x: -dimX,
+                    y: -dimY,
+                },
+                {
+                    x: dimX,
+                    y: -dimY,
+                },
+                {
+                    x: -dimX,
+                    y: dimY,
+                },
+                {
+                    x: dimX,
+                    y: dimY,
+                },
+            ],
+            i,
+            transformMatrix = this._calcDimensionsTransformMatrix(skewX, skewY, false),
+            bbox;
+        for (i = 0; i < points.length; i++) {
+            points[i] = Util.transformPoint(points[i], transformMatrix);
+        }
+        bbox = Util.makeBoundingBoxFromPoints(points);
+        return { x: bbox.width, y: bbox.height };
+    }
+
+    _calcDimensionsTransformMatrix(skewX, skewY, flipping) {
+        let skewMatrixX = [1, 0, Math.tan(Util.degreesToRadians(skewX)), 1],
+            skewMatrixY = [1, Math.tan(Util.degreesToRadians(skewY)), 0, 1],
+            scaleX = this.scaleX,
+            scaleY = this.scaleY,
+            scaleMatrix = [scaleX, 0, 0, scaleY],
+            m = Util.multiplyTransformMatrices(scaleMatrix, skewMatrixX, true);
+        return Util.multiplyTransformMatrices(m, skewMatrixY, true);
+    }
+    // setCoords() {
+    //     let theta = Util.degreesToRadians(this.angle),
+    //         vpt = this.getViewportTransform(),
+    //         dim = this._calculateCurrentDimensions(),
+    //         currentWidth = dim.x,
+    //         currentHeight = dim.y;
+
+    //     // If width is negative, make postive. Fixes path selection issue
+    //     // if (currentWidth < 0) {
+    //     //     currentWidth = Math.abs(currentWidth);
+    //     // }
+
+    //     let sinTh = Math.sin(theta),
+    //         cosTh = Math.cos(theta),
+    //         _angle = currentWidth > 0 ? Math.atan(currentHeight / currentWidth) : 0,
+    //         _hypotenuse = currentWidth / Math.cos(_angle) / 2,
+    //         offsetX = Math.cos(_angle + theta) * _hypotenuse,
+    //         offsetY = Math.sin(_angle + theta) * _hypotenuse,
+    //         // offset added for rotate and scale actions
+    //         coords = Util.transformPoint(this.getCenterPoint(), vpt),
+    //         tl = new Point(coords.x - offsetX, coords.y - offsetY),
+    //         tr = new Point(tl.x + currentWidth * cosTh, tl.y + currentWidth * sinTh),
+    //         bl = new Point(tl.x - currentHeight * sinTh, tl.y + currentHeight * cosTh),
+    //         br = new Point(coords.x + offsetX, coords.y + offsetY),
+    //         ml = new Point((tl.x + bl.x) / 2, (tl.y + bl.y) / 2),
+    //         mt = new Point((tr.x + tl.x) / 2, (tr.y + tl.y) / 2),
+    //         mr = new Point((br.x + tr.x) / 2, (br.y + tr.y) / 2),
+    //         mb = new Point((br.x + bl.x) / 2, (br.y + bl.y) / 2),
+    //         mtr = new Point(mt.x + sinTh * this.rotatingPointOffset, mt.y - cosTh * this.rotatingPointOffset);
+    //     console.log(sinTh, cosTh, mt, mtr);
+    //     // let mtr = {
+    //     //             x: tl.x + (this.currentWidth / 2) * cosTh,
+    //     //             y: tl.y + (this.currentWidth / 2) * sinTh,
+    //     //         };
+    //     // debugging
+
+    //     /* setTimeout(function() {
+    //        canvas.contextTop.fillStyle = 'green';
+    //        canvas.contextTop.fillRect(mb.x, mb.y, 3, 3);
+    //        canvas.contextTop.fillRect(bl.x, bl.y, 3, 3);
+    //        canvas.contextTop.fillRect(br.x, br.y, 3, 3);
+    //        canvas.contextTop.fillRect(tl.x, tl.y, 3, 3);
+    //        canvas.contextTop.fillRect(tr.x, tr.y, 3, 3);
+    //        canvas.contextTop.fillRect(ml.x, ml.y, 3, 3);
+    //        canvas.contextTop.fillRect(mr.x, mr.y, 3, 3);
+    //        canvas.contextTop.fillRect(mt.x, mt.y, 3, 3);
+    //        canvas.contextTop.fillRect(mtr.x, mtr.y, 3, 3);
+    //      }, 50); */
+
+    //     this.oCoords = {
+    //         // corners
+    //         tl,
+    //         tr,
+    //         br,
+    //         bl,
+    //         // middle
+    //         ml,
+    //         mt,
+    //         mr,
+    //         mb,
+    //         // rotating point
+    //         mtr,
+    //     };
+
+    //     // set coordinates of the draggable boxes in the corners used to scale/rotate the image
+    //     this._setCornerCoords && this._setCornerCoords();
+
+    //     return this;
+    // }
     /** 重新设置物体包围盒的边框和各个控制点，包括位置和大小 */
-    setCoords() {
+    setCoords(): FabricObject {
         let strokeWidth = this.strokeWidth > 1 ? this.strokeWidth : 0,
             padding = this.padding,
             radian = Util.degreesToRadians(this.angle);
@@ -869,9 +1088,11 @@ export class FabricObject {
         this[key] = value;
         return this;
     }
+    /** 获取当前大小，包含缩放效果 */
     getWidth(): number {
         return this.width * this.scaleX;
     }
+    /** 获取当前大小，包含缩放效果 */
     getHeight(): number {
         return this.height * this.scaleY;
     }

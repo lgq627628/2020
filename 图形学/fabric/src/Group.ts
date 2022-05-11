@@ -1,7 +1,8 @@
 import { FabricObject } from './FabricObject';
 import { Util } from './Util';
 
-/** 组类，也就是拖蓝框选区域包围的那些物体构成了一个组
+/**
+ * 组类，也就是拖蓝框选区域包围的那些物体构成了一个组
  * Group 虽然继承至 FabricObject，但是要注意获取某些属性有时是没有的
  */
 export class Group extends FabricObject {
@@ -9,9 +10,8 @@ export class Group extends FabricObject {
     // 组中所有的物体
     public objects: FabricObject[];
     public originalState;
-    public _originalTop;
-    public _originalLeft;
-    public canvas;
+    // public _originalTop;
+    // public _originalLeft;
     constructor(objects: FabricObject[], options: any = {}) {
         super(options);
 

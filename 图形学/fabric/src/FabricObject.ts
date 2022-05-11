@@ -29,8 +29,12 @@ export class FabricObject {
     public scaleY: number = 1;
     /** 物体当前的旋转角度 */
     public angle: number = 0;
+    /** 左右镜像，比如反向拉伸控制点 */
+    public flipX: boolean = false;
+    /** 上下镜像，比如反向拉伸控制点 */
+    public flipY: boolean = false;
     /** 选中态物体和边框之间的距离 */
-    public padding: number = 4;
+    public padding: number = 0;
     /** 物体缩放后的宽度 */
     public currentWidth: number = 0;
     /** 物体缩放后的高度 */
@@ -64,7 +68,7 @@ export class FabricObject {
     /** 选中态的边框宽度 */
     public borderWidth: number = 1;
     /** 物体控制点用 stroke 还是 fill */
-    public transparentCorners: boolean = true;
+    public transparentCorners: boolean = false;
     /** 物体控制点大小，单位 px */
     public cornerSize: number = 12;
     /** 通过像素来检测物体而不是通过包围盒 */
@@ -79,7 +83,7 @@ export class FabricObject {
     public group;
     /** 物体被拖蓝选区保存的时候需要临时保存下 hasControls 的值 */
     public orignHasControls: boolean = true;
-    public stateProperties: string[] = ('top left width height scaleX scaleY ' + 'angle cornerSize fill originX originY ' + 'stroke strokeWidth ' + 'borderWidth transformMatrix visible').split(' ');
+    public stateProperties: string[] = ('top left width height scaleX scaleY ' + 'flipX flipY angle cornerSize fill originX originY ' + 'stroke strokeWidth ' + 'borderWidth transformMatrix visible').split(' ');
     constructor(options) {
         // super();
         this.initialize(options);
@@ -144,9 +148,25 @@ export class FabricObject {
      */
     transform(ctx: CanvasRenderingContext2D) {
         let center = this.getCenterPoint();
-        ctx.translate(center.x, center.y);
-        ctx.rotate(Util.degreesToRadians(this.angle));
-        ctx.scale(this.scaleX, this.scaleY);
+        // ctx.translate(center.x, center.y);
+        // ctx.rotate(Util.degreesToRadians(this.angle));
+        // ctx.scale(this.scaleX, this.scaleY);
+        // ctx.scale(this.scaleX * (this.flipX ? -1 : 1), this.scaleY * (this.flipY ? -1 : 1));
+        const m = Util.composeMatrix({
+            angle: this.angle,
+            translateX: center.x,
+            translateY: center.y,
+            scaleX: this.scaleX,
+            scaleY: this.scaleY,
+            flipX: this.flipX,
+            flipY: this.flipY,
+        });
+        console.log(this.top, this.left, '??');
+        // const radian = Util.degreesToRadians(this.angle);
+        // const cos = Math.cos(radian);
+        // const sin = Math.sin(radian);
+        // const m = [cos * this.scaleX, sin * this.scaleX, -sin * this.scaleY, cos * this.scaleY, center.x, center.y];
+        ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
     }
     /** 绘制激活物体边框 */
     drawBorders(ctx: CanvasRenderingContext2D): FabricObject {
@@ -166,12 +186,7 @@ export class FabricObject {
         let w = this.getWidth(),
             h = this.getHeight();
         // 画物体激活时候的边框，也就是包围盒，~~就是取整的意思
-        ctx.strokeRect(
-            ~~(-(w / 2) - padding - strokeWidth / 2) + 0.5, // 0.5 的便宜是为了让曲线更加尖锐
-            ~~(-(h / 2) - padding - strokeWidth / 2) + 0.5,
-            ~~(w + padding2 + strokeWidth),
-            ~~(h + padding2 + strokeWidth)
-        );
+        ctx.strokeRect(-(w / 2) - padding - strokeWidth / 2, -(h / 2) - padding - strokeWidth / 2, w + padding2 + strokeWidth, h + padding2 + strokeWidth);
 
         // 画旋转控制点的那条线
         if (this.hasRotatingPoint && this.hasControls) {
@@ -209,6 +224,7 @@ export class FabricObject {
             scaleOffsetSizeY = (size2 - size) / this.scaleY,
             height = this.height,
             width = this.width,
+            // 控制点是实心还是空心
             methodName = this.transparentCorners ? 'strokeRect' : 'fillRect';
 
         ctx.save();
@@ -287,7 +303,7 @@ export class FabricObject {
         ctx.lineWidth = this.borderWidth;
         ctx.setLineDash([4 * lengthRatio, 3 * lengthRatio]);
         /** 画坐标轴的时候需要把 transform 变换中的 scale 效果抵消，这样才能画出原始大小的线条 */
-        ctx.scale(1 / this.scaleX, 1/this.scaleY);
+        ctx.scale(1 / this.scaleX, 1 / this.scaleY);
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.lineTo((w / 2) * lengthRatio, 0);
@@ -305,7 +321,6 @@ export class FabricObject {
         this.stateProperties.forEach((prop) => {
             this.originalState[prop] = this[prop];
         });
-        console.log(this.originalState);
         return this;
     }
     /** 获取物体中心点 */
@@ -447,22 +462,24 @@ export class FabricObject {
             },
         };
     }
-    /** 判断鼠标点是否在某个物体的包围盒内
-     * 这里运用的是射线检测法，以鼠标坐标点为参照，水平向右做一条射线，如果和物体相交的个数为偶数点则点在物体外部；如果为奇数点则点在内部，当然只适用于凸多边形
+    /**
+     * 射线检测法：以鼠标坐标点为参照，水平向右做一条射线，求坐标点与多条边的交点个数
+     * 如果和物体相交的个数为偶数点则点在物体外部；如果为奇数点则点在内部
+     * 不过 fabric 的点选多边形都是用于包围盒，也就是矩形，所以该方法是专门针对矩形的，并且针对矩形做了一些优化
      */
-    _findCrossPoints(ex: number, ey: number, oCoords): number {
-        let b1,
-            b2,
+    _findCrossPoints(ex: number, ey: number, lines): number {
+        let b1, // 射线的斜率
+            b2, // 边的斜率
             a1,
             a2,
-            xi, // 鼠标点与边的交点
-            // yi, // 鼠标点与边的交点
+            xi, // 射线与边的交点
+            // yi, // 射线与边的交点
             xcount = 0,
             iLine; // 当前边
 
         // 遍历包围盒的四条边
-        for (let lineKey in oCoords) {
-            iLine = oCoords[lineKey];
+        for (let lineKey in lines) {
+            iLine = lines[lineKey];
 
             // 优化1：如果边的两个端点的 y 值都小于鼠标点的 y 值，则跳过
             if (iLine.o.y < ey && iLine.d.y < ey) continue;
@@ -474,7 +491,7 @@ export class FabricObject {
                 xi = iLine.o.x;
                 // yi = ey;
             } else {
-                // 计算交点
+                // 简单计算下射线与边的交点，看式子容易晕，建议自己手动算一下
                 b1 = 0;
                 b2 = (iLine.d.y - iLine.o.y) / (iLine.d.x - iLine.o.x);
                 a1 = ey - b1 * ex;
@@ -483,11 +500,11 @@ export class FabricObject {
                 xi = -(a1 - a2) / (b1 - b2);
                 // yi = a1 + b1 * xi;
             }
-            // dont count xi < ex cases
+            // 只需要计数 xi >= ex 的情况
             if (xi >= ex) {
                 xcount += 1;
             }
-            // 优化4：方形图像
+            // 优化4：因为 fabric 中的多边形只需要用到矩形，所以根据矩形的特质，顶多只有两个交点，所以我们可以提前结束循环
             if (xcount === 2) {
                 break;
             }
@@ -505,21 +522,6 @@ export class FabricObject {
             const skipCallbacks = i !== len - 1;
             this._animate(prop, props[prop], animateOptions, skipCallbacks);
         });
-        // if (arguments[0] && typeof arguments[0] === 'object') {
-        //     let propsToAnimate = [],
-        //         prop,
-        //         skipCallbacks;
-        //     for (prop in arguments[0]) {
-        //         propsToAnimate.push(prop);
-        //     }
-        //     for (let i = 0, len = propsToAnimate.length; i < len; i++) {
-        //         prop = propsToAnimate[i];
-        //         skipCallbacks = i !== len - 1;
-        //         this._animate(prop, arguments[0][prop], arguments[1], skipCallbacks);
-        //     }
-        // } else {
-        //     this._animate.apply(this, arguments);
-        // }
         return this;
     }
     /**
@@ -579,7 +581,7 @@ export class FabricObject {
     setPositionByOrigin(pos: Point, originX: string, originY: string) {
         let center = this.translateToCenterPoint(pos, originX, originY);
         let position = this.translateToOriginPoint(center, this.originX, this.originY);
-        console.log(`更新缩放的物体位置:[${position.x}，${position.y}]`);
+        // console.log(`更新缩放的物体位置:[${position.x}，${position.y}]`);
         this.set('left', position.x);
         this.set('top', position.y);
     }
@@ -589,11 +591,11 @@ export class FabricObject {
     adjustPosition(to: string) {
         let angle = Util.degreesToRadians(this.angle);
 
-        let hypotHalf = this.width / 2;
+        let hypotHalf = this.getWidth() / 2;
         let xHalf = Math.cos(angle) * hypotHalf;
         let yHalf = Math.sin(angle) * hypotHalf;
 
-        let hypotFull = this.width;
+        let hypotFull = this.getWidth();
         let xFull = Math.cos(angle) * hypotFull;
         let yFull = Math.sin(angle) * hypotFull;
 
@@ -1085,6 +1087,13 @@ export class FabricObject {
         // if (key === 'width' || key === 'height') {
         //     this.minScaleLimit = Util.toFixed(Math.min(0.1, 1 / Math.max(this.width, this.height)), 2);
         // }
+        if (key === 'scaleX' && value < 0) {
+            this.flipX = !this.flipX;
+            value *= -1;
+        } else if (key === 'scaleY' && value < 0) {
+            this.flipY = !this.flipY;
+            value *= -1;
+        }
         this[key] = value;
         return this;
     }

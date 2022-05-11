@@ -73,7 +73,7 @@ export class Canvas {
     /** 当前激活物体 */
     private _activeObject;
     /** 变换之前的中心点方式 */
-    private _previousOriginX;
+    // private _previousOriginX;
     private _previousPointer: Pos;
 
     constructor(el: HTMLCanvasElement, options) {
@@ -81,6 +81,10 @@ export class Canvas {
         this._initStatic(el, options);
         // 初始化上层画布 upper-canvas
         this._initInteractive();
+        // 初始化缓冲层画布
+        this._createCacheCanvas();
+        // 处理模糊问题
+        this._initRetinaScaling();
     }
     /** 初始化 _objects、lower-canvas 宽高、options 赋值 */
     _initStatic(el: HTMLCanvasElement, options) {
@@ -101,6 +105,22 @@ export class Canvas {
 
         this.lowerCanvasEl.style.width = this.width + 'px';
         this.lowerCanvasEl.style.height = this.height + 'px';
+    }
+    _initRetinaScaling() {
+        const dpr = window.devicePixelRatio;
+        this.__initRetinaScaling(this.lowerCanvasEl, this.contextContainer, dpr);
+        this.__initRetinaScaling(this.upperCanvasEl, this.contextTop, dpr);
+        this.__initRetinaScaling(this.cacheCanvasEl, this.contextCache, dpr);
+    }
+    __initRetinaScaling(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, dpr: number) {
+        const { width, height } = this;
+        // 重新设置 canvas 自身宽高大小和 css 大小。放大 canvas；css 保持不变，因为我们需要那么多的点
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        // 直接用 scale 放大整个坐标系，相对来说就是放大了每个绘制操作
+        ctx.scale(dpr, dpr);
     }
     /** 初始化交互层，也就是 upper-canvas */
     _initInteractive() {
@@ -150,6 +170,12 @@ export class Canvas {
         el.width = width;
         el.height = height;
         Util.makeElementUnselectable(el);
+    }
+    _createCacheCanvas() {
+        this.cacheCanvasEl = Util.createCanvasElement();
+        this.cacheCanvasEl.width = this.width;
+        this.cacheCanvasEl.height = this.height;
+        this.contextCache = this.cacheCanvasEl.getContext('2d');
     }
     /** 给上层画布增加鼠标事件 */
     _initEvents() {
@@ -237,13 +263,13 @@ export class Canvas {
 
         // this.fire('mouse:down', { target, e });
         // target && target.fire('mousedown', { e });
-        if (corner === 'mtr') {
-            // 如果点击的是上方的控制点，也就是旋转操作
-            this._previousOriginX = this._currentTransform.target.originX;
-            this._currentTransform.target.adjustPosition('center');
-            this._currentTransform.left = this._currentTransform.target.left;
-            this._currentTransform.top = this._currentTransform.target.top;
-        }
+        // if (corner === 'mtr') {
+        //     // 如果点击的是上方的控制点，也就是旋转操作，我们需要临时改一下变换中心，因为我们一直就是以 center 为中心，所以可以先不管
+        //     this._previousOriginX = this._currentTransform.target.originX;
+        //     this._currentTransform.target.adjustPosition('center');
+        //     this._currentTransform.left = this._currentTransform.target.left;
+        //     this._currentTransform.top = this._currentTransform.target.top;
+        // }
     }
     /** 处理鼠标 hover 事件和物体变换时的拖拽事件
      * 如果是涂鸦模式，只绘制 upper-canvas
@@ -387,10 +413,10 @@ export class Canvas {
             //     target.fire('modified');
             // }
 
-            if (this._previousOriginX) {
-                this._currentTransform.target.adjustPosition(this._previousOriginX);
-                this._previousOriginX = null;
-            }
+            // if (this._previousOriginX) {
+            //     this._currentTransform.target.adjustPosition(this._previousOriginX);
+            //     this._previousOriginX = null;
+            // }
         }
 
         this._currentTransform = null;
@@ -447,7 +473,6 @@ export class Canvas {
         // return !!activeObject;
         return !!((target && (target.isMoving || target !== activeObject)) || (!target && !!activeObject) || (!target && !activeObject && !this._groupSelector) || (pointer && this._previousPointer && (pointer.x !== this._previousPointer.x || pointer.y !== this._previousPointer.y)));
     }
-
     /** 使所有元素失活，并触发相应事件 */
     deactivateAllWithDispatch(): Canvas {
         // let activeObject = this.getActiveGroup() || this.getActiveObject();
@@ -463,6 +488,18 @@ export class Canvas {
     getActiveObject() {
         return this._activeObject;
     }
+    // _setOriginToCenter:() {
+    //     this._originalOriginX = this.originX;
+    //     this._originalOriginY = this.originY;
+
+    //     var center = this.getCenterPoint();
+
+    //     this.originX = 'center';
+    //     this.originY = 'center';
+
+    //     this.left = center.x;
+    //     this.top = center.y;
+    //   }
     /** 平移当前选中物体，注意这里我们没有用 += */
     _translateObject(x: number, y: number) {
         let target = this._currentTransform.target;
@@ -541,9 +578,6 @@ export class Canvas {
             if (t.originY === 'top') t.originY = 'bottom';
             else if (t.originY === 'bottom') t.originY = 'top';
         }
-
-        console.log('物体缩放时的变换基点', target.originX, target.originY);
-        console.log(t.originX, t.originY);
 
         // 缩放会改变物体位置，所以要重新设置
         target.setPositionByOrigin(constraintPosition, t.originX, t.originY);
@@ -757,10 +791,10 @@ export class Canvas {
     _resetCurrentTransform(e: MouseEvent) {
         let t = this._currentTransform;
 
-        t.target.scaleX = t.original.scaleX;
-        t.target.scaleY = t.original.scaleY;
-        t.target.left = t.original.left;
-        t.target.top = t.original.top;
+        t.target.set('scaleX', t.original.scaleX);
+        t.target.set('scaleY', t.original.scaleY);
+        t.target.set('left', t.original.left);
+        t.target.set('top', t.original.top);
 
         if (e.altKey) {
             if (t.originX !== 'center') {
@@ -946,7 +980,8 @@ export class Canvas {
         let cacheContext = this.contextCache;
         this._draw(cacheContext, target);
 
-        if (tolerance > 0) { // 如果允许误差
+        if (tolerance > 0) {
+            // 如果允许误差
             if (x > tolerance) {
                 x -= tolerance;
             } else {
@@ -962,7 +997,8 @@ export class Canvas {
         let isTransparent = true;
         let imageData = cacheContext.getImageData(x, y, tolerance * 2 || 1, tolerance * 2 || 1);
 
-        for (let i = 3; i < imageData.data.length; i += 4) { // 只要看第四项透明度即可
+        for (let i = 3; i < imageData.data.length; i += 4) {
+            // 只要看第四项透明度即可
             let temp = imageData.data[i];
             isTransparent = temp <= 0;
             if (isTransparent === false) break; // 找到一个颜色就停止
@@ -1129,10 +1165,10 @@ export class Canvas {
      * 如果一次性加入大量元素，就会做很多无用功，
      * 所以可以加一个属性来先批量添加元素，最后再一次渲染（手动调用 renderAll 函数即可）
      */
-    add(): Canvas {
-        this._objects.push.apply(this._objects, arguments);
-        for (let i = arguments.length; i--; ) {
-            this._initObject(arguments[i]);
+    add(...args): Canvas {
+        this._objects.push.apply(this._objects, args);
+        for (let i = args.length; i--; ) {
+            this._initObject(args[i]);
         }
         this.renderAll();
         return this;

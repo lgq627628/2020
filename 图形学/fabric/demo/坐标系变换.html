@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>拉伸</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+            }
+            #canvas {
+                width: 400px;
+                height: 400px;
+                border: 1px solid red;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="canvas" width="400" height="400"></canvas>
+
+        <script>
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+
+            function degreesToRadians(degrees) {
+                return (degrees * Math.PI) / 180;
+            }
+
+            function drawRect(ctx, rect) {
+                const { x, y, width, height } = rect;
+                ctx.save(); // 之前提到过了，你要修改 ctx 上的一些配置画一个物体，最好先 save 一下，这是个好习惯
+                ctx.translate(100, 100); // 此时原点已经变成
+                ctx.rotate(degreesToRadians(45)); // 注意 canvas 中用的都是弧度（弧度 / 2 * Math.PI = 角度 / 360)，所以我们需要简单换算下
+                ctx.scale(2, 2); // 坐标系放大两倍
+                ctx.fillRect(-width / 2, width / 2, width, height); // 宽高一般我们不去动它
+                ctx.restore(); // 画完之后还原 ctx 状态，这是个好习惯
+            }
+
+            function drawTriangle() {
+                ctx.save();
+                ctx.translate(0, 400); // 左下角变为(0, 0) 点了
+                ctx.rotate(degreesToRadians(-60)); // 准备画左边这条边
+                ctx.moveTo(0, 0);
+                ctx.lineTo(100, 0);
+                ctx.translate(100, 0); // 准备画右边这条边
+                ctx.rotate(degreesToRadians(120));
+                ctx.lineTo(100, 0);
+                ctx.translate(100, 0); // 准备画下面这条边
+                ctx.rotate(degreesToRadians(120));
+                ctx.lineTo(100, 0);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            function drawArrow() {
+                ctx.save();
+                ctx.translate(100, 100);
+                ctx.moveTo(0, 0);
+                ctx.lineTo(50, 0); // 画水平线
+                ctx.translate(50, 0); // 将原点移到右侧
+                ctx.rotate(degreesToRadians(150)); // 准备画箭头右侧下面这条边
+                ctx.lineTo(10, 0);
+                ctx.moveTo(0, 0); // 回到右侧
+                ctx.rotate(degreesToRadians(60)); // 准备画箭头右侧上面这条边
+                ctx.lineTo(10, 0);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            const rect = {
+                x: 100,
+                y: 100,
+                width: 50,
+                height: 50,
+                scale: 2,
+                angle: 45,
+            };
+            drawRect(ctx, rect);
+            drawTriangle();
+            drawArrow();
+
+            window.xx = ctx;
+        </script>
+    </body>
+</html>

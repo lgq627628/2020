@@ -2,6 +2,7 @@ import { Point } from './Point';
 import { IAnimationOption, Offset, Transform } from './interface';
 
 const PiBy180 = Math.PI / 180; // 写在这里相当于缓存，因为会频繁调用
+const iMatrix = [1, 0, 0, 1, 0, 0];
 export class Util {
     static loadImage(url, options: any = {}) {
         return new Promise(function (resolve, reject) {
@@ -189,7 +190,7 @@ export class Util {
         }
         return new Point(t[0] * p.x + t[2] * p.y + t[4], t[1] * p.x + t[3] * p.y + t[5]);
     }
-    static multiplyTransformMatrices(a, b, is2x2) {
+    static multiplyTransformMatrices(a, b, is2x2 = false) {
         // Matrix multiply a * b
         return [a[0] * b[0] + a[2] * b[1], a[1] * b[0] + a[3] * b[1], a[0] * b[2] + a[2] * b[3], a[1] * b[2] + a[3] * b[3], is2x2 ? 0 : a[0] * b[4] + a[2] * b[5] + a[4], is2x2 ? 0 : a[1] * b[4] + a[3] * b[5] + a[5]];
     }
@@ -313,9 +314,6 @@ export class Util {
         element.style.opacity = value;
         return element;
     }
-    static falseFunction() {
-        return false;
-    }
     /** 设置 css 的 userSelect 样式为 none，也就是不可选中的状态 */
     static makeElementUnselectable(element: HTMLElement): HTMLElement {
         element.style.userSelect = 'none';
@@ -326,5 +324,58 @@ export class Util {
     }
     static removeListener(element, eventName, handler) {
         element.removeEventListener(eventName, handler, false);
+    }
+
+    /**
+     * Returns a transform matrix starting from an object of the same kind of
+     * the one returned from qrDecompose, useful also if you want to calculate some
+     * transformations from an object that is not enlived yet
+     * @static
+     * @memberOf fabric.util
+     * @param  {Object} options
+     * @param  {Number} [options.angle]
+     * @param  {Number} [options.scaleX]
+     * @param  {Number} [options.scaleY]
+     * @param  {Boolean} [options.flipX]
+     * @param  {Boolean} [options.flipY]
+     * @param  {Number} [options.skewX]
+     * @param  {Number} [options.skewX]
+     * @param  {Number} [options.translateX]
+     * @param  {Number} [options.translateY]
+     * @return {Number[]} transform matrix
+     */
+    static composeMatrix(options) {
+        var matrix = [1, 0, 0, 1, options.translateX || 0, options.translateY || 0],
+            multiply = Util.multiplyTransformMatrices;
+        if (options.angle) {
+            matrix = multiply(matrix, Util.calcRotateMatrix(options));
+        }
+        if (options.scaleX !== 1 || options.scaleY !== 1 || options.skewX || options.skewY || options.flipX || options.flipY) {
+            matrix = multiply(matrix, Util.calcDimensionsMatrix(options));
+        }
+        return matrix;
+    }
+    static calcDimensionsMatrix(options) {
+        var scaleX = typeof options.scaleX === 'undefined' ? 1 : options.scaleX,
+            scaleY = typeof options.scaleY === 'undefined' ? 1 : options.scaleY,
+            scaleMatrix = [options.flipX ? -scaleX : scaleX, 0, 0, options.flipY ? -scaleY : scaleY, 0, 0],
+            multiply = Util.multiplyTransformMatrices,
+            degreesToRadians = Util.degreesToRadians;
+        if (options.skewX) {
+            scaleMatrix = multiply(scaleMatrix, [1, 0, Math.tan(degreesToRadians(options.skewX)), 1], true);
+        }
+        if (options.skewY) {
+            scaleMatrix = multiply(scaleMatrix, [1, Math.tan(degreesToRadians(options.skewY)), 0, 1], true);
+        }
+        return scaleMatrix;
+    }
+    static calcRotateMatrix(options) {
+        if (!options.angle) {
+            return iMatrix.concat();
+        }
+        var theta = Util.degreesToRadians(options.angle),
+            cos = Math.cos(theta),
+            sin = Math.sin(theta);
+        return [cos, sin, -sin, cos, 0, 0];
     }
 }

@@ -50,7 +50,6 @@
 
             c.addEventListener('mousemove', (e) => {
                 const { x, y } = e;
-                // drawLine(x, y);
                 const isOutside = checkPoint({ x, y }, lineArr);
                 log.innerText = `图形${isOutside ? '外' : '内'}`;
             });
@@ -73,13 +72,6 @@
                 }
                 return intersectionCount % 2 === 0;
             }
-
-            // function drawLine(x, y) {
-            //   ctx.beginPath();
-            //   ctx.moveTo(x, y);
-            //   ctx.lineTo(800, y);
-            //   ctx.stroke();
-            // }
 
             function getRandom(a = 0, b = 600) {
                 return Math.random() * (b - a) + a;

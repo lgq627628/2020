@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>双缓冲实验</title>
+        <style>
+            #canvas {
+                border: 1px solid red;
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="canvas" width="600" height="600"></canvas>
+
+        <script>
+            let canvas = document.getElementById('canvas');
+            let ctx = canvas.getContext('2d');
+            let sum = 0;
+
+            function drawBackground(color) {
+                ctx.fillStyle = color;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            function eraseBackground() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+
+            function animate() {
+                eraseBackground();
+                for (var i = 0; i < 500000000; ++i) {
+                    sum += i;
+                }
+                console.log('这么快？');
+                // drawBackground('green');
+                // Draw the background into onscreen canvaas
+                // Draw animation objects into onscreen canvas
+                // draw();
+                // requestAnimationFrame(); // Keep thee animation going
+            }
+            drawBackground('yellow');
+
+            setTimeout(() => {
+                requestAnimationFrame(animate);
+            }, 3000);
+        </script>
+    </body>
+</html>

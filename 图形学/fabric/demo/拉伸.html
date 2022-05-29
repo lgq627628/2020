@@ -143,7 +143,6 @@
                 const { ex, ey, x, y } = curTransform;
                 const { w } = rect;
                 const { x: pointX, y: pointY } = point;
-                console.log(curTransform);
                 let scale = 1;
                 if (curTransform.originX === 'left') {
                     scale = (pointX - x) / w;

@@ -1,7 +1,6 @@
 ## 实现一个轻量 fabric
 
 ## 目录说明
-- origin 目录下面的是源代码的草稿，可以不管
 - src 目录下是最简版的案例代码，我们看这个目录下的就行
 
 ## 实现思路
@@ -14,8 +13,9 @@
 ## 如何运行
 在根目录下运行 npx vite 即可
 
-## 缓存好文
-https://www.cnblogs.com/axes/p/3567364.html?utm_source=tuicool
+## 好文
+- 缓存：https://www.cnblogs.com/axes/p/3567364.html?utm_source=tuicool
+- 判断两个多边形的位置关系算法：https://williamic.github.io/article/algorithm-polygonIntersection/
 
 ## 小发现
 - 喜欢先校验非空 if(!obj) {} else {}

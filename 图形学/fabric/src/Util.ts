@@ -4,6 +4,19 @@ import { IAnimationOption, Offset, Transform } from './interface';
 const PiBy180 = Math.PI / 180; // 写在这里相当于缓存，因为会频繁调用
 const iMatrix = [1, 0, 0, 1, 0, 0];
 export class Util {
+    /**
+     * 把源对象的某些属性赋值给目标对象
+     * @param source 源对象
+     * @param destination 目标对象
+     * @param properties 需要赋值的属性
+     */
+    static populateWithProperties(source, destination, properties) {
+        if (properties && Object.prototype.toString.call(properties) === '[object Array]') {
+            for (var i = 0, len = properties.length; i < len; i++) {
+                destination[properties[i]] = source[properties[i]];
+            }
+        }
+    }
     static loadImage(url, options: any = {}) {
         return new Promise(function (resolve, reject) {
             let img = document.createElement('img');
@@ -37,20 +50,21 @@ export class Util {
     }
     static animate(options: IAnimationOption) {
         window.requestAnimationFrame((timestamp: number) => {
-            let start = timestamp || +new Date(),
-                duration = options.duration || 500,
-                finish = start + duration,
-                time,
+            let start = timestamp || +new Date(), // 开始时间
+                duration = options.duration || 500, // 动画时间
+                finish = start + duration, // 结束时间
+                time, // 当前时间
                 onChange = options.onChange || (() => {}),
                 abort = options.abort || (() => false),
                 easing = options.easing || ((t, b, c, d) => -c * Math.cos((t / d) * (Math.PI / 2)) + c + b),
-                startValue = options.startValue || 0,
-                endValue = options.endValue || 100,
-                byValue = options.byValue || endValue - startValue;
+                startValue = options.startValue || 0, // 初始值
+                endValue = options.endValue || 100, // 结束值
+                byValue = options.byValue || endValue - startValue; // 值的变化范围
 
             function tick(ticktime: number) {
+                // tick 的主要任务就是根据时间更新值
                 time = ticktime || +new Date();
-                let currentTime = time > finish ? duration : time - start;
+                let currentTime = time > finish ? duration : time - start; // 当前已经执行了多久时间（介于0~duration）
                 if (abort()) {
                     options.onComplete && options.onComplete();
                     return;
@@ -377,5 +391,16 @@ export class Util {
             cos = Math.cos(theta),
             sin = Math.sin(theta);
         return [cos, sin, -sin, cos, 0, 0];
+    }
+    static matrixToSVG(transform) {
+        return (
+            'matrix(' +
+            transform
+                .map((value) => {
+                    return Util.toFixed(value, 2);
+                })
+                .join(' ') +
+            ')'
+        );
     }
 }

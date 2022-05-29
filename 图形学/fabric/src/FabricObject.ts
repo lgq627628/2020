@@ -2,9 +2,10 @@ import { Util } from './Util';
 import { Point } from './Point';
 import { Intersection } from './Intersection';
 import { Offset, Coords, Corner, IAnimationOption } from './interface';
+import { EventCenter } from './EventCenter';
 
 /** 物体基类，有一些共同属性和方法 */
-export class FabricObject {
+export class FabricObject extends EventCenter {
     /** 物体类型标识 */
     public type: string = 'object';
     /** 是否处于激活态，也就是是否被选中 */
@@ -72,7 +73,7 @@ export class FabricObject {
     /** 物体控制点大小，单位 px */
     public cornerSize: number = 12;
     /** 通过像素来检测物体而不是通过包围盒 */
-    // public perPixelTargetFind: boolean = false;
+    public perPixelTargetFind: boolean = false;
     /** 物体控制点位置，随时变化 */
     public oCoords: Coords;
     /** 物体所在的 canvas 画布 */
@@ -84,8 +85,14 @@ export class FabricObject {
     /** 物体被拖蓝选区保存的时候需要临时保存下 hasControls 的值 */
     public orignHasControls: boolean = true;
     public stateProperties: string[] = ('top left width height scaleX scaleY ' + 'flipX flipY angle cornerSize fill originX originY ' + 'stroke strokeWidth ' + 'borderWidth transformMatrix visible').split(' ');
+
+    private _cacheCanvas: HTMLCanvasElement;
+    private _cacheContext: CanvasRenderingContext2D;
+    public cacheWidth: number;
+    public cacheHeight: number;
+    public dirty: boolean;
     constructor(options) {
-        // super();
+        super();
         this.initialize(options);
     }
     initialize(options) {
@@ -148,25 +155,24 @@ export class FabricObject {
      */
     transform(ctx: CanvasRenderingContext2D) {
         let center = this.getCenterPoint();
-        // ctx.translate(center.x, center.y);
-        // ctx.rotate(Util.degreesToRadians(this.angle));
+        ctx.translate(center.x, center.y);
+        ctx.rotate(Util.degreesToRadians(this.angle));
         // ctx.scale(this.scaleX, this.scaleY);
-        // ctx.scale(this.scaleX * (this.flipX ? -1 : 1), this.scaleY * (this.flipY ? -1 : 1));
-        const m = Util.composeMatrix({
-            angle: this.angle,
-            translateX: center.x,
-            translateY: center.y,
-            scaleX: this.scaleX,
-            scaleY: this.scaleY,
-            flipX: this.flipX,
-            flipY: this.flipY,
-        });
-        console.log(this.top, this.left, '??');
+        ctx.scale(this.scaleX * (this.flipX ? -1 : 1), this.scaleY * (this.flipY ? -1 : 1));
+        // const m = Util.composeMatrix({
+        //     angle: this.angle,
+        //     translateX: center.x,
+        //     translateY: center.y,
+        //     scaleX: this.scaleX,
+        //     scaleY: this.scaleY,
+        //     flipX: this.flipX,
+        //     flipY: this.flipY,
+        // });
+        // ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
         // const radian = Util.degreesToRadians(this.angle);
         // const cos = Math.cos(radian);
         // const sin = Math.sin(radian);
         // const m = [cos * this.scaleX, sin * this.scaleX, -sin * this.scaleY, cos * this.scaleY, center.x, center.y];
-        ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
     }
     /** 绘制激活物体边框 */
     drawBorders(ctx: CanvasRenderingContext2D): FabricObject {
@@ -686,17 +692,13 @@ export class FabricObject {
 
         return Util.transformPoint(new Point(w, h), vpt, true);
     }
+    /** 获取物体没有变换时的大小，包括 strokeWidth 的 1px */
     _getNonTransformedDimensions() {
         let strokeWidth = this.strokeWidth,
             w = this.width,
             h = this.height,
             addStrokeToW = true,
             addStrokeToH = true;
-
-        // if (this.type === 'line' && this.strokeLineCap === 'butt') {
-        //     addStrokeToH = w;
-        //     addStrokeToW = h;
-        // }
 
         if (addStrokeToH) {
             h += h < 0 ? -strokeWidth : strokeWidth;
@@ -841,6 +843,7 @@ export class FabricObject {
         // 物体中心点到顶点的斜边长度
         let _hypotenuse = Math.sqrt(Math.pow(this.currentWidth / 2, 2) + Math.pow(this.currentHeight / 2, 2));
         let _angle = Math.atan(this.currentHeight / this.currentWidth);
+        // let _angle = Math.atan2(this.currentHeight, this.currentWidth);
 
         // offset added for rotate and scale actions
         let offsetX = Math.cos(_angle + radian) * _hypotenuse,
@@ -1076,6 +1079,58 @@ export class FabricObject {
             },
         };
     }
+    /**
+     * 转成基础标准对象，方便序列化
+     * @param propertiesToInclude 你可能需要添加一些额外的自定义属性
+     * @returns 标准对象
+     */
+    toObject(propertiesToInclude = []) {
+        // 保存时的数字精度
+        const NUM_FRACTION_DIGITS = 2;
+        const object = {
+            type: this.type,
+            originX: this.originX,
+            originY: this.originY,
+            left: Util.toFixed(this.left, NUM_FRACTION_DIGITS),
+            top: Util.toFixed(this.top, NUM_FRACTION_DIGITS),
+            width: Util.toFixed(this.width, NUM_FRACTION_DIGITS),
+            height: Util.toFixed(this.height, NUM_FRACTION_DIGITS),
+            fill: this.fill,
+            stroke: this.stroke,
+            strokeWidth: this.strokeWidth,
+            scaleX: Util.toFixed(this.scaleX, NUM_FRACTION_DIGITS),
+            scaleY: Util.toFixed(this.scaleY, NUM_FRACTION_DIGITS),
+            angle: Util.toFixed(this.getAngle(), NUM_FRACTION_DIGITS),
+            flipX: this.flipX,
+            flipY: this.flipY,
+            hasControls: this.hasControls,
+            hasRotatingPoint: this.hasRotatingPoint,
+            transparentCorners: this.transparentCorners,
+            perPixelTargetFind: this.perPixelTargetFind,
+            visible: this.visible,
+        };
+        Util.populateWithProperties(this, object, propertiesToInclude);
+        return object;
+    }
+    toSvg(): string {
+        const markup = [];
+        const objSvg = this._toSVG();
+
+        markup.push('<g ', this.getSvgTransform(), ' >\n');
+        markup.push(objSvg.join(''));
+        markup.push('</g>\n');
+        return markup.join('');
+    }
+    /** 由子类具体实现 */
+    _toSVG(): Array<string | number> {
+        return [];
+    }
+    getSvgTransform() {
+        let transform = this.calcOwnMatrix(),
+            svgTransform = 'transform="' + Util.matrixToSVG(transform);
+        return svgTransform + '" ';
+    }
+    calcOwnMatrix() {}
     get(key: string) {
         return this[key];
     }
@@ -1111,4 +1166,130 @@ export class FabricObject {
     setAngle(angle: number) {
         this.angle = angle;
     }
+    // _createCacheCanvas() {
+    //     this._cacheCanvas = Util.createCanvasElement();
+    //     this._cacheContext = this._cacheCanvas.getContext('2d');
+    //     this._updateCacheCanvas();
+    //     // 第一次创建，dirty 一定为 true
+    //     this.dirty = true;
+    // }
+    // _updateCacheCanvas() {
+    //     let canvas = this._cacheCanvas,
+    //         dims = this._limitCacheSize(this._getCacheCanvasDimensions()),
+    //         minCacheSize = fabric.minCacheSideLimit,
+    //         width = dims.width,
+    //         height = dims.height,
+    //         // drawingWidth,
+    //         // drawingHeight,
+    //         zoomX = dims.zoomX,
+    //         zoomY = dims.zoomY,
+    //         dimensionsChanged = width !== this.cacheWidth || height !== this.cacheHeight,
+    //         // zoomChanged = this.zoomX !== zoomX || this.zoomY !== zoomY,
+    //         shouldRedraw = dimensionsChanged || zoomChanged,
+    //         additionalWidth = 0,
+    //         additionalHeight = 0,
+    //         shouldResizeCanvas = false;
+    //     if (dimensionsChanged) {
+    //         let canvasWidth = this._cacheCanvas.width,
+    //             canvasHeight = this._cacheCanvas.height,
+    //             sizeGrowing = width > canvasWidth || height > canvasHeight,
+    //             sizeShrinking = (width < canvasWidth * 0.9 || height < canvasHeight * 0.9) && canvasWidth > minCacheSize && canvasHeight > minCacheSize;
+    //         shouldResizeCanvas = sizeGrowing || sizeShrinking;
+    //         if (sizeGrowing && !dims.capped && (width > minCacheSize || height > minCacheSize)) {
+    //             additionalWidth = width * 0.1;
+    //             additionalHeight = height * 0.1;
+    //         }
+    //     }
+
+    //     if (shouldRedraw) {
+    //         if (shouldResizeCanvas) {
+    //             canvas.width = Math.ceil(width + additionalWidth);
+    //             canvas.height = Math.ceil(height + additionalHeight);
+    //         } else {
+    //             this._cacheContext.setTransform(1, 0, 0, 1, 0, 0);
+    //             this._cacheContext.clearRect(0, 0, canvas.width, canvas.height);
+    //         }
+    //         drawingWidth = dims.x / 2;
+    //         drawingHeight = dims.y / 2;
+    //         this.cacheTranslationX = Math.round(canvas.width / 2 - drawingWidth) + drawingWidth;
+    //         this.cacheTranslationY = Math.round(canvas.height / 2 - drawingHeight) + drawingHeight;
+    //         this.cacheWidth = width;
+    //         this.cacheHeight = height;
+    //         this._cacheContext.translate(this.cacheTranslationX, this.cacheTranslationY);
+    //         this._cacheContext.scale(zoomX, zoomY);
+    //         this.zoomX = zoomX;
+    //         this.zoomY = zoomY;
+    //         return true;
+    //     }
+    //     return false;
+    // }
+    // _limitCacheSize(dims) {
+    //     const perfLimitSizeTotal = 2097152;
+    //     const maxCacheSideLimit = 4096;
+    //     const minCacheSideLimit = 256;
+    //     var width = dims.width,
+    //         height = dims.height,
+    //         max = maxCacheSideLimit,
+    //         min = minCacheSideLimit;
+    //     if (width <= max && height <= max && width * height <= perfLimitSizeTotal) {
+    //         if (width < min) {
+    //             dims.width = min;
+    //         }
+    //         if (height < min) {
+    //             dims.height = min;
+    //         }
+    //         return dims;
+    //     }
+    //     var ar = width / height,
+    //         limitedDims = fabric.util.limitDimsByArea(ar, perfLimitSizeTotal),
+    //         capValue = fabric.util.capValue,
+    //         x = capValue(min, limitedDims.x, max),
+    //         y = capValue(min, limitedDims.y, max);
+    //     if (width > x) {
+    //         dims.zoomX /= width / x;
+    //         dims.width = x;
+    //         dims.capped = true;
+    //     }
+    //     if (height > y) {
+    //         dims.zoomY /= height / y;
+    //         dims.height = y;
+    //         dims.capped = true;
+    //     }
+    //     return dims;
+    // }
+    // /**
+    //  * 返回足够大的画布
+    //  * 假设物体宽高为 100*100，则实际缓存宽高为 (100 + strokeWidth) * scale * dpr + ALIASING_LIMIT = 204
+    //  */
+    // _getCacheCanvasDimensions() {
+    //     const ALIASING_LIMIT = 2;
+    //     let objectScale = this.getObjectScaling(),
+    //         dpr = window.devicePixelRatio,
+    //         dim = this._getNonTransformedDimensions(),
+    //         zoomX = objectScale.scaleX * dpr,
+    //         zoomY = objectScale.scaleY * dpr,
+    //         width = dim.x * zoomX,
+    //         height = dim.y * zoomY;
+    //     return {
+    //         // for sure this ALIASING_LIMIT is slightly crating problem
+    //         // in situation in wich the cache canvas gets an upper limit
+    //         width: width + ALIASING_LIMIT,
+    //         height: height + ALIASING_LIMIT,
+    //         zoomX,
+    //         zoomY,
+    //         x: dim.x,
+    //         y: dim.y,
+    //     };
+    // }
+    // /** 获取物体当前的缩放值 */
+    // getObjectScaling() {
+    //     let scaleX = this.scaleX,
+    //         scaleY = this.scaleY;
+    //     if (this.group) {
+    //         var scaling = this.group.getObjectScaling();
+    //         scaleX *= scaling.scaleX;
+    //         scaleY *= scaling.scaleY;
+    //     }
+    //     return { scaleX, scaleY };
+    // }
 }

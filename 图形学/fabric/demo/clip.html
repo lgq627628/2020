@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Clip</title>
+    </head>
+    <body>
+        <canvas id="canvas" width="800" height="600"></canvas>
+        <script>
+            var canvas = document.getElementById('canvas');
+            var ctx = canvas.getContext('2d');
+            var w = (canvas.width = 800);
+            var h = (canvas.height = 600);
+            var image = new Image();
+            image.style.width = 800 + 'px';
+            image.style.height = 600 + 'px';
+            image.src = '../src/beidaihe.jpeg';
+            canvas.addEventListener('mousemove', mouseMove, false);
+            function draw(cx, cy, radius) {
+                ctx.clearRect(0, 0, w, h);
+                ctx.save();
+                ctx.beginPath();
+                ctx.
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, w, h);
+                ctx.fill();
+                ctx.save();
+
+                ctx.beginPath();
+                ctx.fillStyle = '#FFF';
+
+                ctx.arc(cx, cy, radius, 0, Math.PI * 2, false);
+                ctx.fill();
+                // 将上面的区域作为剪辑区域
+                ctx.clip();
+                // 由于使用clip()，画布背景图片会出现在clip()区域内
+                ctx.drawImage(image, 0, 0, w, h);
+                ctx.restore();
+            }
+            function mouseMove(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                mouseX = parseInt(e.clientX);
+                mouseY = parseInt(e.clientY);
+                draw(mouseX, mouseY, 100);
+            }
+            draw(w / 2, h / 2, 100);
+        </script>
+    </body>
+</html>

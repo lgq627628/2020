@@ -10,8 +10,6 @@ export class Group extends FabricObject {
     // 组中所有的物体
     public objects: FabricObject[];
     public originalState;
-    // public _originalTop;
-    // public _originalLeft;
     constructor(objects: FabricObject[], options: any = {}) {
         super(options);
 
@@ -22,7 +20,6 @@ export class Group extends FabricObject {
         this._updateObjectsCoords();
 
         this.setCoords();
-        // this.saveCoords();
     }
     /** 更新所有物体坐标系 */
     _updateObjectsCoords() {
@@ -32,9 +29,6 @@ export class Group extends FabricObject {
         this.objects.forEach((object) => {
             let objectLeft = object.get('left'),
                 objectTop = object.get('top');
-
-            object.set('originalLeft', objectLeft);
-            object.set('originalTop', objectTop);
 
             object.set('left', objectLeft - groupDeltaX);
             object.set('top', objectTop - groupDeltaY);
@@ -85,7 +79,7 @@ export class Group extends FabricObject {
         return this.getObjects().length;
     }
 
-    render(ctx: CanvasRenderingContext2D, noTransform: boolean = false) {
+    render(ctx: CanvasRenderingContext2D) {
         ctx.save();
         this.transform(ctx);
 
@@ -105,7 +99,8 @@ export class Group extends FabricObject {
             object.hasRotatingPoint = originalHasRotatingPoint;
         }
 
-        if (!noTransform && this.active) {
+        if (this.active) {
+            // if (!noTransform && this.active) {
             this.drawBorders(ctx);
             this.drawControls(ctx);
         }
@@ -116,13 +111,6 @@ export class Group extends FabricObject {
     item(index: number): FabricObject {
         return this.getObjects()[index];
     }
-    // forEachObject(callback: (object: FabricObject, i?: number, objects?: FabricObject[]) => {}) {
-    //     let objects = this.objects,
-    //         i = objects.length;
-    //     while (i--) {
-    //         callback.call(this, objects[i], i, objects);
-    //     }
-    // }
     /** 还原创建 group 之前的状态 */
     _restoreObjectsState(): Group {
         this.objects.forEach(this._restoreObjectState, this);
@@ -155,14 +143,6 @@ export class Group extends FabricObject {
     destroy() {
         return this._restoreObjectsState();
     }
-    // saveCoords(): Group {
-    //     this._originalLeft = this.get('left');
-    //     this._originalTop = this.get('top');
-    //     return this;
-    // }
-    // hasMoved() {
-    //     return this._originalLeft !== this.get('left') || this._originalTop !== this.get('top');
-    // }
     /** 重新设置当前组中所有的物体的边框、控制点、位置和大小等 */
     setObjectsCoords(): Group {
         this.objects.forEach((object) => {
@@ -217,8 +197,6 @@ export class Group extends FabricObject {
 
     /** 检查点是都在 group 中 */
     containsPoint(point) {
-        // halfWidth = this.getWidth() / 2,
-        // halfHeight = this.getHeight() / 2,
         let halfWidth = this.get('width') / 2,
             halfHeight = this.get('height') / 2,
             centerX = this.get('left'),

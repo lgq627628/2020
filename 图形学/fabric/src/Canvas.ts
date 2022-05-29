@@ -3,6 +3,7 @@ import { Point } from './Point';
 import { FabricObject } from './FabricObject';
 import { Group } from './Group';
 import { Offset, Pos, GroupSelector, CurrentTransform } from './interface';
+import { EventCenter } from './EventCenter';
 
 const STROKE_OFFSET = 0.5;
 const cursorMap = {
@@ -15,7 +16,7 @@ const cursorMap = {
     mr: 'e-resize',
     mb: 's-resize',
 };
-export class Canvas {
+export class Canvas extends EventCenter {
     /** 画布宽度 */
     public width: number;
     /** 画布高度 */
@@ -37,7 +38,6 @@ export class Canvas {
     public contextCache: CanvasRenderingContext2D;
     public containerClass: string = 'canvas-container';
 
-    // public controlsAboveOverlay: boolean = false;
     /** 记录最近一个激活的物体，可以优化点选过程，也就是点选的时候先判断是否是当前激活物体 */
     // public lastRenderedObjectWithControlsAboveOverlay;
     /** 通过像素来检测物体而不是通过包围盒 */
@@ -77,6 +77,7 @@ export class Canvas {
     private _previousPointer: Pos;
 
     constructor(el: HTMLCanvasElement, options) {
+        super();
         // 初始化下层画布 lower-canvas
         this._initStatic(el, options);
         // 初始化上层画布 upper-canvas
@@ -261,8 +262,8 @@ export class Canvas {
         // 点选事件：需要把当前激活的物体置顶
         this.renderAll();
 
-        // this.fire('mouse:down', { target, e });
-        // target && target.fire('mousedown', { e });
+        this.emit('mouse:down', { target, e });
+        target && target.emit('mousedown', { e });
         // if (corner === 'mtr') {
         //     // 如果点击的是上方的控制点，也就是旋转操作，我们需要临时改一下变换中心，因为我们一直就是以 center 为中心，所以可以先不管
         //     this._previousOriginX = this._currentTransform.target.originX;
@@ -328,11 +329,11 @@ export class Canvas {
                 // 如果是旋转操作
                 this._rotateObject(x, y);
 
-                // this.fire('object:rotating', {
-                //     target: this._currentTransform.target,
-                //     e,
-                // });
-                // this._currentTransform.target.fire('rotating');
+                this.emit('object:rotating', {
+                    target: this._currentTransform.target,
+                    e,
+                });
+                this._currentTransform.target.emit('rotating');
             } else if (this._currentTransform.action === 'scale') {
                 // 如果是整体缩放操作
                 if (e.shiftKey) {
@@ -348,45 +349,47 @@ export class Canvas {
                     this._scaleObject(x, y, 'equally');
                 }
 
-                // this.fire('object:scaling', {
-                //     target: this._currentTransform.target,
-                //     e,
-                // });
+                this.emit('object:scaling', {
+                    target: this._currentTransform.target,
+                    e,
+                });
+                this._currentTransform.target.emit('scaling', { e });
             } else if (this._currentTransform.action === 'scaleX') {
                 // 如果只是缩放 x
                 this._scaleObject(x, y, 'x');
 
-                // this.fire('object:scaling', {
-                //     target: this._currentTransform.target,
-                //     e,
-                // });
-                // this._currentTransform.target.fire('scaling', { e });
+                this.emit('object:scaling', {
+                    target: this._currentTransform.target,
+                    e,
+                });
+                this._currentTransform.target.emit('scaling', { e });
             } else if (this._currentTransform.action === 'scaleY') {
                 // 如果只是缩放 y
                 this._scaleObject(x, y, 'y');
 
-                // this.fire('object:scaling', {
-                //     target: this._currentTransform.target,
-                //     e,
-                // });
-                // this._currentTransform.target.fire('scaling', { e });
+                this.emit('object:scaling', {
+                    target: this._currentTransform.target,
+                    e,
+                });
+                this._currentTransform.target.emit('scaling', { e });
             } else {
                 // 如果是拖拽物体
                 this._translateObject(x, y);
 
-                // this.fire('object:moving', {
-                //     target: this._currentTransform.target,
-                //     e: e,
-                // });
+                this.emit('object:moving', {
+                    target: this._currentTransform.target,
+                    e,
+                });
 
                 this._setCursor(this.moveCursor);
-                // this._currentTransform.target.fire('moving', { e: e });
+                this._currentTransform.target.emit('moving', { e });
             }
 
             this.renderAll();
         }
-        // this.fire('mouse:move', { target, e });
-        // target && target.fire('mousemove', { e });
+
+        this.emit('mouse:move', { target, e });
+        target && target.emit('mousemove', { e });
     }
     /** 主要就是清空拖蓝选区，设置物体激活状态，重新渲染画布 */
     __onMouseUp(e: MouseEvent) {
@@ -408,10 +411,10 @@ export class Canvas {
             target.isMoving = false;
 
             // 在点击之间如果物体状态改变了才派发事件
-            // if (target.hasStateChanged()) {
-            //     this.fire('object:modified', { target: target });
-            //     target.fire('modified');
-            // }
+            if (target.hasStateChanged()) {
+                this.emit('object:modified', { target });
+                target.emit('modified');
+            }
 
             // if (this._previousOriginX) {
             //     this._currentTransform.target.adjustPosition(this._previousOriginX);
@@ -465,8 +468,8 @@ export class Canvas {
         //     console.log(JSON.stringify(obj, null, 4));
         // }
 
-        // this.fire('mouse:up', { target, e });
-        // target && target.fire('mouseup', { e });
+        this.emit('mouse:up', { target, e });
+        target && target.emit('mouseup', { e });
     }
     _shouldRender(target: FabricObject, pointer: Pos) {
         const activeObject = this.getActiveGroup() || this.getActiveObject();
@@ -477,11 +480,11 @@ export class Canvas {
     deactivateAllWithDispatch(): Canvas {
         // let activeObject = this.getActiveGroup() || this.getActiveObject();
         // if (activeObject) {
-        //     this.fire('before:selection:cleared', { target: activeObject });
+        //     this.emit('before:selection:cleared', { target: activeObject });
         // }
         this.deactivateAll();
         // if (activeObject) {
-        //     this.fire('selection:cleared');
+        //     this.emit('selection:cleared');
         // }
         return this;
     }
@@ -492,7 +495,7 @@ export class Canvas {
     //     this._originalOriginX = this.originX;
     //     this._originalOriginY = this.originY;
 
-    //     var center = this.getCenterPoint();
+    //     let center = this.getCenterPoint();
 
     //     this.originX = 'center';
     //     this.originY = 'center';
@@ -502,6 +505,7 @@ export class Canvas {
     //   }
     /** 平移当前选中物体，注意这里我们没有用 += */
     _translateObject(x: number, y: number) {
+        // console.log(this._currentTransform.offsetX, this._currentTransform.offsetY, this._offset.top, this._offset.left);
         let target = this._currentTransform.target;
         target.set('left', x - this._currentTransform.offsetX);
         target.set('top', y - this._currentTransform.offsetY);
@@ -517,7 +521,7 @@ export class Canvas {
             offset = this._offset,
             target: FabricObject = t.target;
 
-        // Get the constraint point
+        // 缩放基点：比如拖拽右边中间的控制点，其实我们参考的变换基点是左边中间的控制点
         let constraintPosition = target.translateToOriginPoint(target.getCenterPoint(), t.originX, t.originY);
         // 以物体变换中心为原点的鼠标点坐标值
         let localMouse = target.toLocalPoint(new Point(x - offset.left, y - offset.top), t.originX, t.originY);
@@ -579,17 +583,19 @@ export class Canvas {
             else if (t.originY === 'bottom') t.originY = 'top';
         }
 
+        // console.log(constraintPosition, localMouse, t.originX, t.originY);
+
         // 缩放会改变物体位置，所以要重新设置
         target.setPositionByOrigin(constraintPosition, t.originX, t.originY);
     }
     /** 旋转当前选中物体，这里用的是 += */
     _rotateObject(x: number, y: number) {
-        let t = this._currentTransform,
-            o = this._offset;
-
-        let lastAngle = Math.atan2(t.ey - o.top - t.top, t.ex - o.left - t.left),
-            curAngle = Math.atan2(y - o.top - t.top, x - o.left - t.left);
-
+        const t = this._currentTransform;
+        const o = this._offset;
+        // 鼠标按下的点与物体中心点连线和 x 轴正方向形成的弧度
+        const lastAngle = Math.atan2(t.ey - o.top - t.top, t.ex - o.left - t.left);
+        // 鼠标拖拽的终点与物体中心点连线和 x 轴正方向形成的弧度
+        const curAngle = Math.atan2(y - o.top - t.top, x - o.left - t.left);
         let angle = Util.radiansToDegrees(curAngle - lastAngle + t.theta); // 新的角度 = 变换的角度 + 原来的角度
         if (angle < 0) {
             angle = 360 + angle;
@@ -627,9 +633,10 @@ export class Canvas {
             return false;
         }
     }
-    /** 获取拖蓝框选的元素
-     * 可能只有一个元素，那就是普通的点选
-     * 如果有多个元素，那就生成一个组
+    /**
+     * 获取拖蓝选区包围的元素
+     * 可能只有一个物体，那就是普通的点选
+     * 如果有多个物体，那就生成一个组
      */
     _findSelectedObjects(e: MouseEvent) {
         let objects: FabricObject[] = [], // 存储最终框选的元素
@@ -658,7 +665,7 @@ export class Canvas {
             const newGroup = new Group(objects);
             this.setActiveGroup(newGroup);
             // newGroup.saveCoords();
-            // this.fire('selection:created', { target: newGroup });
+            // this.emit('selection:created', { target: newGroup });
         }
 
         this.renderAll();
@@ -684,7 +691,7 @@ export class Canvas {
         // let activeGroup = this.getActiveGroup();
         // if (activeGroup) activeGroup.render(ctx);
 
-        // this.fire('after:render');
+        this.emit('after:render');
         return this;
     }
     /** 绘制框选区域 */
@@ -715,8 +722,8 @@ export class Canvas {
 
         this.renderAll();
 
-        // this.fire('object:selected', { target: object, e });
-        // object.fire('selected', { e });
+        // this.emit('object:selected', { target: object, e });
+        // object.emit('selected', { e });
         return this;
     }
     /** 记录当前物体的变换状态 */
@@ -862,7 +869,7 @@ export class Canvas {
                 activeGroup.addWithUpdate(target);
                 this._resetObjectTransform(activeGroup);
             }
-            // this.fire('selection:created', { target: activeGroup, e: e });
+            // this.emit('selection:created', { target: activeGroup, e: e });
             activeGroup.setActive(true);
         } else {
             // group does not exist
@@ -916,11 +923,6 @@ export class Canvas {
     findTarget(e: MouseEvent, skipGroup: boolean = false): FabricObject {
         let target;
         // let pointer = this.getPointer(e);
-
-        // if (this.controlsAboveOverlay && this.lastRenderedObjectWithControlsAboveOverlay && this.containsPoint(e, this.lastRenderedObjectWithControlsAboveOverlay) && this.lastRenderedObjectWithControlsAboveOverlay._findTargetCorner(e, this._offset)) {
-        //     target = this.lastRenderedObjectWithControlsAboveOverlay;
-        //     return target;
-        // }
 
         // 优先考虑当前组中的物体，因为激活的物体被选中的概率大
         let activeGroup = this.getActiveGroup();
@@ -1055,7 +1057,7 @@ export class Canvas {
             this.clearContext(canvasToDrawOn);
         }
 
-        // this.fire('before:render');
+        this.emit('before:render');
 
         if (this.backgroundColor) {
             canvasToDrawOn.fillStyle = this.backgroundColor;
@@ -1068,11 +1070,7 @@ export class Canvas {
             this._draw(canvasToDrawOn, sortedObjects[i]);
         }
 
-        // if (this.controlsAboveOverlay) {
-        //     this.drawControls(canvasToDrawOn);
-        // }
-
-        // this.fire('after:render');
+        this.emit('after:render');
 
         return this;
     }
@@ -1096,7 +1094,7 @@ export class Canvas {
                     objsToRender.push(object);
                 }
             }
-            activeGroup._set('objects', activeGroupObjects);
+            // activeGroup._set('objects', activeGroupObjects);
             objsToRender.push(activeGroup);
         } else if (activeObject) {
             // 如果只选中一个物体
@@ -1113,46 +1111,11 @@ export class Canvas {
 
         return objsToRender;
     }
-    // forEachObject(callback: Function) {
-    //     let objects = this._objects,
-    //         i = objects.length;
-    //     while (i--) {
-    //         callback.call(this, objects[i], i, objects);
-    //     }
-    // }
     getActiveGroup(): Group {
         return this._activeGroup;
     }
-    // drawControls(ctx: CanvasRenderingContext2D) {
-    //     let activeGroup = this.getActiveGroup();
-    //     if (activeGroup) {
-    //         ctx.save();
-    //         Group.prototype.transform.call(activeGroup, ctx);
-    //         activeGroup.drawBorders(ctx).drawControls(ctx);
-    //         ctx.restore();
-    //     } else {
-    //         for (let i = 0, len = this._objects.length; i < len; ++i) {
-    //             if (!this._objects[i] || !this._objects[i].active) continue;
-
-    //             ctx.save();
-    //             FabricObject.prototype.transform.call(this._objects[i], ctx);
-    //             this._objects[i].drawBorders(ctx).drawControls(ctx);
-    //             ctx.restore();
-
-    //             // this.lastRenderedObjectWithControlsAboveOverlay = this._objects[i];
-    //         }
-    //     }
-    // }
     _draw(ctx: CanvasRenderingContext2D, object: FabricObject) {
         if (!object) return;
-
-        // if (this.controlsAboveOverlay) {
-        //     let hasControls = object.hasControls;
-        //     object.render(ctx);
-        //     object.hasControls = hasControls;
-        // } else {
-        //     object.render(ctx);
-        // }
         object.render(ctx);
     }
     /** 获取画布的偏移量，到时计算鼠标点击位置需要用到 */
@@ -1177,8 +1140,8 @@ export class Canvas {
         obj.setupState();
         obj.setCoords();
         obj.canvas = this;
-        // this.fire('object:added', { target: obj });
-        // obj.fire('added');
+        this.emit('object:added', { target: obj });
+        obj.emit('added');
     }
     clearContext(ctx: CanvasRenderingContext2D): Canvas {
         ctx && ctx.clearRect(0, 0, this.width, this.height);
@@ -1192,7 +1155,7 @@ export class Canvas {
         this.clearContext(this.contextContainer);
         this.clearContext(this.contextTop);
 
-        // this.fire('canvas:cleared');
+        this.emit('canvas:cleared');
         this.renderAll();
         return this;
     }
@@ -1204,61 +1167,69 @@ export class Canvas {
         Util.removeListener(window, 'resize', this._onResize);
         return this;
     }
-    setZoom(value: number): Canvas {
-        this.zoomToPoint(new Point(0, 0), value);
-        return this;
+    toObject() {
+        const data = {
+            objects: this._objects.map((obj) => {
+                return obj.toObject();
+            }),
+        };
+        return data;
     }
-    zoomToPoint(point: Point, value: number): Canvas {
-        // TODO: just change the scale, preserve other transformations
-        let before = point,
-            vpt = this.viewportTransform.slice(0);
-        point = Util.transformPoint(point, Util.invertTransform(this.viewportTransform));
-        vpt[0] = value;
-        vpt[3] = value;
-        let after = Util.transformPoint(point, vpt);
-        vpt[4] += before.x - after.x;
-        vpt[5] += before.y - after.y;
-        return this.setViewportTransform(vpt);
-    }
-    getZoom() {
-        return this.viewportTransform[0];
-    }
-    setViewportTransform(vpt: number[]): Canvas {
-        let activeObject = this._activeObject,
-            object,
-            i,
-            len;
-        this.viewportTransform = vpt;
-        for (i = 0, len = this._objects.length; i < len; i++) {
-            object = this._objects[i];
-            object.group || object.setCoords(true);
-        }
-        if (activeObject) {
-            activeObject.setCoords();
-        }
+    // setZoom(value: number): Canvas {
+    //     this.zoomToPoint(new Point(0, 0), value);
+    //     return this;
+    // }
+    // zoomToPoint(point: Point, value: number): Canvas {
+    //     // TODO: just change the scale, preserve other transformations
+    //     let before = point,
+    //         vpt = this.viewportTransform.slice(0);
+    //     point = Util.transformPoint(point, Util.invertTransform(this.viewportTransform));
+    //     vpt[0] = value;
+    //     vpt[3] = value;
+    //     let after = Util.transformPoint(point, vpt);
+    //     vpt[4] += before.x - after.x;
+    //     vpt[5] += before.y - after.y;
+    //     return this.setViewportTransform(vpt);
+    // }
+    // getZoom() {
+    //     return this.viewportTransform[0];
+    // }
+    // setViewportTransform(vpt: number[]): Canvas {
+    //     let activeObject = this._activeObject,
+    //         object,
+    //         i,
+    //         len;
+    //     this.viewportTransform = vpt;
+    //     for (i = 0, len = this._objects.length; i < len; i++) {
+    //         object = this._objects[i];
+    //         object.group || object.setCoords(true);
+    //     }
+    //     if (activeObject) {
+    //         activeObject.setCoords();
+    //     }
 
-        this.calcViewportBoundaries();
-        this.renderAll();
-        // this.renderOnAddRemove && this.requestRenderAll();
-        return this;
-    }
-    /**
-     * Calculate the position of the 4 corner of canvas with current viewportTransform.
-     * helps to determinate when an object is in the current rendering viewport using
-     * object absolute coordinates ( aCoords )
-     * @return {Object} points.tl
-     * @chainable
-     */
-    calcViewportBoundaries() {
-        let points: any = {},
-            width = this.width,
-            height = this.height,
-            iVpt = Util.invertTransform(this.viewportTransform);
-        points.tl = Util.transformPoint({ x: 0, y: 0 }, iVpt);
-        points.br = Util.transformPoint({ x: width, y: height }, iVpt);
-        points.tr = new Point(points.br.x, points.tl.y);
-        points.bl = new Point(points.tl.x, points.br.y);
-        this.vptCoords = points;
-        return points;
-    }
+    //     this.calcViewportBoundaries();
+    //     this.renderAll();
+    //     // this.renderOnAddRemove && this.requestRenderAll();
+    //     return this;
+    // }
+    // /**
+    //  * Calculate the position of the 4 corner of canvas with current viewportTransform.
+    //  * helps to determinate when an object is in the current rendering viewport using
+    //  * object absolute coordinates ( aCoords )
+    //  * @return {Object} points.tl
+    //  * @chainable
+    //  */
+    // calcViewportBoundaries() {
+    //     let points: any = {},
+    //         width = this.width,
+    //         height = this.height,
+    //         iVpt = Util.invertTransform(this.viewportTransform);
+    //     points.tl = Util.transformPoint({ x: 0, y: 0 }, iVpt);
+    //     points.br = Util.transformPoint({ x: width, y: height }, iVpt);
+    //     points.tr = new Point(points.br.x, points.tl.y);
+    //     points.bl = new Point(points.tl.x, points.br.y);
+    //     this.vptCoords = points;
+    //     return points;
+    // }
 }

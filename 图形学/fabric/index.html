@@ -4,7 +4,7 @@
         <meta charset="UTF-8" />
         <meta http-equiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>fabric.js</title>
+        <title>手写一个轻量 fabric.js</title>
         <style>
             canvas {
                 width: 800px;
@@ -69,16 +69,36 @@
                 {
                     width: 200,
                     height: 200,
-                    left: 400,
-                    top: 300,
+                    left: 500,
+                    top: 400,
                 }
             );
             const g = new fabric.Group([rect3, rect4], {
                 top: 200,
                 left: 200,
             });
+
+            rect.on('added', () => {
+                console.log('rect 被添加了');
+            });
+            rect.on('rotating', () => {
+                console.log('rect 被旋转了');
+            });
+
             canvas.add(rect, rect2, g);
 
+            rect.animate(
+                { top: 100, left: 400, scaleX: 1.5, angle: 45 },
+                {
+                    duration: 400,
+                    onChange: canvas.renderAll.bind(canvas),
+                }
+            );
+
+            window.xx = canvas;
+        </script>
+
+        <script>
             // 这是一个基本的缩放控制，限制在 1% 和 2000% 之间。
             // canvas.on('mouse:wheel', function (opt) {
             //     let delta = opt.e.deltaY;
@@ -157,22 +177,6 @@
             //         }
             //     }
             // });
-
-            rect.animate(
-                { top: 50, left: 400, scaleX: 2, angle: 45 },
-                {
-                    duration: 1000,
-                    onChange: canvas.renderAll.bind(canvas),
-                }
-            );
-
-            // setInterval(() => {
-            //     rect.set('top', Math.random() * 800);
-            //     rect.set('left', Math.random() * 800);
-            //     canvas.renderAll();
-            // }, 500);
-
-            window.xx = canvas;
         </script>
     </body>
 </html>

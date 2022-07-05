@@ -247,3 +247,7 @@ plugin 从前到后，preset 从后到前
 一般还是第二种方式用的比较多，babel 也是封装了这种方式，提供了 babel-plugin-tester 包。
 babel-plugin-tester 就是对比生成的代码的方式，有三种对比方式：直接对比字符串、指定输入和输出的代码文件和实际执行结果对比、生成快照对比快照。
 babel plugin tester 还是得用 jest 来跑，只是做了一层封装，简化了书写方式，但运行的话还是用 jest
+
+
+## 不错的文章
+- 聊聊Babel开发的那些事：https://jelly.jd.com/article/5f573dd85e6e88014d42f3d9

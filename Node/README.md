@@ -11,3 +11,7 @@
     6.3 再把 Node 原生模块和我们的 JS 代码都加载进来运行
     6.4 最后把主持人 libuv 请上场，执行 JS 里的各种任务
 7. libuv 没活干了，就一层层来退出进程、收拾场地，退出程序
+
+## 参考文章
+- https://github.com/theanarkh/understand-nodejs
+- https://zhuanlan.zhihu.com/p/375276722

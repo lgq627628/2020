@@ -187,3 +187,6 @@ do
   # git push -u origin fix-ajax-bug
   cd ..
 done
+
+## 不错的教程
+- 交互式命令行 https://jelly.jd.com/article/6006b1045b6c6a01506c87b4

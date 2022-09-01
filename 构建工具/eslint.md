@@ -1,3 +1,15 @@
+## eslint + vscode 格式化
+第一步：
+  下载 eslint
+第二步：  
+  ```js
+  "eslint.format.enable": true, // 使得 eslint 可用
+  "eslint.validate": ["javascript","vue","html"], // 哪些文件需要格式化
+  "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": true, // 是否需要再保存的自动格式化
+  }
+  ```
+
 ## eslint 的正确使用方式
 
 - 安装 npm install eslint --save-dev

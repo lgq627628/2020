@@ -11,3 +11,7 @@
 
 ### 工具函数
 存放常用的函数库
+
+### 好文，真的好
+- [Chrome Developers](https://developer.chrome.com/blog/)
+- [AntV](https://www.yuque.com/r/antv/books?q=)

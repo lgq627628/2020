@@ -175,3 +175,8 @@ function copyFn(fn) {
   if (typeof fn !== 'function') return fn
   return eval(`(${fn.toString()})`)
 }
+
+
+// 深拷贝进阶：
+// - 使用 immer，如果数据不改变，即便是拷贝我们仍然使用同一数据
+// - 如果数据改变了，用 proxy 代理加一个中间层 draft，在中间层重新赋值改变的值，其余值还是会映射到原始数据，极大的提高了深拷贝性能

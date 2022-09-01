@@ -47,7 +47,8 @@
     ```
 
 ### 脚手架 || 插件化脚手架
-参考文章：https://jelly.jd.com/article/5f447fc70186880153ccdbd4
+- https://jelly.jd.com/article/5f447fc70186880153ccdbd4
+- https://juejin.cn/post/7115206210701230088
 
 ### 本地开发测试
 - 开发版本：开发版本的程序，可以在代码根目录中使用npm link将其注册为全局安装，当开发完毕正式发布后，使用npm unlink去除连接即可。

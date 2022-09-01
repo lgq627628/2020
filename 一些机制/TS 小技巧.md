@@ -30,3 +30,7 @@ nest.js、egg.js - 支持 ts 的服务端框架
 ts-node - node 端直接运行 ts 文件
 utility-types - 一些实用的 ts 类型工具
 type-coverage - 静态类型覆盖率检测
+
+## 写法
+- 断言一定存在：this.element = document.getElementById('xxx')!
+- 收纳：在 get set 的时候 try..catch

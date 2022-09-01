@@ -10,7 +10,6 @@
 // 1、是否用 test
 // 2、是否是全局 g
 
-
 // 字符串转数字
 // 示例 1:
 // 输入: "42"
@@ -22,7 +21,37 @@
 // 输出: 4193
 // 示例 4: 输入: "words and 987"
 // 输出: 0
-let reg = /\s*([-\+]?[0-9]+).*/g
-let str = ' -42'
-let rs = str.match(reg)
-console.log(rs)
+let reg = /\s*([-\+]?[0-9]+).*/g;
+let str = ' -42';
+let rs = str.match(reg);
+console.log(rs);
+
+export class Utils {
+    /** 是否是中文、英文、数字组成 */
+    static isWord(str: string): boolean {
+        return /[a-zA-Z0-9\u4e00-\u9fa5]/.test(str);
+    }
+    /** 是否都是英文 */
+    static isEnglish(str: string): boolean {
+        return /[a-zA-Z]/.test(str);
+    }
+    /** 是否都是中文 */
+    static isChinese(str: string): boolean {
+        return /[\u4e00-\u9fa5]/.test(str);
+    }
+    /** 是否都是数字 */
+    static isNumber(str: string): boolean {
+        return /[0-9]/.test(str);
+    }
+    /** 是否是标点符号 */
+    static isSign(str: string): boolean {
+        return Utils.isEnglishSign(str) || Utils.isChineseSign(str);
+    }
+    static isEnglishSign(str: string): boolean {
+        return /[\\~!@#$%^&*()-+=_`|[\]{};:"='?/><.,——\x21-\x2f\x3a-\x40\x5b-\x60\x7B-\x7F]/.test(str);
+    }
+    /** 是否是中文标点符号，比如 。；，：“”（）、？《》！【】￥ */
+    static isChineseSign(str: string): boolean {
+        return /[’|」「\u3002\uff1b\uff0c\uff1a\u201c\u201d\uff08\uff09\u3001\uff1f\u300a\u300b\uff01\u3010\u3011\uffe5]/.test(str);
+    }
+}

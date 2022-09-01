@@ -114,3 +114,53 @@ setTimeout(() => {
     }
     loop();
   }, 0);
+
+
+
+// 第一步：
+let time = 0;
+function A(t) {
+    requestAnimationFrame(A)
+    console.log("距离上一次执行的时间间隔", t - time)
+    time = t
+}
+A()
+// 第二步：
+let interval = 1000
+let lastTime = 0
+function SecondTimer(t) {
+    requestAnimationFrame(SecondTimer)
+    if(t - lastTime >= interval) {
+        console.log("1s到了")
+        lastTime = t
+    }
+}
+SecondTimer()
+// 第三步：
+class Timer {
+    constructor(fn, interval) {
+        this.interval = interval
+        this.fn = fn
+        this.lastTime = 0
+
+        this.loop(0)
+    }
+    loop(timestamp){
+        this.timer = requestAnimationFrame(Timer.prototype.loop.bind(this))
+        if(timestamp - this.lastTime > this.interval) { 
+            this.lastTime = timestamp;
+            typeof this.fn == "function" && this.fn()
+        }
+    }
+    clear() {
+        cancelAnimationFrame(this.timer)
+        this.timer = null
+    }
+}
+// 调用
+let t = new Timer(() => {
+    console.log("timer 1s到了")
+}, 1000)
+let t2 = setInterval(() => {
+    console.log("setinterval 1s到了")
+}, 1000)

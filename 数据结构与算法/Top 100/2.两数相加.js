@@ -10,6 +10,10 @@
 // 输出：7 -> 0 -> 8
 // 原因：342 + 465 = 807
 
+function ListNode(val) {
+    this.val = val;
+    this.next = null;
+}
 var addTwoNumbers = function(l1, l2) {
   let dummy = new ListNode()
   cur =  dummy
@@ -30,3 +34,9 @@ var addTwoNumbers = function(l1, l2) {
   if (needOne) cur.next = new ListNode(1)
   return dummy.next
 };
+
+
+const l1 = { val: 2, next: {val: 4, next: { val: 3 }} }
+const l2 = { val: 5, next: {val: 6, next: { val: 4 }} }
+const rs = addTwoNumbers(l1, l2);
+console.log(rs);

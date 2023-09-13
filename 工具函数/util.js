@@ -1,6 +1,8 @@
 // 金钱加分号
 const thousand = num => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const money = thousand(19941112);
+
+// '3423534634634'.replace(/(\d)(?=(?:\d{3})+$)/g, '$1,')
 // money => "19,941,112"
 
 // 生成随机ID

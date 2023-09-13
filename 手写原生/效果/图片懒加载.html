@@ -80,3 +80,23 @@
   </!-->
 </body>
 </html>
+
+
+<!-- directives: {
+  'asyncLoadImg': {
+    //自定义指令的定义
+    //bind方法只执行一次
+    bind: function (el) {
+      //防止赋值操作频繁进行
+      let isShow = false
+      let ib = new IntersectionObserver(function (entrie5){
+      if(isShow) return
+      //entries[0].intersectionRatio小于0表示在可视外
+      if (entries[0].intersectionRatio <= 0) return;
+      el.src = el.getAttribute('data-src')
+      isShow = true
+      ib = null
+    });
+    ib.observe(el)
+  }
+}   -->

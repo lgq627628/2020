@@ -56,3 +56,37 @@ function swap(arr, i, j) {
 }
 let list2 = quickSort2([1,10,2,8,5,3,1,6,9]);
 console.log(list2);
+
+
+
+function quickSort2(arr, left = 0, right = arr.length - 1, k) { // 困难版本：在原数组上直接排序，不额外开辟空间
+  // if (arr.length <= 1) return arr;
+  let partIdx = partArr(arr, left, right);
+  if (k < partIdx) quickSort2(arr, left, partIdx - 1, k);
+  else if (k > partIdx) quickSort2(arr, partIdx + 1, right, k);
+  else return arr;
+  return arr;
+}
+function partArr(arr, left, right) { // 一次划分，并返回左指针当作下次划分依据
+  let midVal = arr[~~(left + (right - left) / 2)];
+  let i = left;
+  let j = right;
+
+  while(i <= j) {
+    while(arr[i] < midVal) i++; // 左指针所指元素若小于基准值，则左指针右移
+    while(arr[j] > midVal) j--; // 右指针所指元素若大于基准值，则右指针左移
+    if (i <= j) { // 若i<=j，则意味着基准值 左边存在较大元素 或 右边存在较小元素，交换两个元素确保左右两侧有序
+      swap(arr, i, j);
+      i++;
+      j--;
+    }
+  }
+
+  return i; // 返回左指针索引作为下一次划分左右子数组的依据
+}
+function swap(arr, i, j) {
+  [arr[i], arr[j]] = [arr[j], arr[i]];
+}
+let list2 = quickSort2([1,10,2,8,5,3,1,6,9], 5);
+console.log(list2);
+

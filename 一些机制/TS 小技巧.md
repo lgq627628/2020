@@ -34,3 +34,14 @@ type-coverage - 静态类型覆盖率检测
 ## 写法
 - 断言一定存在：this.element = document.getElementById('xxx')!
 - 收纳：在 get set 的时候 try..catch
+
+## Schema
+```ts
+export interface Schema {
+  type: SchemaType | string // 为什么要加个 string，方便开发者直接写 type: 'number' 而不需要引用 SchemaType
+}
+```
+
+
+## 不想学？
+简单参考这边文章：https://github.com/biaochenxuying/blog/issues/80

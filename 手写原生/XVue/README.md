@@ -37,3 +37,5 @@ function isHtmlTag( tagName ) {
 ## 为什么要用柯里化？
 为了提升性能，使用它可以缓存一部分能力
 
+## vue3 源码
+http://www.zhufengpeixun.com/jg-vue

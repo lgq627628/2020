@@ -1,4 +1,6 @@
 // 常用正则表达式，不错的网站 https://ihateregex.io/
+// https://regexr.com/
+// http://regexper.com/
 // 以下是一些正则实操
 
 // reg.test(str) // 返回布尔值
@@ -55,3 +57,12 @@ export class Utils {
         return /[’|」「\u3002\uff1b\uff0c\uff1a\u201c\u201d\uff08\uff09\u3001\uff1f\u300a\u300b\uff01\u3010\u3011\uffe5]/.test(str);
     }
 }
+
+// 替换 script 标签里面的内容
+''.replace(/(?<=<script data-inject>).*?(?=<\/script>)/, 'xxxx')
+
+// 替换 title 标签里面的内容
+''.replace(/(?<=<title>).*?(?=<\/title>)/, 'xxxx')
+
+// 替换注释里面的内容
+''.replace(/(?<=<!-- remote-script-inject-start -->).*?(?=<!-- remote-script-inject-end -->)/, 'xxxx')

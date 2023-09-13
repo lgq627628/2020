@@ -162,3 +162,143 @@ ConfigMap 是 Kubernetes 的一种资源类型，我们可以使用它存放一�
 当你给 Node 设置一个污点后，除非给 Pod 设置一个相对应的**容忍度，**否则 Pod 才能被调度上去。这也就是污点和容忍的来源。
 
 污点的格式是 key=value，可以自定义自己的内容，就像是一组 Tag 一样。**
+
+
+
+
+## 使用 docker 部署前端
+https://q.shanyue.tech/engineering/749.html
+```dockerfile
+# 指定 node 版本号，满足宿主环境
+FROM node:16-alpine
+
+# 指定工作目录，将代码添加至此
+WORKDIR /code
+ADD . /code
+
+# 如何将项目跑起来
+RUN npm install
+RUN npm run build
+CMD npm start
+
+# 暴露出运行的端口号，可对外接入服务发现
+EXPOSE 8080
+```
+运行 docker
+```zsh
+# 构建镜像
+$ docker build -t fe-app .
+
+# 运行容器
+$ docker run -it --rm fe-app
+```
+问题：
+- 使用 node:16 作为基础镜像过于奢侈，占用体积太大，而最终产物 (js/css/html) 无需依赖该镜像。可使用更小的 nginx 镜像做多阶段构建。
+- 多个 RUN 命令，不利于 Docker 的镜像分层存储。可合并为一个 RUN 命令
+- 每次都需要 npm i，可合理利用 Docker 缓存，ADD 命令中内容发生改变将会破坏缓存。可将 package.json 提前移至目标目录，只要 package.json/lockfile 不发生变动，将不会重新 npm i
+  
+```dockerfile
+FROM node:16-alpine as builder
+
+WORKDIR /code
+
+ADD package.json package-lock.json /code/
+RUN npm install
+
+ADD . /code
+
+RUN npm run build
+
+# 选择更小体积的基础镜像
+FROM nginx:alpine
+
+# 将构建产物移至 nginx 中
+COPY --from=builder code/build/ /usr/share/nginx/html/
+```
+
+
+## 灰度实际配置
+
+具体的反向代理和负载均衡的实现方式可以根据具体的应用场景和技术栈来选择和调整，下面给出一个简单的示例，以 Nginx 为例：
+
+1. 配置反向代理
+
+在 Nginx 的配置文件中，可以使用 location 指令配置反向代理规则，例如：
+
+```
+http {
+  upstream backend {
+    server backend1.example.com;
+    server backend2.example.com;
+  }
+
+  server {
+    listen 80;
+    server_name frontend.example.com;
+
+    location / {
+      proxy_pass http://backend;
+    }
+  }
+}
+```
+
+在上面的例子中，我们配置了一个名为 backend 的 upstream，其中包含两个后端服务器 backend1.example.com 和 backend2.example.com。然后在 server 指令中，配置了一个名为 frontend.example.com 的虚拟主机，并使用 location 指令将所有请求转发到 backend 反向代理服务器上。在转发请求时，Nginx 会根据反向代理规则将请求转发到对应的后端服务器上。
+
+2. 配置负载均衡
+
+在 Nginx 的配置文件中，可以使用 upstream 指令配置负载均衡规则，例如：
+
+```
+http {
+  upstream backend {
+    least_conn;
+    server backend1.example.com weight=5;
+    server backend2.example.com;
+    server backend3.example.com;
+  }
+
+  server {
+    listen 80;
+    server_name frontend.example.com;
+
+    location / {
+      proxy_pass http://backend;
+    }
+  }
+}
+```
+
+在上面的例子中，我们配置了一个名为 backend 的 upstream，使用 least_conn 策略对请求进行负载均衡，即优先将请求转发到当前连接数最少的后端服务器上。同时，我们还可以配置每个后端服务器的权重，例如将 backend1.example.com 的权重设置为 5，表示优先将请求转发到该服务器上。在配置负载均衡时，还可以使用其他的负载均衡策略，例如 round-robin 等。
+
+3. 对用户进行分组
+
+在进行反向代理和负载均衡时，需要对用户进行合理的分组和控制，避免出现过多的异常情况和性能问题。具体的分组方式可以根据实际情况来选择和调整，例如可以根据用户的 IP 地址、设备类型、登录状态等信息来进行分组。在分组时，可以使用 Nginx 的变量和条件指令来进行控制，例如：
+
+```
+http {
+  upstream backend {
+    server backend1.example.com;
+    server backend2.example.com;
+  }
+
+  server {
+    listen 80;
+    server_name frontend.example.com;
+
+    location / {
+      if ($remote_addr ~* "^192\.168\.") {
+        proxy_pass http://backend1;
+      }
+      if ($http_user_agent ~* "mobile") {
+        proxy_pass http://backend2;
+      }
+      proxy_pass http://backend;
+    }
+  }
+}
+```
+
+在上面的例子中，我们使用 $remote_addr 变量和正则表达式来判断用户的 IP 地址，如果 IP 地址以 192.168. 开头，就将请求转发到 backend1 反向代理服务器上；使用 $http_user_agent 变量和正则表达式来判断用户的设备类型，如果设备类型为 mobile，就将请求转发到 backend2 反向代理服务器上；否则将请求转发到默认的 backend 反向代理服务器上。在进行分组时，还可以使用其他的变量和条件指令进行控制，例如 $cookie、$http_referer 等。
+
+需要注意的是，在进行反向代理和负载均衡时，需要考虑到安全性和性能问题，避免出现潜在的漏洞和性能问题。同时也需要进行充分的测试和评估，确保新功能的可靠性和效果。

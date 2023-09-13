@@ -45,6 +45,9 @@
         .option('-C, --no-cheese', 'You do not want any cheese')
         .parse(process.argv);
     ```
+- listr2 是一个用于在终端中展示任务列表和进度的 Node.js 库
+- fast-glob 是一个非常快速和可靠的文件搜索库
+- boxen 是一个用于在终端中生成带边框的文本框的 Node.js 模块
 
 ### 脚手架 || 插件化脚手架
 - https://jelly.jd.com/article/5f447fc70186880153ccdbd4

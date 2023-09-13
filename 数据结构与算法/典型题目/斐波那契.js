@@ -51,7 +51,7 @@ console.log(rs)
 
 
 
-// 尾递归
+// 尾递归，函数的最后一步只能是函数调用
 function fibonacci(count) {
   function fn(count, curr = 1, next = 1) {
     if (count == 0) {
@@ -61,4 +61,9 @@ function fibonacci(count) {
     }
   };
   return fn(count);
+}
+
+function fibonacci(n, cur = 1, next = 1) {
+  if(n<= 1) return next;
+  return fibonacci(n - 1, next, cur + next);
 }

@@ -25,9 +25,9 @@ function insert(root, n) {
   }
   let val = root.val;
   if (val > n) {
-    insert(root.left, n);
+    root.left = insert(root.left, n);
   } else if (val < n) {
-    insert(root.right, n);
+    root.right = insert(root.right, n);
   }
   return root;
 }
@@ -75,7 +75,7 @@ function isValidBST(root) { // 在递归式中，如果单独维护一段逻辑�
   return dfs(root, -Infinity, Infinity);
 }
 
-function isValidBST(root) {
+function isValidBST(root) { // 看起来是错的
   if (!root) return true;
   let leftBool = root.left ? root.left.val < root.val : true;
   let rightBool = root.right ? root.right.val > root.val : true;

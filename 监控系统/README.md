@@ -32,3 +32,7 @@ React error boundary：像组件一样使用即可，然后再componentDidCatch�
 - 操作缓存数据（模拟有无缓存的场景等）。
 
 参考：https://mp.weixin.qq.com/s/VhvXTNuM7TSfFtzBVmhTyg
+
+## 参考代码库
+- https://github.com/getsentry/sentry-javascript/blob/develop/packages/utils/src/instrument.ts#L571
+- https://github.com/clouDr-f2e/monitor/blob/master/packages/browser/src/handleEvents.ts

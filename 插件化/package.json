@@ -1,0 +1,15 @@
+{
+  "name": "core-plugin",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsc Core.ts && node Core.js",
+    "start": "npm run dev"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^18.11.7"
+  }
+}

@@ -33,3 +33,11 @@ async function c() {
 
 c()
 
+
+
+// 抽离成公共方法
+const awaitWrap = (promise) => {
+  return promise
+      .then(data => [null, data])
+      .catch(err => [err, null])
+}

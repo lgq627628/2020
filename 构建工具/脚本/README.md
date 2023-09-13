@@ -18,6 +18,8 @@ j part-of-your-path-name
 jc
 jo, jco
 
+- ping 看 time 延时
+- nslookup www.xxx.com 看 dns 解析
 
 - 创建删除
 touch 创建文件
@@ -190,3 +192,8 @@ done
 
 ## 不错的教程
 - 交互式命令行 https://jelly.jd.com/article/6006b1045b6c6a01506c87b4
+
+## 如何在 node 中调用 shell
+- node 通过 exec、spawn 来调用 shell 命令，exec 会开启子进程运行，有大小限制，200kb，超过就报错；spawn 则是在当前进程中以流的方式运行，适合大文件
+- shell 中直接运行 node ./xxx 即可
+- 借助 zx 库用 js 来写，调用方式 $`command`，借助shell完成系统操作，文件io、内存、磁盘系统状态查询间等；借助nodejs完成应用层能力，网络io、计算等

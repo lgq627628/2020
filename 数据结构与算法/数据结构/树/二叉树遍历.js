@@ -111,6 +111,29 @@ function levelOrder(root) {
   return rs;
 }
 
+function snakeLevelOrder(root) {
+  const rs = [];
+  const queue = [];
+  queue.push(root);
+
+  while(queue.length) {
+    let len = queue.length;
+    let level = [];
+
+    for(let i = 0; i < len; i++) {
+      let top = queue.shift();
+      level.push(top.val);
+      top.left && queue.push(top.left);
+      top.right && queue.push(top.right);
+    }
+    if (rs.length % 2 === 0) level.reverse();
+    level.forEach(l => console.log(l));
+    rs.push(level);
+  }
+  console.log(rs);
+  return rs;
+}
+
 const root = {
   val: "A",
   left: {
@@ -135,3 +158,4 @@ preorderTraversal(root);
 postorderTraversal(root);
 inorderTraversal(root);
 levelOrder(root);
+snakeLevelOrder(root);

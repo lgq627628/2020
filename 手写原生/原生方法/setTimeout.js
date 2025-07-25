@@ -28,7 +28,7 @@ setTimeout(print, 2000);
   // use a closure).
   function setZeroTimeout(fn) {
       timeouts.push(fn);
-      window.postMessage(messageName, "*");
+      window.postMessage(messageName, window.location.origin); // Modified line
   }
 
   function handleMessage(event) {

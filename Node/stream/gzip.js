@@ -12,8 +12,13 @@ const reportProgress = new Transform({
     }
 })
 
+const algorithm = 'aes-192-cbc';
+const password = '123456';
+const key = crypto.scryptSync(password, 'salt', 24);
+const iv = crypto.randomBytes(16);
+
 fs.createReadStream(file)
-    .pipe(crypto.createCipher('aes192', '123456')) // 先加密再压缩
+    .pipe(crypto.createCipheriv(algorithm, key, iv)) // 先加密再压缩
     .pipe(zlib.createGzip())
     // .on('data', () => process.stdout.write('.'))
     .pipe(reportProgress)

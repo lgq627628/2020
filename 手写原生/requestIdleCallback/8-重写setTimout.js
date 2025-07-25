@@ -9,7 +9,7 @@
   // use a closure).
   function setZeroTimeout(fn) {
       timeouts.push(fn);
-      window.postMessage(messageName, "*");
+      window.postMessage(messageName, window.location.origin); // Restrict target origin
   }
 
   function handleMessage(event) {
